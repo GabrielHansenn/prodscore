@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   BASE
+   ============================================================ */
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    touch-action: manipulation;
+  }
+
+  /* P1: focus-visible ring global */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+  }
+
+  /* P2: cursor nos elementos interativos */
+  button, [role="button"], a { cursor: pointer; }
+
+  /* P7: respeitar preferência de movimento reduzido */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  ::-webkit-scrollbar       { @apply w-1.5; }
+  ::-webkit-scrollbar-track  { @apply bg-gray-100; }
+  ::-webkit-scrollbar-thumb  { @apply rounded-full bg-gray-300; }
+  ::-webkit-scrollbar-thumb:hover { background-color: #a3e635; }
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-card border border-gray-100;
+  }
+
+  .card :focus-visible {
+    @apply ring-offset-white;
+  }
+
+  /* P2: min-height 44px para toque */
+  .btn-primary {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl
+           bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-brand
+           transition-all duration-150 ease-out
+           hover:bg-brand-700 active:scale-95 active:duration-75
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl
+           border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700
+           transition-all duration-150 ease-out
+           hover:bg-gray-50 active:scale-95 active:duration-75;
+  }
+
+  .badge-easy   { @apply rounded-full bg-green-100  px-2.5 py-0.5 text-xs font-medium text-green-700;  }
+  .badge-medium { @apply rounded-full bg-amber-100  px-2.5 py-0.5 text-xs font-medium text-amber-700;  }
+  .badge-hard   { @apply rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700; }
+  .badge-epic   { @apply rounded-full bg-red-100    px-2.5 py-0.5 text-xs font-medium text-red-700;    }
+
+  .status-pending    { @apply rounded-full bg-gray-100    px-2.5 py-0.5 text-xs font-medium text-gray-600;    }
+  .status-inprogress { @apply rounded-full bg-blue-100   px-2.5 py-0.5 text-xs font-medium text-blue-700;   }
+  .status-completed  { @apply rounded-full bg-lime-100   px-2.5 py-0.5 text-xs font-medium text-lime-700;   }
+  .status-overdue    { @apply rounded-full bg-red-100    px-2.5 py-0.5 text-xs font-medium text-red-700;    }
+  .status-abandoned  { @apply rounded-full bg-gray-200   px-2.5 py-0.5 text-xs font-medium text-gray-500;   }
+
+  .skeleton { @apply animate-pulse rounded-lg bg-gray-200; }
+
+  .input {
+    @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900
+           placeholder-gray-400 outline-none transition-all duration-150
+           focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
+           disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 44px;
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+@layer utilities {
+  @keyframes slide-in-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in {
+    animation: slide-in-up 200ms ease-out both;
+  }
+}
+
+/* ============================================================
+   DARK MODE — fora de qualquer @layer
+   Hierarquia de camadas:
+     L0 fundo da página : #0c0b18
+     L1 card / surface  : #19182e   (+7 luminância — claramente distinto)
+     L2 input / nested  : #222040   (dentro dos cards)
+     L3 hover / active  : #2c2a52   (estados interativos)
+   ============================================================ */
+.dark {
+  color-scheme: dark;
+}
+
+/* ── Backgrounds ─────────────────────────────────────────── */
+.dark body,
+.dark .bg-gray-50  { background-color: #0c0b18; }
+.dark .bg-white    { background-color: #19182e; }
+.dark .bg-gray-100 { background-color: #222040; }
+.dark .bg-gray-200 { background-color: #2c2a52; }
+
+/* ── Bordas ──────────────────────────────────────────────── */
+.dark .border-gray-100 { border-color: #272550; }
+.dark .border-gray-200 { border-color: #312f5e; }
+.dark .border-gray-300 { border-color: #3e3b6e; }
+
+/* ── Textos ──────────────────────────────────────────────── */
+.dark .text-gray-900 { color: #eeeef8; }
+.dark .text-gray-800 { color: #d8d8ee; }
+.dark .text-gray-700 { color: #b8b8d8; }
+.dark .text-gray-600 { color: #8a8aac; }
+.dark .text-gray-500 { color: #686890; }
+.dark .text-gray-400 { color: #54547a; }
+
+/* ── Divisores ───────────────────────────────────────────── */
+.dark .divide-gray-100 > * + * { border-color: #272550; }
+.dark .divide-gray-200 > * + * { border-color: #312f5e; }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+.dark ::-webkit-scrollbar-track { background: #0c0b18; }
+.dark ::-webkit-scrollbar-thumb { background: #3a3860; border-radius: 9999px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #a3e635; }
+
+/* ── Focus ───────────────────────────────────────────────── */
+.dark :focus-visible         { --tw-ring-offset-color: #0c0b18; }
+.dark .card :focus-visible   { --tw-ring-offset-color: #19182e; }
+
+/* ── Cards ───────────────────────────────────────────────── */
+.dark .card {
+  background: linear-gradient(145deg, #1e1d34 0%, #17162b 100%);
+  border-color: #272550;
+  box-shadow:
+    0 1px 0   rgba(255,255,255,0.04) inset,   /* brilho no topo */
+    0 4px 16px rgba(0,0,0,0.45),               /* sombra de elevação */
+    0 1px 4px  rgba(0,0,0,0.3);
+}
+
+/* ── Header mobile (bg-white dentro do AppLayout) ─────────── */
+.dark header.bg-white {
+  background-color: #19182e;
+  border-bottom-color: #272550;
+}
+
+/* ── Botão secundário ────────────────────────────────────── */
+.dark .btn-secondary {
+  background-color: #222040;
+  border-color: #3e3b6e;
+  color: #d8d8ee;
+}
+.dark .btn-secondary:hover { background-color: #2c2a52; }
+
+/* ── Inputs / textareas / selects ─────────────────────────── */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+  background-color: #222040;
+  border-color: #3e3b6e;
+  color: #eeeef8;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #54547a; }
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.2);
+}
+
+/* ── Badges ──────────────────────────────────────────────── */
+.dark .badge-easy   { background-color: rgba(163,230,53,.12);  color: #bef264; }
+.dark .badge-medium { background-color: rgba(245,158,11,.12);  color: #fcd34d; }
+.dark .badge-hard   { background-color: rgba(249,115,22,.12);  color: #fdba74; }
+.dark .badge-epic   { background-color: rgba(239,68,68,.12);   color: #fca5a5; }
+
+/* ── Status badges ───────────────────────────────────────── */
+.dark .status-pending    { background-color: #222040;                      color: #8a8aac; }
+.dark .status-inprogress { background-color: rgba(99,102,241,.15);         color: #a5b4fc; }
+.dark .status-completed  { background-color: rgba(163,230,53,.14);         color: #bef264; }
+.dark .status-overdue    { background-color: rgba(239,68,68,.14);          color: #fca5a5; }
+.dark .status-abandoned  { background-color: #222040;                      color: #54547a; }
+
+/* ── Skeleton ────────────────────────────────────────────── */
+.dark .skeleton {
+  background: linear-gradient(90deg, #222040 25%, #2c2a52 50%, #222040 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-wave {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Melhorias de profundidade para estatísticas ─────────── */
+.dark .stat-card-glow-purple { box-shadow: 0 0 20px rgba(124,58,237,0.08); }
+.dark .stat-card-glow-amber  { box-shadow: 0 0 20px rgba(245,158,11,0.08); }
+.dark .stat-card-glow-lime   { box-shadow: 0 0 20px rgba(163,230,53,0.08); }
+.dark .stat-card-glow-blue   { box-shadow: 0 0 20px rgba(59,130,246,0.08); }

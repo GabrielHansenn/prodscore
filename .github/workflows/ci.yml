@@ -1,0 +1,65 @@
+name: CI — ProdScore
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    name: Verificação de tipos e testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências do monorepo
+        run: npm install
+
+      # ─── Shared ────────────────────────────────────────────────────────────
+
+      - name: Verificar tipos — @prodscore/shared
+        run: npm run typecheck --workspace=packages/shared
+
+      - name: Compilar pacote shared
+        run: npm run build --workspace=packages/shared
+
+      # ─── API ───────────────────────────────────────────────────────────────
+
+      - name: Verificar tipos — API
+        run: npm run typecheck --workspace=packages/api
+
+      - name: Executar testes unitários — API
+        run: npm run test --workspace=packages/api
+        env:
+          # Variáveis fictícias para que o módulo supabase não lance erro na importação
+          # O mock manual em __mocks__/supabase.ts substitui o módulo real durante os testes
+          SUPABASE_URL: https://fake.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: fake-service-key
+
+      # ─── Web ───────────────────────────────────────────────────────────────
+
+      - name: Verificar tipos — app web
+        run: npm run typecheck --workspace=apps/web
+
+      - name: Executar testes unitários — app web
+        run: npm run test --workspace=apps/web
+        env:
+          VITE_SUPABASE_URL: https://fake.supabase.co
+          VITE_SUPABASE_ANON_KEY: fake-anon-key
+          VITE_API_URL: http://localhost:3333
+
+      - name: Build de produção — app web
+        run: npm run build --workspace=apps/web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
