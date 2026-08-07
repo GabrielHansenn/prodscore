@@ -1,6 +1,6 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { MemberRole } from '@prodscore/shared';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
 export interface GroupCardData {
   id:          string;
@@ -24,7 +24,7 @@ const ROLE_LABELS: Record<MemberRole, string> = {
 
 const ROLE_COLORS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  COLORS.amber,
-  [MemberRole.Admin]:  COLORS.violet,
+  [MemberRole.Admin]:  COLORS.primary400,
   [MemberRole.Member]: COLORS.textSecondary,
 };
 
@@ -63,16 +63,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.border,
+    borderColor:     COLORS.borderSoft,
     padding:         SPACING.md,
     marginBottom:    SPACING.sm,
     gap:             SPACING.md,
+    ...CARD_SHADOW,
   },
   iconCircle: {
     width:           44,
     height:          44,
     borderRadius:    RADIUS.md,
-    backgroundColor: COLORS.emeraldDim,
+    backgroundColor: COLORS.primaryDim,
     alignItems:      'center',
     justifyContent:  'center',
   },
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   },
   pos: {
     fontSize: FONT.sm,
-    color:    COLORS.emerald,
+    color:    COLORS.primary,
     fontWeight: '600',
   },
   roleBadge: {

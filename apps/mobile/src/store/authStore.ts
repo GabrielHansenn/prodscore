@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../lib/storage';
 import type { User } from '@prodscore/shared';
 import { api, TOKEN_KEY } from '../services/api';
 

@@ -10,6 +10,7 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=packages/api",
     "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev:mobile:tunnel": "npm run start:tunnel --workspace=apps/mobile",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=packages/api",
     "build:shared": "npm run build --workspace=packages/shared",

@@ -3,20 +3,26 @@ import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '../store/authStore';
+import AppTabBar from './AppTabBar';
 
 // Telas de autenticação
 import LoginScreen    from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 
-// Telas principais
+// Telas principais (tab bar)
 import DashboardScreen from '../screens/DashboardScreen';
 import TasksScreen     from '../screens/TasksScreen';
 import GroupsScreen    from '../screens/GroupsScreen';
 import RankingScreen   from '../screens/RankingScreen';
 import ProfileScreen   from '../screens/ProfileScreen';
+
+// Telas alcançadas via stack (não ficam na tab bar, espelham rotas do web)
+import AchievementsScreen   from '../screens/AchievementsScreen';
+import StatisticsScreen     from '../screens/StatisticsScreen';
+import GroupDetailScreen    from '../screens/GroupDetailScreen';
+import GroupSettingsScreen  from '../screens/GroupSettingsScreen';
 
 import { COLORS } from '../constants/theme';
 
@@ -37,40 +43,27 @@ export type TabParamList = {
   Profile:   undefined;
 };
 
+export type AppStackParamList = {
+  Tabs:           undefined;
+  Achievements:   undefined;
+  Statistics:     undefined;
+  GroupDetail:    { groupId: string; groupName: string };
+  GroupSettings:  { groupId: string };
+};
+
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppTab    = createBottomTabNavigator<TabParamList>();
+const AppStack  = createNativeStackNavigator<AppStackParamList>();
 
 // ---------------------------------------------------------------------------
-// Tab navigator — telas autenticadas
+// Tab navigator — telas autenticadas de primeiro nível
 // ---------------------------------------------------------------------------
 
 function AppTabNavigator() {
   return (
     <AppTab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown:   false,
-        tabBarStyle: {
-          backgroundColor: COLORS.card,
-          borderTopColor:  COLORS.border,
-          borderTopWidth:  1,
-          paddingBottom:   4,
-          height:          60,
-        },
-        tabBarActiveTintColor:   COLORS.emerald,
-        tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
-
-          if (route.name === 'Dashboard') iconName = focused ? 'home'         : 'home-outline';
-          if (route.name === 'Tasks')     iconName = focused ? 'checkbox'     : 'checkbox-outline';
-          if (route.name === 'Groups')    iconName = focused ? 'people'       : 'people-outline';
-          if (route.name === 'Ranking')   iconName = focused ? 'trophy'       : 'trophy-outline';
-          if (route.name === 'Profile')   iconName = focused ? 'person'       : 'person-outline';
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <AppTabBar {...props} />}
     >
       <AppTab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Início'     }} />
       <AppTab.Screen name="Tasks"     component={TasksScreen}     options={{ title: 'Tarefas'    }} />
@@ -78,6 +71,23 @@ function AppTabNavigator() {
       <AppTab.Screen name="Ranking"   component={RankingScreen}   options={{ title: 'Ranking'    }} />
       <AppTab.Screen name="Profile"   component={ProfileScreen}   options={{ title: 'Perfil'     }} />
     </AppTab.Navigator>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stack do app autenticado — tabs + telas de segundo nível
+// (equivalente às rotas /conquistas, /estatisticas, /grupos/:id, /grupos/:id/configuracoes do web)
+// ---------------------------------------------------------------------------
+
+function AppStackNavigator() {
+  return (
+    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+      <AppStack.Screen name="Tabs"          component={AppTabNavigator} />
+      <AppStack.Screen name="Achievements"  component={AchievementsScreen} />
+      <AppStack.Screen name="Statistics"    component={StatisticsScreen} />
+      <AppStack.Screen name="GroupDetail"   component={GroupDetailScreen} />
+      <AppStack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+    </AppStack.Navigator>
   );
 }
 
@@ -110,14 +120,14 @@ export default function AppNavigation() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={COLORS.emerald} size="large" />
+        <ActivityIndicator color={COLORS.primary} size="large" />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppTabNavigator /> : <AuthStackNavigator />}
+      {isAuthenticated ? <AppStackNavigator /> : <AuthStackNavigator />}
     </NavigationContainer>
   );
 }

@@ -38,7 +38,7 @@ export default function RankingItem({ row, isCurrentUser }: RankingItemProps) {
         </Text>
       </View>
       <View style={styles.nameCell}>
-        <Text style={[styles.username, isCurrentUser && { color: COLORS.emerald }]} numberOfLines={1}>
+        <Text style={[styles.username, isCurrentUser && { color: COLORS.primary }]} numberOfLines={1}>
           {row.username}{isCurrentUser ? ' (você)' : ''}
         </Text>
         <Text style={styles.level}>Nível {row.level}</Text>
@@ -49,7 +49,7 @@ export default function RankingItem({ row, isCurrentUser }: RankingItemProps) {
         {row.currentStreak > 0 && (
           <Text style={styles.streak}>🔥 {row.currentStreak}</Text>
         )}
-        <Text style={[styles.score, isCurrentUser && { color: COLORS.emerald }]}>
+        <Text style={[styles.score, isCurrentUser && { color: COLORS.primary }]}>
           {row.score.toLocaleString('pt-BR')}
         </Text>
       </View>
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     borderColor:    COLORS.border,
   },
   rowHighlight: {
-    backgroundColor: 'rgba(52,211,153,0.06)',
+    backgroundColor: 'rgba(124,58,237,0.06)',
   },
   posCell: {
     width: 36,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   level: {
     fontSize: FONT.sm,
-    color:    COLORS.violet,
+    color:    COLORS.primary400,
   },
   right: {
     alignItems: 'flex-end',

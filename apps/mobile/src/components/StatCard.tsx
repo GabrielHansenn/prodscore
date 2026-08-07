@@ -1,62 +1,71 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
 interface StatCardProps {
   label:    string;
   value:    string | number;
-  /** Tipo de destaque de cor */
-  accent:   'emerald' | 'amber' | 'violet' | 'blue';
+  /** Sub-legenda opcional, como no StatCard do DashboardPage web */
+  sub?:     string;
+  /** Tipo de destaque de cor do valor */
+  accent:   'lime' | 'amber' | 'primary' | 'blue';
   icon?:    string;
 }
 
-const ACCENT_MAP = {
-  emerald: { color: COLORS.emerald, gradient: ['rgba(52,211,153,0.18)', 'rgba(52,211,153,0.04)'] as const },
-  amber:   { color: COLORS.amber,   gradient: ['rgba(251,191,36,0.18)',  'rgba(251,191,36,0.04)'] as const },
-  violet:  { color: COLORS.violet,  gradient: ['rgba(167,139,250,0.18)', 'rgba(167,139,250,0.04)'] as const },
-  blue:    { color: COLORS.blue,    gradient: ['rgba(96,165,250,0.18)',  'rgba(96,165,250,0.04)'] as const },
+const ACCENT_COLOR = {
+  lime:    COLORS.limeText,
+  amber:   COLORS.amber,
+  primary: COLORS.primary,
+  blue:    COLORS.blue,
 };
 
-/** Mini card de estatística com gradiente e cor de destaque */
-export default function StatCard({ label, value, accent, icon }: StatCardProps) {
-  const { color, gradient } = ACCENT_MAP[accent];
-
+/**
+ * Mini card de estatística — espelha o StatCard do DashboardPage web:
+ * card branco liso (sem fundo colorido no tema claro), valor grande colorido.
+ */
+export default function StatCard({ label, value, sub, accent, icon }: StatCardProps) {
   return (
-    <LinearGradient
-      colors={gradient}
-      style={styles.card}
-    >
+    <View style={styles.card}>
       <View style={styles.top}>
+        <Text style={styles.label}>{label}</Text>
         {icon ? <Text style={styles.icon}>{icon}</Text> : null}
       </View>
-      <Text style={[styles.value, { color }]}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
-    </LinearGradient>
+      <Text style={[styles.value, { color: ACCENT_COLOR[accent] }]}>{value}</Text>
+      {sub ? <Text style={styles.sub}>{sub}</Text> : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flex:          1,
-    borderRadius:  RADIUS.md,
-    borderWidth:   1,
-    borderColor:   COLORS.border,
-    padding:       SPACING.md,
-    minWidth:      70,
+    flex:            1,
+    backgroundColor: COLORS.card,
+    borderRadius:    RADIUS.lg,
+    borderWidth:     1,
+    borderColor:     COLORS.borderSoft,
+    padding:         SPACING.md,
+    minWidth:        70,
+    ...CARD_SHADOW,
   },
   top: {
-    marginBottom: SPACING.xs,
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
   },
   icon: {
-    fontSize: 18,
+    fontSize: 14,
+  },
+  label: {
+    fontSize:   FONT.sm,
+    color:      COLORS.textSecondary,
+    fontWeight: '500',
   },
   value: {
     fontSize:   FONT.xl,
     fontWeight: '700',
     marginTop:  SPACING.xs,
   },
-  label: {
-    fontSize:  FONT.sm,
+  sub: {
+    fontSize:  11,
     color:     COLORS.textMuted,
     marginTop: 2,
   },
