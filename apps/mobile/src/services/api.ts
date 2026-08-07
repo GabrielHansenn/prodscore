@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '../lib/storage';
 
 /** Chave usada para guardar o access token no SecureStore */
 export const TOKEN_KEY = 'prodscore_access_token';
@@ -23,12 +23,22 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Interceptor de resposta: 401 → limpa token (store trata o redirecionamento)
+// Interceptor de resposta:
+// - 401 → limpa token (store trata o redirecionamento)
+// - reescreve error.message com o campo `erro` retornado pela API
+//   (formato { erro, codigo? } — ver packages/api/src/lib/errors.ts),
+//   já que por padrão o axios só expõe "Request failed with status code XXX".
 api.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
+      const serverMessage = (error.response?.data as { erro?: string } | undefined)?.erro;
+      if (serverMessage) {
+        error.message = serverMessage;
+      }
     }
     return Promise.reject(error);
   },

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Task } from '@prodscore/shared';
+import type { Task, LevelReward, TaskPriority } from '@prodscore/shared';
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { api } from '../services/api';
 
@@ -12,20 +12,23 @@ const BASE_POINTS: Record<TaskDifficulty, number> = {
 };
 
 export interface CompleteTaskResult {
-  tarefa:        Task;
-  pontosGanhos:  number;
-  novoStreak:    number;
-  novoNivel:     number;
-  subidoDeNivel: boolean;
-  marcoStreak:   boolean;
+  tarefa:          Task;
+  pontosGanhos:    number;
+  novoStreak:      number;
+  novoNivel:       number;
+  subidoDeNivel:   boolean;
+  marcoStreak:     boolean;
+  recompensaNivel: LevelReward | null;
 }
 
 interface CreateTaskInput {
-  title:        string;
-  difficulty:   TaskDifficulty;
-  description?: string;
-  dueDate?:     string;
-  groupId?:     string;
+  title:             string;
+  difficulty:        TaskDifficulty;
+  priority?:         TaskPriority;
+  description?:      string;
+  dueDate?:          string;
+  estimatedMinutes?: number;
+  groupId?:          string;
 }
 
 interface TaskFilters {

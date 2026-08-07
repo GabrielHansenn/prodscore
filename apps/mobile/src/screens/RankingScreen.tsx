@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import { api } from '../services/api';
+import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 
 type Tab = 'global' | 'semanal';
@@ -61,6 +62,7 @@ async function fetchWeeklyRanking(): Promise<RankingRow[]> {
 /** Tela de placar de líderes com abas Global e Semanal */
 export default function RankingScreen() {
   const insets   = useSafeAreaInsets();
+  const { isWide } = useResponsive();
   const { user }              = useAuthStore();
   const { stats, fetchStats } = useUserStore();
 
@@ -91,13 +93,13 @@ export default function RankingScreen() {
   const myRow = rows.find((r) => r.userId === user?.id);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
       {/* Cabeçalho */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Ranking</Text>
         {stats && (
           <Text style={styles.myPosition}>
-            Sua posição: <Text style={{ color: COLORS.emerald, fontWeight: '700' }}>
+            Sua posição: <Text style={{ color: COLORS.primary, fontWeight: '700' }}>
               #{stats.rankPosition > 0 ? stats.rankPosition : '—'}
             </Text>
           </Text>
@@ -108,8 +110,8 @@ export default function RankingScreen() {
       {myRow && (
         <View style={styles.myBanner}>
           <Text style={styles.myBannerText}>
-            🏆 Você está em <Text style={{ color: COLORS.emerald }}>#{myRow.position}</Text> com{' '}
-            <Text style={{ color: COLORS.emerald }}>{myRow.score.toLocaleString('pt-BR')}</Text>{' '}
+            🏆 Você está em <Text style={{ color: COLORS.primary }}>#{myRow.position}</Text> com{' '}
+            <Text style={{ color: COLORS.primary }}>{myRow.score.toLocaleString('pt-BR')}</Text>{' '}
             {tab === 'semanal' ? 'pontos esta semana' : 'pontos'}
           </Text>
         </View>
@@ -133,7 +135,7 @@ export default function RankingScreen() {
       {/* Lista */}
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={COLORS.emerald} size="large" />
+          <ActivityIndicator color={COLORS.primary} size="large" />
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -167,10 +169,10 @@ const styles = StyleSheet.create({
   myBanner: {
     marginHorizontal: SPACING.md,
     marginBottom:     SPACING.sm,
-    backgroundColor:  COLORS.emeraldDim,
+    backgroundColor:  COLORS.primaryDim,
     borderRadius:     RADIUS.md,
     borderWidth:      1,
-    borderColor:      'rgba(52,211,153,0.25)',
+    borderColor:      'rgba(124,58,237,0.2)',
     padding:          SPACING.md,
   },
   myBannerText: { fontSize: FONT.sm, color: COLORS.textSecondary, lineHeight: 18 },
@@ -183,12 +185,13 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     COLORS.border,
     backgroundColor: COLORS.card,
-    overflow:        'hidden',
+    padding:         4,
+    gap:             4,
   },
-  segment:           { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  segmentActive:     { backgroundColor: COLORS.border },
+  segment:           { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, alignItems: 'center' },
+  segmentActive:     { backgroundColor: COLORS.primary },
   segmentText:       { fontSize: FONT.base, fontWeight: '600', color: COLORS.textMuted },
-  segmentTextActive: { color: COLORS.text },
+  segmentTextActive: { color: '#ffffff' },
 
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   errorText: { color: COLORS.red, fontSize: FONT.base, textAlign: 'center' },

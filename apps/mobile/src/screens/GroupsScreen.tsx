@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, Pressable, ActivityIndicator, Alert,
+  Modal, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MemberRole } from '@prodscore/shared';
 import GroupCard, { type GroupCardData } from '../components/GroupCard';
 import { api } from '../services/api';
+import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import type { AppStackParamList } from '../navigation/index';
 
 // ---------------------------------------------------------------------------
 // Serviço inline (mobile consome a mesma API via axios)
@@ -67,6 +71,10 @@ function CreateModal({ visible, onClose, onCreate }: {
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet}>
           <View style={styles.handle} />
@@ -81,6 +89,7 @@ function CreateModal({ visible, onClose, onCreate }: {
           </TouchableOpacity>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -113,6 +122,10 @@ function JoinModal({ visible, onClose, onJoin }: {
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.sheet}>
           <View style={styles.handle} />
@@ -133,6 +146,7 @@ function JoinModal({ visible, onClose, onJoin }: {
           </TouchableOpacity>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -144,6 +158,8 @@ function JoinModal({ visible, onClose, onJoin }: {
 /** Tela de listagem de grupos com criação e entrada por código */
 export default function GroupsScreen() {
   const insets = useSafeAreaInsets();
+  const { isWide } = useResponsive();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [groups,      setGroups]      = useState<MobileGroup[]>([]);
   const [isLoading,   setIsLoading]   = useState(true);
   const [showCreate,  setShowCreate]  = useState(false);
@@ -166,7 +182,7 @@ export default function GroupsScreen() {
   });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Grupos</Text>
         <Text style={styles.headerSub}>Colabore e compita</Text>
@@ -174,7 +190,7 @@ export default function GroupsScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={COLORS.emerald} size="large" />
+          <ActivityIndicator color={COLORS.primary} size="large" />
         </View>
       ) : groups.length === 0 ? (
         <View style={styles.center}>
@@ -189,7 +205,7 @@ export default function GroupsScreen() {
           renderItem={({ item }) => (
             <GroupCard
               group={toCardData(item)}
-              onPress={() => Alert.alert(item.name, `Código de convite: ${item.inviteCode}`)}
+              onPress={() => navigation.navigate('GroupDetail', { groupId: item.id, groupName: item.name })}
             />
           )}
           contentContainerStyle={styles.list}
@@ -243,7 +259,7 @@ const styles = StyleSheet.create({
   emptyText:   { fontSize: FONT.lg, fontWeight: '600', color: COLORS.textSecondary },
   emptyHint:   { fontSize: FONT.base, color: COLORS.textMuted, textAlign: 'center' },
 
-  fab: { position: 'absolute', right: SPACING.lg, width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.emerald, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.emerald, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
+  fab: { position: 'absolute', right: SPACING.lg, width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
   fabIcon: { fontSize: 28, color: '#fff', fontWeight: '300', lineHeight: 32 },
   fabMenu: { position: 'absolute', right: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', elevation: 8 },
   fabMenuItem: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderColor: COLORS.border },
@@ -257,6 +273,6 @@ const styles = StyleSheet.create({
   input:      { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: COLORS.text },
   codeInput:  { textAlign: 'center', fontSize: FONT.xl, letterSpacing: 8, fontWeight: '700' },
   error:      { color: COLORS.red, fontSize: FONT.sm },
-  btn:        { backgroundColor: COLORS.emerald, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
+  btn:        { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnText:    { color: '#fff', fontWeight: '700', fontSize: FONT.md },
 });

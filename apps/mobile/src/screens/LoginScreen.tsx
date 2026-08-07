@@ -49,7 +49,8 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* Formulário */}
         <View style={styles.card}>
-          <Text style={styles.title}>Entrar</Text>
+          <Text style={styles.title}>Bem-vindo de volta</Text>
+          <Text style={styles.subtitle}>Entre com sua conta para continuar</Text>
 
           <View style={styles.field}>
             <Text style={styles.label}>E-mail</Text>
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize:   36,
     fontWeight: '800',
-    color:      COLORS.emerald,
+    color:      COLORS.primary,
     letterSpacing: -0.5,
   },
   logoSub: {
@@ -134,18 +135,18 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius:    RADIUS.xl,
-    borderWidth:     1,
-    borderColor:     COLORS.border,
-    padding:         SPACING.lg,
-    gap:             SPACING.md,
+    gap: SPACING.md,
   },
   title: {
-    fontSize:     FONT.xl,
+    fontSize:     FONT.xxl,
     fontWeight:   '700',
     color:        COLORS.text,
-    marginBottom: SPACING.xs,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize:     FONT.base,
+    color:        COLORS.textMuted,
+    marginBottom: SPACING.md,
   },
   field: {
     gap: SPACING.xs,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     fontSize: FONT.sm,
   },
   btn: {
-    backgroundColor: COLORS.emerald,
+    backgroundColor: COLORS.primary,
     borderRadius:    RADIUS.md,
     paddingVertical: 14,
     alignItems:      'center',
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     fontSize: FONT.base,
   },
   link: {
-    color:      COLORS.emerald,
+    color:      COLORS.primary,
     fontWeight: '600',
     fontSize:   FONT.base,
   },
