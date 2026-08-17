@@ -6,6 +6,7 @@ import { sendError, AppError } from '../lib/errors.js';
 import { supabase, getUserById } from '../lib/supabase.js';
 import { getMissionsForUser } from '../services/mission.service.js';
 import { buyStreakFreeze } from '../services/gamification.service.js';
+import { purgeAllProofFilesForUser } from '../services/proof.service.js';
 import {
   computeBehavioralProfile,
   getTaskSuggestions,
@@ -140,6 +141,11 @@ router.patch('/me', authGuard, async (req, res) => {
 router.delete('/me', authGuard, requireAAL2, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
+
+    // Remove os arquivos de comprovação de tarefa do Storage antes de excluir
+    // a conta (LGPD: direito à eliminação — os registros em task_proofs caem
+    // via ON DELETE CASCADE, mas o arquivo em si não é apagado pelo cascade).
+    await purgeAllProofFilesForUser(user.id);
 
     const { error } = await supabase.auth.admin.deleteUser(user.id);
 

@@ -1,14 +1,4 @@
-import axios from 'axios';
-import { api } from './api.js';
-
-/** Extrai a mensagem de erro em português enviada pela API, com fallback genérico */
-function extractApiErrorMessage(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err)) {
-    const body = err.response?.data as { erro?: string } | undefined;
-    if (body?.erro) return body.erro;
-  }
-  return err instanceof Error ? err.message : fallback;
-}
+import { api, extractApiErrorMessage } from './api.js';
 
 /**
  * Altera a senha do usuário autenticado.

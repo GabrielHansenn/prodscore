@@ -1,8 +1,18 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
-import { useThemeStore } from '../store/themeStore.js';
+import { useThemeStore, type Theme } from '../store/themeStore.js';
 import { useConsentStore } from '../store/consentStore.js';
 import { LogoWordmark } from './Logo.js';
+
+const THEME_OPTIONS: ReadonlyArray<{
+  value: Theme;
+  label:  string;
+  icon:   (props: { className?: string }) => React.JSX.Element;
+}> = [
+  { value: 'light',  label: 'Tema claro',      icon: SunIcon },
+  { value: 'dark',   label: 'Tema escuro',     icon: MoonIcon },
+  { value: 'system', label: 'Tema do sistema', icon: DesktopIcon },
+];
 
 const NAV_ITEMS = [
   { to: '/dashboard',    label: 'Dashboard',    icon: HomeIcon },
@@ -21,7 +31,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
   const { user, logout } = useAuthStore((s) => ({ user: s.user, logout: s.logout }));
-  const { theme, toggle } = useThemeStore();
+  const { theme, setTheme } = useThemeStore();
   const resetConsent = useConsentStore((s) => s.resetConsent);
   const navigate = useNavigate();
 
@@ -92,24 +102,39 @@ export default function Sidebar({ onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Botões de ação */}
-        <div className="mt-1 flex gap-1 px-1">
-          <button
-            onClick={toggle}
-            aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-lg text-xs text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
-          >
-            {theme === 'dark' ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
-            <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
-          </button>
-          <button
-            onClick={() => void handleLogout()}
-            aria-label="Sair da conta"
-            className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
-          >
-            <LogoutIcon className="h-4 w-4" />
-          </button>
+        {/* Seletor de tema — claro / escuro / sistema (P9) */}
+        <div
+          role="radiogroup"
+          aria-label="Tema da interface"
+          className="mt-1 flex items-center gap-0.5 rounded-lg bg-black/20 p-0.5"
+        >
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={theme === value}
+              aria-label={label}
+              onClick={() => setTheme(value)}
+              className={`flex min-h-[36px] flex-1 items-center justify-center rounded-md transition-colors duration-150 ${
+                theme === value
+                  ? 'bg-sidebar-active text-white'
+                  : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-white'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          ))}
         </div>
+
+        <button
+          onClick={() => void handleLogout()}
+          aria-label="Sair da conta"
+          className="mt-1 flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg text-xs text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
+        >
+          <LogoutIcon className="h-4 w-4" />
+          <span>Sair</span>
+        </button>
 
         {/* Revogação/troca de consentimento de cookies — sempre acessível (LGPD) */}
         <button
@@ -199,6 +224,13 @@ function MoonIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+    </svg>
+  );
+}
+function DesktopIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
     </svg>
   );
 }

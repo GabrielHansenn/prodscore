@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   Modal, TextInput, ScrollView, ActivityIndicator, Pressable,
-  KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert, Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -64,19 +64,20 @@ interface TaskModalProps {
   onClose:  () => void;
   onSubmit: (data: {
     title: string; difficulty: TaskDifficulty; priority: TaskPriority;
-    estimatedMinutes?: number; description?: string; dueDate?: string;
+    estimatedMinutes?: number; description?: string; dueDate?: string; requiresProof?: boolean;
   }) => Promise<void>;
 }
 
 function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
-  const [title,       setTitle]       = useState(task?.title ?? '');
-  const [description, setDescription] = useState(task?.description ?? '');
-  const [difficulty,  setDifficulty]  = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
-  const [priority,    setPriority]    = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
-  const [estMinutes,  setEstMinutes]  = useState(task?.estimatedMinutes?.toString() ?? '');
-  const [dueDate,     setDueDate]     = useState(task?.dueDate ? task.dueDate.split('T')[0]! : '');
-  const [error,       setError]       = useState('');
-  const [loading,     setLoading]     = useState(false);
+  const [title,          setTitle]          = useState(task?.title ?? '');
+  const [description,    setDescription]    = useState(task?.description ?? '');
+  const [difficulty,     setDifficulty]     = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
+  const [priority,       setPriority]       = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
+  const [estMinutes,     setEstMinutes]     = useState(task?.estimatedMinutes?.toString() ?? '');
+  const [dueDate,        setDueDate]        = useState(task?.dueDate ? task.dueDate.split('T')[0]! : '');
+  const [requiresProof,  setRequiresProof]  = useState(task?.requiresProof ?? false);
+  const [error,          setError]          = useState('');
+  const [loading,        setLoading]        = useState(false);
 
   const isEdit      = task !== null;
   const isCompleted = task?.status === TaskStatus.Completed;
@@ -90,7 +91,7 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
       const due = dueDate ? `${dueDate}T23:59:00.000Z` : undefined;
       const est = estMinutes ? parseInt(estMinutes, 10) : undefined;
       await onSubmit({
-        title: title.trim(), difficulty, priority,
+        title: title.trim(), difficulty, priority, requiresProof,
         ...(est ? { estimatedMinutes: est } : {}),
         ...(description.trim() ? { description: description.trim() } : {}),
         ...(due ? { dueDate: due } : {}),
@@ -159,6 +160,17 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
                     keyboardType="number-pad" placeholder="Ex: 60" placeholderTextColor={COLORS.textMuted}
                   />
                 </View>
+              </View>
+
+              <View style={styles.proofRow}>
+                <Text style={styles.fieldLabel}>Exige comprovação fotográfica para concluir</Text>
+                <Switch
+                  value={requiresProof}
+                  onValueChange={setRequiresProof}
+                  disabled={isCompleted}
+                  trackColor={{ false: COLORS.border, true: COLORS.primary400 }}
+                  thumbColor={requiresProof ? COLORS.primary : '#fff'}
+                />
               </View>
 
               <View style={styles.ptsPreview}>
@@ -397,6 +409,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
   rowFields: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  proofRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md, gap: SPACING.sm },
   ptsPreview: { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md },
   ptsText: { fontSize: 12, color: COLORS.primary },
   error: { color: COLORS.red, fontSize: FONT.sm, marginTop: SPACING.sm },

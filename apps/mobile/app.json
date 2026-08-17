@@ -1,5 +1,12 @@
 {
   "plugins": [
-    "expo-font"
+    "expo-font",
+    [
+      "expo-image-picker",
+      {
+        "photosPermission": "O ProdScore precisa acessar suas fotos para anexar a comprovação de conclusão da tarefa.",
+        "cameraPermission": "O ProdScore precisa acessar a câmera para tirar a foto de comprovação da tarefa."
+      }
+    ]
   ]
 }

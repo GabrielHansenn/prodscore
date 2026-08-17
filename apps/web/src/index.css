@@ -3,11 +3,69 @@
 @tailwind utilities;
 
 /* ============================================================
+   TOKENS SEMÂNTICOS
+   Valores em "R G B" (sem vírgula) para funcionar com a sintaxe
+   rgb(var(--x) / <alpha-value>) do Tailwind (suporta opacidade).
+
+   Hierarquia de superfícies (igual nos dois temas):
+     surface          fundo da página
+     surface-elevated  card / superfície elevada (+contraste que a página)
+     surface-sunken    input / elemento aninhado dentro de um card
+     surface-hover     estado hover/active
+   ============================================================ */
+:root {
+  color-scheme: light;
+
+  --surface:          249 250 251; /* gray-50  */
+  --surface-elevated:  255 255 255; /* white     */
+  --surface-sunken:    243 244 246; /* gray-100 */
+  --surface-hover:     243 244 246; /* gray-100 */
+
+  --ink:           17  24  39;  /* gray-900 */
+  --ink-secondary: 55  65  81;  /* gray-700 */
+  --ink-muted:     107 114 128; /* gray-500 */
+
+  --border:        229 231 235; /* gray-200 */
+  --border-strong: 209 213 219; /* gray-300 */
+
+  --success: 4   120 87;  /* emerald-700 — texto em fundo claro precisa ser mais escuro que o ícone */
+  --warning: 180 83  9;   /* amber-700   */
+  --danger:  220 38  38;  /* red-600     */
+}
+
+/* Hierarquia de camadas no escuro:
+     L0 fundo da página : #0c0b18
+     L1 card / surface  : #1c1b32  (o .card usa um gradiente próprio, ver abaixo)
+     L2 input / nested  : #222040
+     L3 hover / active  : #2c2a52
+   ink-muted foi recalculado (era #54547a, 2.29:1 — reprovava AA) para
+   #8f8fb8, que passa em 4.5:1+ contra as superfícies elevadas. */
+.dark {
+  color-scheme: dark;
+
+  --surface:          12  11  24;  /* #0c0b18 */
+  --surface-elevated:  28  27  50;  /* #1c1b32 */
+  --surface-sunken:    34  32  64;  /* #222040 */
+  --surface-hover:     44  42  82;  /* #2c2a52 */
+
+  --ink:           238 238 248; /* #eeeef8 */
+  --ink-secondary: 184 184 216; /* #b8b8d8 */
+  --ink-muted:     143 143 184; /* #8f8fb8 — corrigido, ver comentário acima */
+
+  --border:        49 47  94;  /* #312f5e */
+  --border-strong: 62 59  110; /* #3e3b6e */
+
+  --success: 52  211 153; /* emerald-400 */
+  --warning: 251 191 36;  /* amber-400   */
+  --danger:  248 113 113; /* red-400     */
+}
+
+/* ============================================================
    BASE
    ============================================================ */
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-gray-50 text-gray-900 antialiased motion-safe:transition-colors motion-safe:duration-200;
     font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
     touch-action: manipulation;
   }
@@ -17,10 +75,17 @@
     @apply outline-none ring-2 ring-brand-500 ring-offset-2;
   }
 
+  /* Sidebar é sempre escura (roxo #1a0b2e) nos dois temas — sem isto o anel
+     de foco usaria o offset branco padrão, quase invisível/deslocado nesse fundo. */
+  aside :focus-visible {
+    --tw-ring-offset-color: #1a0b2e;
+  }
+
   /* P2: cursor nos elementos interativos */
   button, [role="button"], a { cursor: pointer; }
 
-  /* P7: respeitar preferência de movimento reduzido */
+  /* P7: respeitar preferência de movimento reduzido — cobre também a
+     transição de tema aplicada acima via motion-safe: */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -40,11 +105,11 @@
    ============================================================ */
 @layer components {
   .card {
-    @apply rounded-2xl bg-white shadow-card border border-gray-100;
+    @apply rounded-2xl bg-white shadow-card border border-gray-100 motion-safe:transition-colors motion-safe:duration-200;
   }
 
   .card :focus-visible {
-    @apply ring-offset-white;
+    @apply ring-offset-white dark:ring-offset-[#1c1b32];
   }
 
   /* P2: min-height 44px para toque */
@@ -83,6 +148,31 @@
            disabled:cursor-not-allowed disabled:opacity-50;
     min-height: 44px;
   }
+
+  /* ── Alertas semânticos ──────────────────────────────────────
+     Substitui os blocos "border-X-200 bg-X-50 text-X-700 dark:..."
+     repetidos em várias páginas (erro, aviso, confirmação, info) por
+     uma única definição reutilizável baseada nos tokens de tema. */
+  .alert-danger {
+    @apply rounded-xl border px-4 py-3 text-sm
+           border-red-200 bg-red-50 text-red-700
+           dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300;
+  }
+  .alert-warning {
+    @apply rounded-xl border px-4 py-3 text-sm
+           border-amber-200 bg-amber-50 text-amber-700
+           dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300;
+  }
+  .alert-success {
+    @apply rounded-xl border px-4 py-3 text-sm
+           border-green-200 bg-green-50 text-green-700
+           dark:border-green-800/60 dark:bg-green-900/20 dark:text-green-300;
+  }
+  .alert-info {
+    @apply rounded-xl border px-4 py-3 text-sm
+           border-blue-200 bg-blue-50 text-blue-700
+           dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300;
+  }
 }
 
 /* ============================================================
@@ -99,16 +189,25 @@
 }
 
 /* ============================================================
-   DARK MODE — fora de qualquer @layer
-   Hierarquia de camadas:
-     L0 fundo da página : #0c0b18
-     L1 card / surface  : #19182e   (+7 luminância — claramente distinto)
-     L2 input / nested  : #222040   (dentro dos cards)
-     L3 hover / active  : #2c2a52   (estados interativos)
+   Correção de contraste — modo claro
+   text-gray-400 (#9ca3af) é usado nesta base de código como cor padrão
+   de texto secundário/legenda (achado da auditoria — vários usos, ex:
+   StatCard, MissionCard, RankingTable), mas reprova WCAG AA contra fundo
+   branco (2.54:1, precisa de 4.5:1). Escurecido para o mesmo tom de
+   text-gray-500 do Tailwind, que passa em 4.83:1. Ícones que usam esta
+   classe via currentColor só ficam mais nítidos — sem efeito colateral.
    ============================================================ */
-.dark {
-  color-scheme: dark;
-}
+.text-gray-400 { color: #6b7280; }
+
+/* ============================================================
+   DARK MODE — compatibilidade com classes cruas já em uso
+   (bg-white, text-gray-500 etc.) espalhadas pela base de código.
+   Os componentes novos devem preferir os tokens (bg-surface-*,
+   text-ink-*) acima; isto aqui existe para não quebrar o que já
+   está escrito com as classes utilitárias puras do Tailwind.
+   Fora de @layer de propósito, para sempre vencer a especificidade
+   das classes utilitárias que sobrescreve.
+   ============================================================ */
 
 /* ── Backgrounds ─────────────────────────────────────────── */
 .dark body,
@@ -127,8 +226,29 @@
 .dark .text-gray-800 { color: #d8d8ee; }
 .dark .text-gray-700 { color: #b8b8d8; }
 .dark .text-gray-600 { color: #8a8aac; }
-.dark .text-gray-500 { color: #686890; }
-.dark .text-gray-400 { color: #54547a; }
+/* Corrigidos — valores antigos (#686890 / #54547a) reprovavam WCAG AA
+   (3.10:1 e 2.29:1) contra a superfície elevada. Novos valores testados
+   em 4.5:1+ (ver relatório de auditoria). */
+.dark .text-gray-500 { color: #a0a0c8; }
+.dark .text-gray-400 { color: #8f8fb8; }
+
+/* ── Estados hover/focus/active ──────────────────────────────
+   O Tailwind gera uma classe própria para cada variante (ex:
+   .hover\:bg-gray-50:hover), então os overrides acima em ".dark
+   .bg-gray-50" NÃO alcançam ".hover\:bg-gray-50:hover" — é uma
+   classe totalmente diferente. Sem isto, qualquer hover/focus
+   sobre cinza/branco "vaza" a cor do modo claro para o escuro
+   (achado: linha da tabela de ranking ficando branca ao passar
+   o mouse). Cobre as variantes realmente usadas no projeto. */
+.dark .hover\:bg-white:hover    { background-color: #19182e; }
+.dark .hover\:bg-gray-50:hover  { background-color: #2c2a52; }
+.dark .hover\:bg-gray-100:hover { background-color: #2c2a52; }
+.dark .active\:bg-gray-200:active { background-color: #3a3860; }
+.dark .hover\:border-gray-300:hover { border-color: #3e3b6e; }
+/* Hover de texto: no claro escurece (gray-400→600); no escuro precisa
+   clarear na mesma direção semântica ("mais destaque ao passar o mouse") */
+.dark .hover\:text-gray-600:hover { color: #d8d8ee; }
+.dark .hover\:text-gray-700:hover { color: #eeeef8; }
 
 /* ── Divisores ───────────────────────────────────────────── */
 .dark .divide-gray-100 > * + * { border-color: #272550; }
@@ -141,7 +261,7 @@
 
 /* ── Focus ───────────────────────────────────────────────── */
 .dark :focus-visible         { --tw-ring-offset-color: #0c0b18; }
-.dark .card :focus-visible   { --tw-ring-offset-color: #19182e; }
+.dark .card :focus-visible   { --tw-ring-offset-color: #1c1b32; }
 
 /* ── Cards ───────────────────────────────────────────────── */
 .dark .card {
@@ -176,7 +296,7 @@
   color: #eeeef8;
 }
 .dark input::placeholder,
-.dark textarea::placeholder { color: #54547a; }
+.dark textarea::placeholder { color: #8f8fb8; }
 
 .dark input:focus,
 .dark textarea:focus,
@@ -192,11 +312,11 @@
 .dark .badge-epic   { background-color: rgba(239,68,68,.12);   color: #fca5a5; }
 
 /* ── Status badges ───────────────────────────────────────── */
-.dark .status-pending    { background-color: #222040;                      color: #8a8aac; }
+.dark .status-pending    { background-color: #222040;                      color: #a0a0c8; }
 .dark .status-inprogress { background-color: rgba(99,102,241,.15);         color: #a5b4fc; }
 .dark .status-completed  { background-color: rgba(163,230,53,.14);         color: #bef264; }
 .dark .status-overdue    { background-color: rgba(239,68,68,.14);          color: #fca5a5; }
-.dark .status-abandoned  { background-color: #222040;                      color: #54547a; }
+.dark .status-abandoned  { background-color: #222040;                      color: #8f8fb8; }
 
 /* ── Skeleton ────────────────────────────────────────────── */
 .dark .skeleton {

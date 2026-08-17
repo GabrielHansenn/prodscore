@@ -53,6 +53,7 @@ interface TaskModalProps {
     estimatedMinutes?: number;
     description?:      string;
     dueDate?:          string;
+    requiresProof?:    boolean;
   }) => Promise<void>;
 }
 
@@ -63,6 +64,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const [priority,         setPriority]         = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>(task?.estimatedMinutes?.toString() ?? '');
   const [dueDate,          setDueDate]          = useState(task?.dueDate ? task.dueDate.split('T')[0]! : '');
+  const [requiresProof,    setRequiresProof]    = useState(task?.requiresProof ?? false);
   const [error,            setError]            = useState('');
   const [loading,          setLoading]          = useState(false);
 
@@ -83,6 +85,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
         title:       title.trim(),
         difficulty,
         priority,
+        requiresProof,
         ...(estMins  ? { estimatedMinutes: estMins } : {}),
         ...(desc     ? { description: desc }         : {}),
         ...(due      ? { dueDate: due }              : {}),
@@ -187,6 +190,17 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
+            <input
+              type="checkbox"
+              checked={requiresProof}
+              onChange={(e) => setRequiresProof(e.target.checked)}
+              disabled={isCompleted}
+              className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
+            />
+            Exige comprovação fotográfica para concluir
+          </label>
 
           <div className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-300">
             Esta tarefa vale <strong>{pts} pontos</strong>

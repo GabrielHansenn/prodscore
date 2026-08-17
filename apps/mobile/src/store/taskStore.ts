@@ -29,6 +29,7 @@ interface CreateTaskInput {
   dueDate?:          string;
   estimatedMinutes?: number;
   groupId?:          string;
+  requiresProof?:    boolean;
 }
 
 interface TaskFilters {

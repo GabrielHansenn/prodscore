@@ -3,8 +3,11 @@
  * Jest carrega este arquivo automaticamente quando jest.mock('../lib/supabase') é chamado.
  */
 export const supabase = {
-  from: jest.fn(),
-  rpc:  jest.fn(),
+  from:    jest.fn(),
+  rpc:     jest.fn(),
+  storage: {
+    from: jest.fn(),
+  },
   auth: {
     admin: {
       signOut:         jest.fn(),

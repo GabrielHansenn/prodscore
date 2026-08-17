@@ -174,14 +174,14 @@ function EmailConfirmStep({ email }: { email: string }) {
         </p>
         <p className="mt-1 font-semibold text-gray-800 break-all">{email}</p>
 
-        <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-700 text-left space-y-1">
+        <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-blue-700 text-left space-y-1 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-300">
           <p className="font-medium">O que fazer agora:</p>
-          <ol className="mt-2 list-decimal list-inside space-y-1 text-xs text-blue-600">
+          <ol className="mt-2 list-decimal list-inside space-y-1 text-xs text-blue-600 dark:text-blue-400">
             <li>Abra seu e-mail e procure uma mensagem do ProdScore</li>
             <li>Clique no botão de confirmação</li>
             <li>Você será redirecionado para fazer login</li>
           </ol>
-          <p className="mt-2 text-xs text-blue-500">
+          <p className="mt-2 text-xs text-blue-500 dark:text-blue-400">
             Não encontrou? Verifique a pasta de spam ou lixo eletrônico.
           </p>
         </div>
@@ -417,7 +417,7 @@ export default function RegisterPage() {
 
               {/* Erro global (Supabase) */}
               {globalError && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600">
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
                   {globalError}
                 </div>
               )}

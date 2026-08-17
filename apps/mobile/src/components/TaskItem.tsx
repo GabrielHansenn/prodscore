@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import TaskProofUpload from './TaskProofUpload';
+import TaskProofViewer from './TaskProofViewer';
 
 interface TaskItemProps {
   task:       Task;
@@ -78,12 +80,26 @@ function getPointsPreview(task: Task): string {
 
 /** Card de tarefa — espelha TaskCard.tsx no web (badges, prazo, pontos, menu editar/excluir) */
 export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskItemProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen,        setMenuOpen]        = useState(false);
+  const [showProofUpload, setShowProofUpload] = useState(false);
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
   const isCompleted  = task.status === TaskStatus.Completed;
   const dueInfo      = parseDueDate(task.dueDate);
   const pointsLabel  = getPointsPreview(task);
   const priorityBadge = task.priority ? PRIORITY_BADGE[task.priority] : undefined;
+
+  const handleCompletePress = () => {
+    if (task.requiresProof) {
+      setShowProofUpload(true);
+    } else {
+      onComplete(task.id);
+    }
+  };
+
+  const handleProofUploaded = () => {
+    setShowProofUpload(false);
+    onComplete(task.id);
+  };
 
   return (
     <View style={[styles.card, isCompleted && styles.cardCompleted]}>
@@ -131,13 +147,29 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
             </Text>
           </View>
         ) : <View />}
-        <Text style={styles.points}>{pointsLabel}</Text>
+        <View style={styles.footerRight}>
+          {task.requiresProof && !task.hasProof && isActionable && (
+            <View style={styles.proofBadge}>
+              <Text style={styles.proofBadgeText}>Requer foto</Text>
+            </View>
+          )}
+          {task.hasProof && <TaskProofViewer taskId={task.id} />}
+          <Text style={styles.points}>{pointsLabel}</Text>
+        </View>
       </View>
 
       {isActionable && (
-        <TouchableOpacity style={styles.completeBtn} onPress={() => onComplete(task.id)} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.completeBtn} onPress={handleCompletePress} activeOpacity={0.8}>
           <Text style={styles.completeBtnText}>Concluir tarefa</Text>
         </TouchableOpacity>
+      )}
+
+      {showProofUpload && (
+        <TaskProofUpload
+          taskId={task.id}
+          onUploaded={handleProofUploaded}
+          onCancel={() => setShowProofUpload(false)}
+        />
       )}
 
       {/* Menu editar/excluir */}
@@ -190,6 +222,9 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dueText: { fontSize: 11 },
+  footerRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  proofBadge: { backgroundColor: `${COLORS.primary}1f`, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
+  proofBadgeText: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
   points: { fontSize: 12, fontWeight: '700', color: COLORS.success },
 
   completeBtn: { backgroundColor: COLORS.successDim, borderRadius: RADIUS.md, paddingVertical: 9, alignItems: 'center' },

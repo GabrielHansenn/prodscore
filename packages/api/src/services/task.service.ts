@@ -18,6 +18,7 @@ import {
   checkAchievements,
 } from './gamification.service.js';
 import { checkMissionProgress } from './mission.service.js';
+import { purgeProofFileForTask } from './proof.service.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos (linha do banco em snake_case)
@@ -39,6 +40,10 @@ interface TaskRow {
   points_earned: number | null;
   created_at: string;
   updated_at: string;
+  requires_proof?: boolean;
+  // Presente apenas quando a query usa o embed `task_proofs(id)` do Supabase
+  // (foreign table embedding via FK) — ausente em updates/inserts que não pedem o join.
+  task_proofs?: Array<{ id: string }> | null;
 }
 
 /** Converte a linha do banco (snake_case) para a interface Task (camelCase) */
@@ -59,6 +64,8 @@ export function mapTaskRow(row: TaskRow): Task {
     pointsEarned:     row.points_earned,
     createdAt:        row.created_at,
     updatedAt:        row.updated_at,
+    requiresProof:    row.requires_proof ?? false,
+    hasProof:         (row.task_proofs?.length ?? 0) > 0,
   };
 }
 
@@ -87,6 +94,8 @@ export interface CreateTaskInput {
   estimatedMinutes?: number;
   dueDate?:          string;
   groupId?:          string;
+  /** Se true, a tarefa só pode ser concluída com uma foto de comprovação anexada */
+  requiresProof?:    boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +140,9 @@ export async function getTasksByUser(
 ): Promise<Task[]> {
   let query = supabase
     .from('tasks')
-    .select('*')
+    // Embed de task_proofs(id) via FK — usado só para computar hasProof,
+    // sem precisar de uma query separada por tarefa.
+    .select('*, task_proofs(id)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -204,6 +215,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
       estimated_minutes: input.estimatedMinutes  ?? null,
       status:            'pending',
       due_date:          input.dueDate           ?? null,
+      requires_proof:    input.requiresProof      ?? false,
     })
     .select('*')
     .single();
@@ -229,6 +241,7 @@ export interface UpdateTaskInput {
   /** A proteção contra 'completed' é feita em runtime — use PATCH /complete para concluir */
   status?:           TaskStatus;
   dueDate?:          string | null;
+  requiresProof?:    boolean;
 }
 
 /**
@@ -279,6 +292,7 @@ export async function updateTask(
   if (updates.estimatedMinutes !== undefined) patch['estimated_minutes'] = updates.estimatedMinutes;
   if (updates.status           !== undefined) patch['status']            = updates.status;
   if (updates.dueDate          !== undefined) patch['due_date']          = updates.dueDate;
+  if (updates.requiresProof    !== undefined) patch['requires_proof']    = updates.requiresProof;
 
   const { data, error } = await supabase
     .from('tasks')
@@ -320,6 +334,11 @@ export async function deleteTask(taskId: string, userId: string): Promise<void> 
   if (!existing) {
     throw new AppError('Tarefa não encontrada.', 404, 'TAREFA_NAO_ENCONTRADA');
   }
+
+  // Remove o arquivo de comprovação do Storage antes de excluir a tarefa
+  // (LGPD: o registro em task_proofs cai via ON DELETE CASCADE, mas o
+  // arquivo em si não é apagado automaticamente pelo cascade do Postgres).
+  await purgeProofFileForTask(taskId);
 
   const { error } = await supabase
     .from('tasks')
@@ -381,6 +400,30 @@ export async function completeTask(
       409,
       'TAREFA_JA_CONCLUIDA',
     );
+  }
+
+  // ── Passo 1b: exige comprovação fotográfica? ─────────────────────────────
+  // Guarda pura — não interfere no cálculo de pontos abaixo. Roda antes de
+  // qualquer efeito colateral (transação, streak, conquistas), então uma
+  // tentativa sem prova não deixa nenhum rastro parcial.
+
+  if (taskRow.requires_proof) {
+    const { data: proof, error: proofError } = await supabase
+      .from('task_proofs')
+      .select('id')
+      .eq('task_id', taskId)
+      .maybeSingle();
+
+    if (proofError) {
+      throw new AppError('Erro ao verificar comprovação da tarefa.', 500);
+    }
+    if (!proof) {
+      throw new AppError(
+        'Esta tarefa exige uma foto de comprovação antes de ser concluída.',
+        400,
+        'PROVA_OBRIGATORIA',
+      );
+    }
   }
 
   // ── Passo 2: pontualidade ─────────────────────────────────────────────────
