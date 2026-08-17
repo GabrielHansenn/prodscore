@@ -5,6 +5,7 @@ import {
   type Subscription,
   type User as SupabaseAuthUser,
 } from '@supabase/supabase-js';
+import { AssuranceLevel, MFAFactorStatus, type MFAFactor } from '@prodscore/shared';
 
 // ---------------------------------------------------------------------------
 // Validação das variáveis de ambiente Vite no carregamento do módulo
@@ -220,4 +221,161 @@ export async function updatePassword(newPassword: string): Promise<AuthResult> {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) return { data: null, error: error.message };
   return { data: null, error: null };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers de MFA/TOTP (autenticação de dois fatores)
+// ---------------------------------------------------------------------------
+//
+// Usa exclusivamente supabase.auth.mfa.* — sem bibliotecas externas de TOTP.
+// O modelo é baseado em AAL (Authenticator Assurance Level):
+//   aal1 = login convencional (e-mail + senha)
+//   aal2 = segundo fator (TOTP) verificado
+
+/** Converte a string de AAL retornada pelo SDK no enum tipado do projeto */
+function toAssuranceLevel(level: string | null): AssuranceLevel | null {
+  if (level === AssuranceLevel.AAL1 || level === AssuranceLevel.AAL2) return level;
+  return null;
+}
+
+/** Dados retornados pelo Supabase ao iniciar o enrollment de um fator TOTP */
+export interface TOTPEnrollment {
+  /** ID do fator (ainda não verificado) — usado no challengeAndVerify */
+  factorId: string;
+  /** QR code em SVG — prefixe com "data:image/svg+xml;utf-8," para exibir em <img> */
+  qrCodeSvg: string;
+  /** Segredo TOTP em texto — fallback para digitação manual no autenticador */
+  secret: string;
+  /** URI otpauth:// completa, equivalente ao QR code */
+  otpauthUri: string;
+}
+
+/**
+ * Inicia o cadastro de um novo fator TOTP para o usuário autenticado.
+ *
+ * Gera um fator em estado "unverified" — só passa a valer para o cálculo de
+ * AAL2 depois que `verifyTOTPChallenge` confirmar um código válido.
+ */
+export async function enrollTOTP(): Promise<AuthResult<TOTPEnrollment | null>> {
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType:   'totp',
+    friendlyName: 'ProdScore',
+  });
+
+  if (error) return { data: null, error: error.message };
+
+  return {
+    data: {
+      factorId:   data.id,
+      qrCodeSvg:  data.totp.qr_code,
+      secret:     data.totp.secret,
+      otpauthUri: data.totp.uri,
+    },
+    error: null,
+  };
+}
+
+/** Resultado de uma verificação de fator MFA bem-sucedida — nova sessão elevada a aal2 */
+export interface MFAChallengeResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/**
+ * Cria um desafio e verifica o código TOTP em uma única chamada.
+ *
+ * Usado tanto para confirmar um novo enrollment quanto para o step-up de
+ * login (subir a sessão de aal1 para aal2). Em caso de sucesso, o Supabase
+ * já atualiza a sessão internamente do cliente.
+ *
+ * @param factorId - ID do fator retornado por `enrollTOTP` ou `listTOTPFactors`
+ * @param code     - Código de 6 dígitos exibido no aplicativo autenticador
+ */
+export async function verifyTOTPChallenge(
+  factorId: string,
+  code: string,
+): Promise<AuthResult<MFAChallengeResult | null>> {
+  const { data, error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
+
+  if (error) return { data: null, error: error.message };
+
+  return {
+    data: {
+      accessToken:  data.access_token,
+      refreshToken: data.refresh_token,
+    },
+    error: null,
+  };
+}
+
+/** Remove um fator MFA cadastrado, desativando o 2FA associado a ele */
+export async function unenrollTOTP(factorId: string): Promise<AuthResult> {
+  const { error } = await supabase.auth.mfa.unenroll({ factorId });
+  if (error) return { data: null, error: error.message };
+  return { data: null, error: null };
+}
+
+/**
+ * Lista os fatores TOTP do usuário autenticado — verificados e não verificados.
+ *
+ * Usa `data.all` (não `data.totp`, que o SDK só preenche com fatores já
+ * verificados) para também enxergar enrollments incompletos/abandonados,
+ * necessário para limpá-los antes de iniciar um novo enrollment.
+ *
+ * Importante: não use esta função para decidir se um enrollment recém-
+ * iniciado deu certo — use apenas o retorno de `verifyTOTPChallenge`.
+ */
+export async function listTOTPFactors(): Promise<{ factors: MFAFactor[]; error: string | null }> {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  if (error) return { factors: [], error: error.message };
+
+  const factors: MFAFactor[] = data.all
+    .filter((f) => f.factor_type === 'totp')
+    .map((f) => ({
+      id:           f.id,
+      friendlyName: f.friendly_name ?? null,
+      status:       f.status === 'verified' ? MFAFactorStatus.Verified : MFAFactorStatus.Unverified,
+      createdAt:    f.created_at,
+    }));
+
+  return { factors, error: null };
+}
+
+/** Nível de garantia (AAL) atual e o próximo nível possível para a sessão */
+export interface AssuranceLevels {
+  currentLevel: AssuranceLevel | null;
+  nextLevel:    AssuranceLevel | null;
+}
+
+/**
+ * Retorna o AAL atual da sessão e o próximo nível possível.
+ *
+ * `nextLevel === 'aal2' && currentLevel === 'aal1'` indica que o usuário tem
+ * um fator MFA verificado e precisa completar o step-up antes de prosseguir.
+ */
+export async function getAssuranceLevel(): Promise<AssuranceLevels & { error: string | null }> {
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) return { currentLevel: null, nextLevel: null, error: error.message };
+
+  return {
+    currentLevel: toAssuranceLevel(data.currentLevel),
+    nextLevel:    toAssuranceLevel(data.nextLevel),
+    error:        null,
+  };
+}
+
+/** Traduz as mensagens de erro mais comuns do Supabase MFA para o usuário final */
+export function translateMFAErrorMessage(rawMessage: string): string {
+  const msg = rawMessage.toLowerCase();
+
+  if (msg.includes('invalid') && (msg.includes('totp') || msg.includes('code')))
+    return 'Código inválido. Verifique o aplicativo autenticador e tente novamente.';
+  if (msg.includes('expired'))
+    return 'Código expirado. Gere um novo código no aplicativo autenticador e tente novamente.';
+  if (msg.includes('already enrolled') || msg.includes('already exists'))
+    return 'Você já possui um fator de autenticação ativo.';
+  if (msg.includes('too many requests') || msg.includes('rate limit'))
+    return 'Muitas tentativas. Aguarde alguns instantes e tente novamente.';
+
+  return 'Não foi possível confirmar o código. Tente novamente.';
 }

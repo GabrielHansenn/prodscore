@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase.js';
 import { sendError, AppError } from '../lib/errors.js';
-import { authGuard } from '../middleware/auth.js';
+import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
+import { requireAAL2 } from '../middleware/aal.js';
 
 const router = Router();
 
@@ -37,6 +38,12 @@ const loginSchema = z.object({
   password: z
     .string({ required_error: 'Senha é obrigatória.' })
     .min(1, { message: 'Senha é obrigatória.' }),
+});
+
+const changePasswordSchema = z.object({
+  newPassword: z
+    .string({ required_error: 'A nova senha é obrigatória.' })
+    .min(8, { message: 'A nova senha deve ter no mínimo 8 caracteres.' }),
 });
 
 // ---------------------------------------------------------------------------
@@ -203,6 +210,35 @@ router.post('/logout', authGuard, async (req, res) => {
     return res.status(200).json({ mensagem: 'Sessão encerrada com sucesso.' });
   } catch (err) {
     return sendError(res, err, '[auth/logout]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /auth/password
+// ---------------------------------------------------------------------------
+
+/**
+ * Altera a senha do usuário autenticado.
+ *
+ * Ação sensível — exige requireAAL2 (segundo fator TOTP verificado nesta
+ * sessão), além do authGuard padrão.
+ */
+router.patch('/password', authGuard, requireAAL2, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const body = changePasswordSchema.parse(req.body);
+
+    const { error } = await supabase.auth.admin.updateUserById(user.id, {
+      password: body.newPassword,
+    });
+
+    if (error) {
+      throw new AppError('Erro ao alterar a senha.', 500, 'ALTERACAO_SENHA_FALHOU');
+    }
+
+    return res.status(200).json({ mensagem: 'Senha alterada com sucesso.' });
+  } catch (err) {
+    return sendError(res, err, '[auth/password]');
   }
 });
 

@@ -10,6 +10,15 @@ export default defineConfig({
       '@prodscore/shared': fileURLToPath(
         new URL('../../packages/shared/src/index.ts', import.meta.url),
       ),
+      // Força TODO import de react/react-dom (inclusive de dependências hoisted
+      // na raiz do monorepo, como zustand e react-router-dom) a resolver a cópia
+      // local do apps/web. Sem isso, a raiz resolve React 19 (exigido pelo
+      // apps/mobile/Expo) enquanto apps/web usa React 18 localmente — duas
+      // instâncias de React ao mesmo tempo quebram hooks ("Cannot read
+      // properties of null (reading 'useRef')") em qualquer render que passe
+      // por um pacote hoisted (Zustand, react-router-dom).
+      'react':     fileURLToPath(new URL('./node_modules/react', import.meta.url)),
+      'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url)),
     },
   },
   server: {

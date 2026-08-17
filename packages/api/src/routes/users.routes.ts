@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
+import { requireAAL2 } from '../middleware/aal.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { supabase, getUserById } from '../lib/supabase.js';
 import { getMissionsForUser } from '../services/mission.service.js';
@@ -119,6 +120,40 @@ router.patch('/me', authGuard, async (req, res) => {
     });
   } catch (err) {
     return sendError(res, err, '[usuarios/PATCH/me]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /users/me
+// ---------------------------------------------------------------------------
+
+/**
+ * Exclui permanentemente a conta do usuário autenticado.
+ *
+ * Ação sensível — exige requireAAL2 (segundo fator TOTP verificado nesta
+ * sessão), além do authGuard padrão. A exclusão em auth.users é propagada
+ * por ON DELETE CASCADE para o perfil e a maioria dos dados relacionados
+ * (ver migrations); grupos dos quais o usuário é owner impedem a exclusão
+ * (ON DELETE RESTRICT) até que a titularidade seja transferida ou o grupo
+ * seja apagado.
+ */
+router.delete('/me', authGuard, requireAAL2, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+
+    const { error } = await supabase.auth.admin.deleteUser(user.id);
+
+    if (error) {
+      throw new AppError(
+        'Não foi possível excluir a conta. Se você é dono de algum grupo, transfira a titularidade ou exclua o grupo antes de continuar.',
+        409,
+        'EXCLUSAO_CONTA_FALHOU',
+      );
+    }
+
+    return res.status(200).json({ mensagem: 'Conta excluída com sucesso.' });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/DELETE/me]');
   }
 });
 
