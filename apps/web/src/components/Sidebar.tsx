@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 import { useThemeStore } from '../store/themeStore.js';
+import { useConsentStore } from '../store/consentStore.js';
 import { LogoWordmark } from './Logo.js';
 
 const NAV_ITEMS = [
@@ -11,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/conquistas',   label: 'Conquistas',    icon: StarIcon },
   { to: '/estatisticas', label: 'Estatísticas',  icon: ChartIcon },
   { to: '/perfil',       label: 'Perfil',        icon: UserIcon },
+  { to: '/configuracoes/seguranca', label: 'Segurança', icon: LockIcon },
 ];
 
 interface SidebarProps {
@@ -20,6 +22,7 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const { user, logout } = useAuthStore((s) => ({ user: s.user, logout: s.logout }));
   const { theme, toggle } = useThemeStore();
+  const resetConsent = useConsentStore((s) => s.resetConsent);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -107,6 +110,15 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <LogoutIcon className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Revogação/troca de consentimento de cookies — sempre acessível (LGPD) */}
+        <button
+          type="button"
+          onClick={resetConsent}
+          className="mt-1 w-full rounded-lg px-3 py-1.5 text-left text-[11px] text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
+        >
+          Configurações de cookies
+        </button>
       </div>
     </aside>
   );
@@ -159,6 +171,13 @@ function UserIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  );
+}
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
     </svg>
   );
 }

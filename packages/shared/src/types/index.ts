@@ -333,3 +333,73 @@ export interface RankingEntry {
   /** Streak atual do usuário */
   currentStreak: number;
 }
+
+// ---------------------------------------------------------------------------
+// Autenticação de dois fatores (MFA/TOTP via Supabase Auth)
+// ---------------------------------------------------------------------------
+
+/**
+ * Nível de garantia do autenticador (Authenticator Assurance Level) da sessão.
+ * Gravado na claim `aal` do JWT emitido pelo Supabase Auth.
+ */
+export enum AssuranceLevel {
+  /** Login convencional (e-mail + senha) — apenas um fator verificado */
+  AAL1 = 'aal1',
+  /** Segundo fator (TOTP) verificado nesta sessão */
+  AAL2 = 'aal2',
+}
+
+/** Status de verificação de um fator MFA cadastrado */
+export enum MFAFactorStatus {
+  /** Fator confirmado — participa do cálculo de AAL2 */
+  Verified = 'verified',
+  /** Fator criado via enroll() mas ainda não confirmado com um código válido */
+  Unverified = 'unverified',
+}
+
+/** Fator MFA do tipo TOTP associado ao usuário */
+export interface MFAFactor {
+  /** ID do fator, usado em challenge()/verify()/unenroll() */
+  id: string;
+  /** Nome amigável do fator (ex: "ProdScore") */
+  friendlyName: string | null;
+  /** Status de verificação do fator */
+  status: MFAFactorStatus;
+  /** Timestamp de criação do fator */
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Consentimento de cookies (LGPD — Lei nº 13.709/2018)
+// ---------------------------------------------------------------------------
+
+/**
+ * Categoria de cookie/rastreamento para consentimento granular.
+ * `Essential` nunca exige consentimento; as demais começam desligadas.
+ */
+export enum CookieCategory {
+  /** Necessários ao funcionamento básico (sessão, segurança) — sempre ativos */
+  Essential = 'essential',
+  /** Métricas de uso e desempenho (ex: analytics de produto) */
+  Analytics = 'analytics',
+  /** Preferências que melhoram a experiência (ex: layout, recomendações) */
+  Functional = 'functional',
+  /** Publicidade e rastreamento entre sites/terceiros */
+  Marketing = 'marketing',
+}
+
+/** Estado de consentimento por categoria — `true` = permitido */
+export type ConsentState = Record<CookieCategory, boolean>;
+
+/**
+ * Registro de consentimento com metadados de prestação de contas (accountability),
+ * exigidos pela LGPD para comprovar quando e o quê o usuário consentiu.
+ */
+export interface ConsentRecord {
+  /** Escolha do usuário por categoria */
+  consent: ConsentState;
+  /** Versão da política de consentimento vigente no momento da escolha */
+  version: string;
+  /** Timestamp ISO 8601 de quando o consentimento foi registrado */
+  consentedAt: string;
+}

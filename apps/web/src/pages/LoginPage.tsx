@@ -48,7 +48,9 @@ export default function LoginPage() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.toLowerCase().includes('email not confirmed') || msg.toLowerCase().includes('not confirmed')) {
+      if (msg === 'MFA_REQUIRED') {
+        navigate('/verificar-2fa');
+      } else if (msg.toLowerCase().includes('email not confirmed') || msg.toLowerCase().includes('not confirmed')) {
         setNeedsConfirm(true);
       } else {
         setError(msg || 'Erro ao fazer login. Tente novamente.');

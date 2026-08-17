@@ -4,11 +4,15 @@ import { useAuthStore } from './store/authStore.js';
 
 // Layout
 import AppLayout from './components/AppLayout.js';
+import CookieBanner from './components/CookieBanner.js';
+import CookiePreferences from './components/CookiePreferences.js';
 
 // Páginas públicas
-import LandingPage   from './pages/LandingPage.js';
-import LoginPage     from './pages/LoginPage.js';
-import RegisterPage  from './pages/RegisterPage.js';
+import LandingPage        from './pages/LandingPage.js';
+import LoginPage          from './pages/LoginPage.js';
+import RegisterPage       from './pages/RegisterPage.js';
+import MfaVerifyPage      from './pages/MfaVerifyPage.js';
+import PrivacyPolicyPage  from './pages/PrivacyPolicyPage.js';
 
 // Páginas privadas
 import DashboardPage    from './pages/DashboardPage.js';
@@ -20,6 +24,7 @@ import RankingPage      from './pages/RankingPage.js';
 import AchievementsPage from './pages/AchievementsPage.js';
 import StatisticsPage   from './pages/StatisticsPage.js';
 import ProfilePage      from './pages/ProfilePage.js';
+import SecurityPage     from './pages/SecurityPage.js';
 
 // ---------------------------------------------------------------------------
 // Layout privado — protege + fornece sidebar
@@ -92,49 +97,61 @@ export default function App() {
   }, [location.pathname]);
 
   return (
-    <Routes>
-      {/* Rotas públicas */}
-      <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/login"
-        element={
-          <PublicOnlyRoute>
-            <LoginPage />
-          </PublicOnlyRoute>
-        }
-      />
-      <Route
-        path="/cadastro"
-        element={
-          <PublicOnlyRoute>
-            <RegisterPage />
-          </PublicOnlyRoute>
-        }
-      />
+    <>
+      <Routes>
+        {/* Rotas públicas */}
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/cadastro"
+          element={
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
+          }
+        />
+        {/* Step-up de 2FA no login — acessível apenas com um login aal1 em andamento */}
+        <Route path="/verificar-2fa" element={<MfaVerifyPage />} />
+        <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
 
-      {/* Rotas privadas — aninhadas sob AppLayout com sidebar */}
-      <Route element={<PrivateAppLayout />}>
-        <Route path="/dashboard"      element={<DashboardPage />} />
-        <Route path="/tarefas"        element={<TasksPage />} />
-        <Route path="/grupos"         element={<GroupsPage />} />
-        <Route path="/grupos/:id"                element={<GroupDetailPage />} />
-        <Route path="/grupos/:id/configuracoes" element={<GroupSettingsPage />} />
-        <Route path="/ranking"        element={<RankingPage />} />
-        <Route path="/conquistas"     element={<AchievementsPage />} />
-        <Route path="/estatisticas"   element={<StatisticsPage />} />
-        <Route path="/perfil"         element={<ProfilePage />} />
-      </Route>
+        {/* Rotas privadas — aninhadas sob AppLayout com sidebar */}
+        <Route element={<PrivateAppLayout />}>
+          <Route path="/dashboard"      element={<DashboardPage />} />
+          <Route path="/tarefas"        element={<TasksPage />} />
+          <Route path="/grupos"         element={<GroupsPage />} />
+          <Route path="/grupos/:id"                element={<GroupDetailPage />} />
+          <Route path="/grupos/:id/configuracoes" element={<GroupSettingsPage />} />
+          <Route path="/ranking"        element={<RankingPage />} />
+          <Route path="/conquistas"     element={<AchievementsPage />} />
+          <Route path="/estatisticas"   element={<StatisticsPage />} />
+          <Route path="/perfil"         element={<ProfilePage />} />
+          <Route path="/configuracoes/seguranca" element={<SecurityPage />} />
+        </Route>
 
-      {/* Aliases em inglês → PT-BR */}
-      <Route path="/register"     element={<Navigate to="/cadastro"   replace />} />
-      <Route path="/tasks"        element={<Navigate to="/tarefas"    replace />} />
-      <Route path="/groups"       element={<Navigate to="/grupos"     replace />} />
-      <Route path="/groups/:id"   element={<Navigate to="/grupos/:id" replace />} />
-      <Route path="/achievements" element={<Navigate to="/conquistas" replace />} />
-      <Route path="/profile"      element={<Navigate to="/perfil"     replace />} />
+        {/* Aliases em inglês → PT-BR */}
+        <Route path="/register"     element={<Navigate to="/cadastro"   replace />} />
+        <Route path="/tasks"        element={<Navigate to="/tarefas"    replace />} />
+        <Route path="/groups"       element={<Navigate to="/grupos"     replace />} />
+        <Route path="/groups/:id"   element={<Navigate to="/grupos/:id" replace />} />
+        <Route path="/achievements" element={<Navigate to="/conquistas" replace />} />
+        <Route path="/profile"      element={<Navigate to="/perfil"     replace />} />
+        <Route path="/security"     element={<Navigate to="/configuracoes/seguranca" replace />} />
+        <Route path="/privacy-policy" element={<Navigate to="/politica-de-privacidade" replace />} />
 
-      {/* 404 */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* 404 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {/* Elementos globais de consentimento de cookies — presentes em toda rota */}
+      <CookieBanner />
+      <CookiePreferences />
+    </>
   );
 }

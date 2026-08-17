@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { TrophyIcon, FlameIcon, FlagIcon, SparklesIcon } from '../components/icons.js';
 import { LogoWordmark } from '../components/Logo.js';
+import { useConsentStore } from '../store/consentStore.js';
 
 export default function LandingPage() {
+  const resetConsent = useConsentStore((s) => s.resetConsent);
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Nav */}
@@ -70,6 +73,14 @@ export default function LandingPage() {
 
       <footer className="border-t border-gray-200 px-8 py-5 text-center text-xs text-gray-400">
         © {new Date().getFullYear()} ProdScore — Plataforma de gamificação de produtividade
+        {' · '}
+        <Link to="/politica-de-privacidade" className="underline hover:text-gray-600">
+          Política de Privacidade
+        </Link>
+        {' · '}
+        <button type="button" onClick={resetConsent} className="underline hover:text-gray-600">
+          Configurações de cookies
+        </button>
       </footer>
     </div>
   );

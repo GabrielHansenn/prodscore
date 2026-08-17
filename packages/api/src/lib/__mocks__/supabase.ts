@@ -6,8 +6,13 @@ export const supabase = {
   from: jest.fn(),
   rpc:  jest.fn(),
   auth: {
-    admin:               { signOut: jest.fn() },
-    signInWithPassword:  jest.fn(),
+    admin: {
+      signOut:         jest.fn(),
+      updateUserById:  jest.fn(),
+      deleteUser:      jest.fn(),
+    },
+    signInWithPassword: jest.fn(),
     signUp:              jest.fn(),
+    getUser:             jest.fn(),
   },
 };
