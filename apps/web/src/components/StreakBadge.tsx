@@ -13,7 +13,7 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
     <div className="card p-4">
       <div className="flex items-center gap-3">
         <div className={`flex h-12 w-12 items-center justify-center rounded-full ${
-          isActive ? 'bg-amber-100' : 'bg-gray-100'
+          isActive ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'
         }`}>
           {isActive
             ? <FlameIcon className="h-6 w-6 text-amber-500" />
@@ -22,7 +22,7 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
         </div>
         <div>
           <p className="text-xs text-gray-500">Sequência atual</p>
-          <p className={`text-3xl font-bold ${isActive ? 'text-amber-600' : 'text-gray-400'}`}>
+          <p className={`text-3xl font-bold ${isActive ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
             {currentStreak} <span className="text-base font-normal">{currentStreak === 1 ? 'dia' : 'dias'}</span>
           </p>
         </div>
@@ -32,11 +32,11 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
           <TrophyIcon className="h-3.5 w-3.5 text-amber-500" />
           <span>
             Recorde pessoal:{' '}
-            <span className="font-semibold text-amber-600">{longestStreak} {longestStreak === 1 ? 'dia' : 'dias'}</span>
+            <span className="font-semibold text-amber-600 dark:text-amber-400">{longestStreak} {longestStreak === 1 ? 'dia' : 'dias'}</span>
           </span>
         </div>
         {streakFreezes > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-blue-500">
+          <div className="flex items-center gap-1.5 text-xs text-blue-500 dark:text-blue-400">
             <span>🧊</span>
             <span>
               {streakFreezes} {streakFreezes === 1 ? 'freeze disponível' : 'freezes disponíveis'}

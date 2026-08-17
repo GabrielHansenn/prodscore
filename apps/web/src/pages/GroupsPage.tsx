@@ -126,9 +126,9 @@ const ROLE_LABELS: Record<MemberRole, string> = {
 };
 
 const ROLE_STYLES: Record<MemberRole, string> = {
-  [MemberRole.Owner]:  'bg-amber-100 text-amber-700',
-  [MemberRole.Admin]:  'bg-brand-100 text-brand-700',
-  [MemberRole.Member]: 'bg-gray-100 text-gray-600',
+  [MemberRole.Owner]:  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  [MemberRole.Admin]:  'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300',
+  [MemberRole.Member]: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
 
 function GroupCard({ group, onClick }: { group: GroupWithMeta; onClick: () => void }) {

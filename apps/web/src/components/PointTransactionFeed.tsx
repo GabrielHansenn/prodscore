@@ -24,11 +24,11 @@ const REASON_ICONS: Record<PointReason, IconComponent> = {
 };
 
 const REASON_ICON_COLORS: Record<PointReason, string> = {
-  [PointReason.TaskCompleted]:    'text-green-500',
-  [PointReason.StreakBonus]:      'text-amber-500',
-  [PointReason.LatePenalty]:      'text-red-500',
-  [PointReason.MissionReward]:    'text-brand-500',
-  [PointReason.AchievementBonus]: 'text-amber-500',
+  [PointReason.TaskCompleted]:    'text-green-500 dark:text-green-400',
+  [PointReason.StreakBonus]:      'text-amber-500 dark:text-amber-400',
+  [PointReason.LatePenalty]:      'text-red-500 dark:text-red-400',
+  [PointReason.MissionReward]:    'text-brand-500 dark:text-brand-400',
+  [PointReason.AchievementBonus]: 'text-amber-500 dark:text-amber-400',
 };
 
 export default function PointTransactionFeed({ transactions }: PointTransactionFeedProps) {
@@ -53,7 +53,7 @@ export default function PointTransactionFeed({ transactions }: PointTransactionF
               <Icon className={`h-4 w-4 shrink-0 ${REASON_ICON_COLORS[tx.reason]}`} />
               <span className="text-xs text-gray-600">{REASON_LABELS[tx.reason]}</span>
             </div>
-            <span className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+            <span className={`text-sm font-semibold ${tx.amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {tx.amount >= 0 ? '+' : ''}{tx.amount} pts
             </span>
           </li>

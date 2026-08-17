@@ -31,12 +31,12 @@ export default function LevelProgress({ level, totalPoints }: LevelProgressProps
   return (
     <div className="w-full">
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-semibold text-brand-400">Nível {level}</span>
+        <span className="font-semibold text-brand-600 dark:text-brand-400">Nível {level}</span>
         <span className="text-gray-500">
-          <span className="font-medium text-gray-300">{progress.toLocaleString('pt-BR')}</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{progress.toLocaleString('pt-BR')}</span>
           {' / '}
           {range.toLocaleString('pt-BR')} pts
-          <span className="ml-2 text-gray-600">→ Nível {level + 1}</span>
+          <span className="ml-2 text-gray-400">→ Nível {level + 1}</span>
         </span>
       </div>
 
@@ -49,12 +49,12 @@ export default function LevelProgress({ level, totalPoints }: LevelProgressProps
 
       <div className="mt-1.5 flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          <span className="font-medium text-lime-600">{Math.round(percentage)}%</span> completo
+          <span className="font-medium text-lime-700 dark:text-lime-400">{Math.round(percentage)}%</span> completo
         </p>
         {nextReward && (
           <p className="text-xs text-gray-500">
             Nível {nextReward.level}{' '}
-            <span className="text-amber-500">
+            <span className="text-amber-700 dark:text-amber-400">
               {BADGE_EMOJI[nextReward.badgeKey] ?? '🎁'}
               {' '}+{nextReward.bonusPoints} pts
               {nextReward.bonusFreezes > 0 && ` · ${nextReward.bonusFreezes}🧊`}

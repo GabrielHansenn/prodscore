@@ -76,11 +76,11 @@ export default function RankingPage() {
 
       {/* Posição do usuário */}
       {stats && (
-        <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4">
-          <p className="text-xs font-medium text-brand-700">Sua posição no ranking global</p>
+        <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800/60 dark:bg-brand-900/20">
+          <p className="text-xs font-medium text-brand-700 dark:text-brand-300">Sua posição no ranking global</p>
           <div className="mt-2 flex flex-wrap items-center gap-6">
             <div>
-              <p className="text-3xl font-bold text-brand-700">
+              <p className="text-3xl font-bold text-brand-700 dark:text-brand-300">
                 #{stats.rankPosition > 0 ? stats.rankPosition : '—'}
               </p>
               <p className="text-xs text-gray-500">Posição geral</p>
@@ -93,14 +93,14 @@ export default function RankingPage() {
               <p className="text-xs text-gray-500">Pontos totais</p>
             </div>
             <div>
-              <p className="flex items-center gap-1 text-xl font-bold text-amber-600">
+              <p className="flex items-center gap-1 text-xl font-bold text-amber-600 dark:text-amber-400">
                 <FlameIcon className="h-5 w-5" />
                 {stats.currentStreak}
               </p>
               <p className="text-xs text-gray-500">Sequência atual</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-brand-600">Nível {stats.level}</p>
+              <p className="text-xl font-bold text-brand-600 dark:text-brand-400">Nível {stats.level}</p>
               <p className="text-xs text-gray-500">Nível atual</p>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function RankingPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
           {error}
         </div>
       ) : (

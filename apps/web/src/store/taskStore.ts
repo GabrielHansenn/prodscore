@@ -42,9 +42,10 @@ interface TaskState {
     dueDate?:          string;
     description?:      string;
     groupId?:          string;
+    requiresProof?:    boolean;
   }) => Promise<Task>;
   /** Atualiza campos de uma tarefa localmente e na API */
-  updateTask:    (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate'>>) => Promise<void>;
+  updateTask:    (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate' | 'requiresProof'>>) => Promise<void>;
   /** Remove uma tarefa permanentemente */
   deleteTask:    (id: string) => Promise<void>;
   /**
@@ -91,6 +92,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       dueDate:          input.dueDate,
       description:      input.description,
       groupId:          input.groupId,
+      requiresProof:    input.requiresProof,
     });
     set((state) => ({ tasks: [data.tarefa, ...state.tasks] }));
     return data.tarefa;
@@ -105,6 +107,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (updates.estimatedMinutes !== undefined) body['estimatedMinutes'] = updates.estimatedMinutes;
     if (updates.status           !== undefined) body['status']           = updates.status;
     if (updates.dueDate          !== undefined) body['dueDate']          = updates.dueDate;
+    if (updates.requiresProof    !== undefined) body['requiresProof']    = updates.requiresProof;
 
     const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, body);
     set((state) => ({

@@ -11,3 +11,19 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 vi.spyOn(console, 'error').mockImplementation(() => undefined);
 vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+// jsdom não implementa matchMedia — necessário para código que consulta
+// prefers-color-scheme/prefers-reduced-motion (ex: themeStore). Os testes que
+// precisam de um valor específico sobrescrevem window.matchMedia localmente.
+if (!window.matchMedia) {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}

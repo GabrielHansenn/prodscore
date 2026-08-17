@@ -2,6 +2,25 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Aplica o tema (claro/escuro/sistema) ANTES do bundle React carregar,
+      para não piscar o tema errado (FOUC). Roda de forma síncrona no <head>,
+      lendo a mesma chave de localStorage usada pelo themeStore (zustand/persist).
+    -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('prodscore-theme');
+          var theme = raw ? JSON.parse(raw).state.theme : 'system';
+          var isDark = theme === 'dark' ||
+            (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (e) {
+          /* localStorage indisponível — mantém o tema claro padrão */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProdScore — Gamifique sua Produtividade</title>

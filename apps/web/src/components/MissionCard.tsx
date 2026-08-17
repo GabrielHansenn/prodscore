@@ -39,7 +39,7 @@ export default function MissionCard({ mission, isParticipating = false, onJoin }
             <p className="mt-1 text-xs text-gray-500">{mission.description}</p>
           )}
         </div>
-        <div className="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+        <div className="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
           +{mission.rewardPoints} pts
         </div>
       </div>
@@ -47,7 +47,7 @@ export default function MissionCard({ mission, isParticipating = false, onJoin }
       <div className="mt-3">
         <div className="mb-1 flex justify-between text-xs text-gray-500">
           <span>{mission.currentValue} / {mission.targetValue}</span>
-          <span className={isExpired ? 'text-red-500' : 'text-gray-400'}>{timeLeft}</span>
+          <span className={isExpired ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}>{timeLeft}</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-gray-100">
           <div
@@ -60,14 +60,14 @@ export default function MissionCard({ mission, isParticipating = false, onJoin }
       {!isParticipating && !mission.isCompleted && !isExpired && onJoin && (
         <button
           onClick={() => onJoin(mission.id)}
-          className="mt-3 w-full rounded-lg bg-brand-50 py-1.5 text-sm font-medium text-brand-600 transition-all hover:bg-brand-100"
+          className="mt-3 w-full rounded-lg bg-brand-50 py-1.5 text-sm font-medium text-brand-600 transition-all hover:bg-brand-100 dark:bg-brand-900/20 dark:text-brand-300 dark:hover:bg-brand-900/40"
         >
           Participar
         </button>
       )}
 
       {mission.isCompleted && (
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-green-600">
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
           <CheckCircleInline />
           Missão concluída!
         </div>

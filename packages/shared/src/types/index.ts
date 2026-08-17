@@ -126,6 +126,10 @@ export interface Task {
   createdAt: string;
   /** Timestamp da última atualização */
   updatedAt: string;
+  /** Se true, a tarefa só pode ser concluída com uma foto de comprovação anexada */
+  requiresProof: boolean;
+  /** Se já existe uma comprovação anexada — use GET /tasks/:id/proof para exibi-la (signed URL) */
+  hasProof: boolean;
 }
 
 /**
@@ -240,6 +244,29 @@ export interface PointTransaction {
   /** Referência à entidade que originou a transação (ex: UUID da tarefa) */
   referenceId: string | null;
   /** Timestamp da transação */
+  createdAt: string;
+}
+
+/**
+ * Formato de imagem aceito para comprovação fotográfica de tarefa.
+ * Validado no servidor pelos magic bytes reais do arquivo, nunca pelo
+ * Content-Type informado pelo cliente.
+ */
+export type ProofMimeType = 'image/jpeg' | 'image/png' | 'image/webp';
+
+/**
+ * Comprovação fotográfica de conclusão de uma tarefa (accountability).
+ * Nunca inclui o caminho de armazenamento nem uma URL permanente — a
+ * exibição sempre passa por uma signed URL de curta duração (ver
+ * GET /tasks/:id/proof), gerada sob demanda pela API.
+ */
+export interface TaskProof {
+  id: string;
+  taskId: string;
+  userId: string;
+  contentType: ProofMimeType;
+  /** Tamanho do arquivo em bytes */
+  fileSize: number;
   createdAt: string;
 }
 

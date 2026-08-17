@@ -230,7 +230,7 @@ export async function getMissionById(
       .order('current_value', { ascending: false });
 
     leaderboard = (participantsData ?? []).map((p) => {
-      const row = p as {
+      const row = p as unknown as {
         user_id: string; current_value: number; is_completed: boolean;
         profiles: { username: string; avatar_url: string | null };
       };
@@ -540,7 +540,7 @@ export async function checkMissionProgress(userId: string): Promise<void> {
 
     if (error || !participationsData) return;
 
-    const participations = participationsData as Array<{
+    const participations = participationsData as unknown as Array<{
       mission_id:  string;
       current_value: number;
       joined_at:   string;

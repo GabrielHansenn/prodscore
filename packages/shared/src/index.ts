@@ -5,3 +5,4 @@
 export * from './types/index.js';
 export * from './constants/gamification.js';
 export * from './constants/consent.js';
+export * from './constants/proof.js';

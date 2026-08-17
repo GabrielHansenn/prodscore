@@ -170,14 +170,14 @@ export default function DashboardPage() {
           label="Nível"
           value={user?.level ?? 1}
           sub={`${stats?.achievementsCount ?? 0} conquistas`}
-          accent="text-lime-400"
+          accent="text-lime-700 dark:text-lime-400"
           glow="stat-card-glow-lime"
         />
         <StatCard
           label="Tarefas Esta Semana"
           value={stats?.tasksCompletedThisWeek ?? 0}
           sub={`${stats?.pointsThisWeek ?? 0} pts esta semana`}
-          accent="text-blue-400"
+          accent="text-blue-600 dark:text-blue-400"
           glow="stat-card-glow-blue"
         />
       </div>
@@ -310,9 +310,9 @@ export default function DashboardPage() {
           <div
             key={toast.id}
             role="status"
-            className="flex items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 shadow-card-hover animate-in"
+            className="flex items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 shadow-card-hover animate-in dark:border-brand-800/60"
           >
-            <svg className="h-4 w-4 shrink-0 text-lime-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+            <svg className="h-4 w-4 shrink-0 text-lime-600 dark:text-lime-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
             <span className="text-sm font-medium text-gray-800">{toast.message}</span>
@@ -323,22 +323,22 @@ export default function DashboardPage() {
       {/* Modal de recompensa de nível */}
       {levelRewardPop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-brand-200 bg-white p-8 text-center shadow-2xl">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-brand-200 bg-white p-8 text-center shadow-2xl dark:border-brand-800/60">
             <div className="mb-2 text-5xl">
               {LEVEL_BADGE_EMOJI[levelRewardPop.badgeKey ?? ''] ?? '🎁'}
             </div>
-            <h2 className="text-2xl font-bold text-brand-600">
+            <h2 className="text-2xl font-bold text-brand-600 dark:text-brand-400">
               Nível {levelRewardPop.level} atingido!
             </h2>
             <p className="mt-2 text-gray-600">{levelRewardPop.description}</p>
             <div className="mt-4 flex justify-center gap-4 text-sm font-semibold">
               {levelRewardPop.bonusPoints > 0 && (
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-600">
+                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300">
                   +{levelRewardPop.bonusPoints} pts
                 </span>
               )}
               {levelRewardPop.bonusFreezes > 0 && (
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-600">
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
                   +{levelRewardPop.bonusFreezes} 🧊 freeze{levelRewardPop.bonusFreezes > 1 ? 's' : ''}
                 </span>
               )}
@@ -356,15 +356,15 @@ export default function DashboardPage() {
       {/* Modal de streak */}
       {celebration && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-2xl">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-2xl dark:border-amber-800/60">
             <div className="mb-4 flex justify-center">
               <FlameIcon className="h-14 w-14 text-amber-500" />
             </div>
-            <h2 className="text-2xl font-bold text-amber-600">
+            <h2 className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               Sequência de {celebration.days} dias!
             </h2>
             <p className="mt-2 text-gray-600">Incrível! Você está em chamas. Continue assim!</p>
-            <p className="mt-1 text-sm font-semibold text-lime-600">+50 pontos bônus!</p>
+            <p className="mt-1 text-sm font-semibold text-lime-700 dark:text-lime-400">+50 pontos bônus!</p>
             <button
               onClick={() => setCelebration(null)}
               className="btn-primary mt-6 w-full"

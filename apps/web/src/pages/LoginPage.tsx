@@ -156,7 +156,7 @@ export default function LoginPage() {
 
             {/* E-mail não confirmado */}
             {needsConfirm && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300">
                 <p className="font-semibold">Confirme seu e-mail antes de entrar.</p>
                 <p className="mt-1 text-xs text-amber-600">
                   Enviamos um link para <strong>{email}</strong>. Verifique sua caixa de entrada.
@@ -177,7 +177,7 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
                 {error}
               </p>
             )}

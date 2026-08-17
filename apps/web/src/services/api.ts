@@ -40,3 +40,15 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+/**
+ * Extrai a mensagem de erro em português enviada pela API (formato
+ * `{ erro, codigo? }`), com fallback genérico quando não disponível.
+ */
+export function extractApiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const body = err.response?.data as { erro?: string } | undefined;
+    if (body?.erro) return body.erro;
+  }
+  return err instanceof Error ? err.message : fallback;
+}

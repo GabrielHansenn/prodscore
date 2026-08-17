@@ -9,6 +9,29 @@ const config: Config = {
         sans: ['Montserrat', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // ---------------------------------------------------------------
+        // Tokens semânticos — valores reais em src/index.css via CSS vars,
+        // trocam automaticamente entre os temas claro/escuro (ver :root/.dark).
+        // Uso: bg-surface, bg-surface-elevated, text-ink, border-border etc.
+        // ---------------------------------------------------------------
+        surface: {
+          DEFAULT:  'rgb(var(--surface) / <alpha-value>)',
+          elevated: 'rgb(var(--surface-elevated) / <alpha-value>)',
+          sunken:   'rgb(var(--surface-sunken) / <alpha-value>)',
+          hover:    'rgb(var(--surface-hover) / <alpha-value>)',
+        },
+        ink: {
+          DEFAULT:   'rgb(var(--ink) / <alpha-value>)',
+          secondary: 'rgb(var(--ink-secondary) / <alpha-value>)',
+          muted:     'rgb(var(--ink-muted) / <alpha-value>)',
+        },
+        border: {
+          DEFAULT: 'rgb(var(--border) / <alpha-value>)',
+          strong:  'rgb(var(--border-strong) / <alpha-value>)',
+        },
+        success: 'rgb(var(--success) / <alpha-value>)',
+        warning: 'rgb(var(--warning) / <alpha-value>)',
+        danger:  'rgb(var(--danger) / <alpha-value>)',
         // Roxo primário — cor de marca do ProdScore
         brand: {
           50:  '#f5f3ff',
