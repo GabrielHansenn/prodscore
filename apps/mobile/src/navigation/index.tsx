@@ -8,8 +8,9 @@ import { useAuthStore } from '../store/authStore';
 import AppTabBar from './AppTabBar';
 
 // Telas de autenticação
-import LoginScreen    from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
+import LoginScreen     from '../screens/LoginScreen';
+import RegisterScreen  from '../screens/RegisterScreen';
+import MfaVerifyScreen from '../screens/MfaVerifyScreen';
 
 // Telas principais (tab bar)
 import DashboardScreen from '../screens/DashboardScreen';
@@ -23,6 +24,7 @@ import AchievementsScreen   from '../screens/AchievementsScreen';
 import StatisticsScreen     from '../screens/StatisticsScreen';
 import GroupDetailScreen    from '../screens/GroupDetailScreen';
 import GroupSettingsScreen  from '../screens/GroupSettingsScreen';
+import SecurityScreen       from '../screens/SecurityScreen';
 
 import { COLORS } from '../constants/theme';
 
@@ -49,6 +51,7 @@ export type AppStackParamList = {
   Statistics:     undefined;
   GroupDetail:    { groupId: string; groupName: string };
   GroupSettings:  { groupId: string };
+  Security:       undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -87,6 +90,7 @@ function AppStackNavigator() {
       <AppStack.Screen name="Statistics"    component={StatisticsScreen} />
       <AppStack.Screen name="GroupDetail"   component={GroupDetailScreen} />
       <AppStack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+      <AppStack.Screen name="Security"      component={SecurityScreen} />
     </AppStack.Navigator>
   );
 }
@@ -109,7 +113,7 @@ function AuthStackNavigator() {
 // ---------------------------------------------------------------------------
 
 export default function AppNavigation() {
-  const { isAuthenticated, isLoading, loadSession } = useAuthStore();
+  const { isAuthenticated, isLoading, mfaPending, loadSession } = useAuthStore();
 
   // Restaura sessão do SecureStore na montagem do app
   useEffect(() => {
@@ -122,6 +126,16 @@ export default function AppNavigation() {
       <View style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={COLORS.primary} size="large" />
       </View>
+    );
+  }
+
+  // Login com senha feito, mas a conta tem 2FA ativo pendente de step-up —
+  // não é nem "autenticado" (AppStack) nem a tela de login normal.
+  if (mfaPending) {
+    return (
+      <NavigationContainer>
+        <MfaVerifyScreen />
+      </NavigationContainer>
     );
   }
 

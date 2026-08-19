@@ -57,7 +57,9 @@ const TAG_LABELS: Record<BehavioralTag, string> = {
 /** Tela de perfil com stats, edição, perfil comportamental, conquistas e histórico */
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { isWide } = useResponsive();
+  const { width, isWide } = useResponsive();
+  // Espelha "grid-cols-2 sm:grid-cols-3" da ProfilePage web (breakpoint sm=640)
+  const statCols = width >= 640 ? 3 : 2;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { user, logout }         = useAuthStore();
   const { stats, fetchStats }    = useUserStore();
@@ -187,6 +189,12 @@ export default function ProfileScreen() {
             <Text style={styles.menuRowText}>Estatísticas</Text>
             <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
+          <View style={styles.menuDivider} />
+          <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Security')}>
+            <Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} />
+            <Text style={styles.menuRowText}>Segurança</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Estatísticas rápidas — espelha a grade de 6 do web */}
@@ -200,7 +208,7 @@ export default function ProfileScreen() {
               { label: 'Consistência',       value: `${Math.round(stats.consistencyRate)}%`,  color: COLORS.blue    },
               { label: 'Pts Esta Semana',    value: stats.pointsThisWeek.toLocaleString('pt-BR'), color: COLORS.primary },
             ].map((s) => (
-              <View key={s.label} style={styles.statCell}>
+              <View key={s.label} style={[styles.statCell, { minWidth: statCols === 3 ? '30%' : '47%' }]}>
                 <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
                 <Text style={styles.statLabel}>{s.label}</Text>
               </View>
