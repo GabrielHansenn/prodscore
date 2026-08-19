@@ -140,7 +140,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         <button
           type="button"
           onClick={resetConsent}
-          className="mt-1 w-full rounded-lg px-3 py-1.5 text-left text-[11px] text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
+          className="mt-1 w-full rounded-lg px-3 py-1.5 text-center text-[11px] text-sidebar-muted transition-colors duration-150 hover:bg-sidebar-hover hover:text-white"
         >
           Configurações de cookies
         </button>

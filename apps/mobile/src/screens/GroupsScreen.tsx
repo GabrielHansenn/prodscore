@@ -164,7 +164,6 @@ export default function GroupsScreen() {
   const [isLoading,   setIsLoading]   = useState(true);
   const [showCreate,  setShowCreate]  = useState(false);
   const [showJoin,    setShowJoin]    = useState(false);
-  const [showFabMenu, setShowFabMenu] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -184,8 +183,18 @@ export default function GroupsScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Grupos</Text>
-        <Text style={styles.headerSub}>Colabore e compita</Text>
+        <View>
+          <Text style={styles.headerTitle}>Grupos</Text>
+          <Text style={styles.headerSub}>Colabore e compita com outros jogadores</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.btnSecondary} onPress={() => setShowJoin(true)}>
+            <Text style={styles.btnSecondaryText}>Entrar com Código</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnPrimary} onPress={() => setShowCreate(true)}>
+            <Text style={styles.btnPrimaryText}>+ Criar Grupo</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading ? (
@@ -196,7 +205,7 @@ export default function GroupsScreen() {
         <View style={styles.center}>
           <Text style={{ fontSize: 48 }}>👥</Text>
           <Text style={styles.emptyText}>Nenhum grupo ainda</Text>
-          <Text style={styles.emptyHint}>Use o botão + para criar ou entrar em um grupo</Text>
+          <Text style={styles.emptyHint}>Use os botões acima para criar ou entrar em um grupo</Text>
         </View>
       ) : (
         <FlatList
@@ -213,28 +222,6 @@ export default function GroupsScreen() {
         />
       )}
 
-      {/* FAB com menu */}
-      {showFabMenu && (
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowFabMenu(false)} />
-      )}
-      {showFabMenu && (
-        <View style={[styles.fabMenu, { bottom: insets.bottom + 80 }]}>
-          <TouchableOpacity style={styles.fabMenuItem} onPress={() => { setShowFabMenu(false); setShowCreate(true); }}>
-            <Text style={styles.fabMenuText}>✦ Criar Grupo</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.fabMenuItem} onPress={() => { setShowFabMenu(false); setShowJoin(true); }}>
-            <Text style={styles.fabMenuText}>🔗 Entrar em Grupo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + SPACING.lg }]}
-        onPress={() => setShowFabMenu((v) => !v)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabIcon}>{showFabMenu ? '✕' : '+'}</Text>
-      </TouchableOpacity>
-
       <CreateModal
         visible={showCreate}
         onClose={() => setShowCreate(false)}
@@ -250,20 +237,29 @@ export default function GroupsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: COLORS.background },
-  header:      { padding: SPACING.md, paddingBottom: SPACING.sm },
+  root: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+    gap: SPACING.sm, padding: SPACING.md, paddingBottom: SPACING.sm,
+  },
   headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
   headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
-  list:        { padding: SPACING.md, paddingBottom: 100 },
+  list:        { padding: SPACING.md, paddingBottom: SPACING.xl },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, padding: SPACING.xl },
   emptyText:   { fontSize: FONT.lg, fontWeight: '600', color: COLORS.textSecondary },
   emptyHint:   { fontSize: FONT.base, color: COLORS.textMuted, textAlign: 'center' },
 
-  fab: { position: 'absolute', right: SPACING.lg, width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8 },
-  fabIcon: { fontSize: 28, color: '#fff', fontWeight: '300', lineHeight: 32 },
-  fabMenu: { position: 'absolute', right: SPACING.lg, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden', elevation: 8 },
-  fabMenuItem: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, borderBottomWidth: 1, borderColor: COLORS.border },
-  fabMenuText: { fontSize: FONT.base, fontWeight: '600', color: COLORS.text },
+  headerActions: { flexDirection: 'row', gap: SPACING.sm },
+  btnSecondary: {
+    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10,
+  },
+  btnSecondaryText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
+  btnPrimary: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10,
+  },
+  btnPrimaryText: { fontSize: FONT.sm, fontWeight: '600', color: '#fff' },
 
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet:   { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.sm },

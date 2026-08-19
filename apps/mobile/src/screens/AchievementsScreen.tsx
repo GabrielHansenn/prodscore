@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -49,6 +49,9 @@ function AchievementCard({ item, earned, earnedAt }: {
 /** Tela de conquistas — catálogo completo com filtro e progresso, espelha /conquistas no web */
 export default function AchievementsScreen({ navigation }: { navigation: { goBack: () => void } }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  // Mesmos breakpoints sm(640)/lg(1024) usados por "sm:grid-cols-2 lg:grid-cols-3" na web
+  const numColumns = width >= 1024 ? 3 : width >= 640 ? 2 : 1;
   const [catalog, setCatalog] = useState<AchievementItem[]>([]);
   const [earned,  setEarned]  = useState<UserAchievementItem[]>([]);
   const [filter,  setFilter]  = useState<Filter>('todas');
@@ -91,10 +94,11 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
         <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
       ) : (
         <FlatList
+          key={`cols-${numColumns}`}
           data={filtered}
           keyExtractor={(a) => a.id}
-          numColumns={2}
-          columnWrapperStyle={{ gap: SPACING.sm }}
+          numColumns={numColumns}
+          {...(numColumns > 1 ? { columnWrapperStyle: { gap: SPACING.sm } } : {})}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <>

@@ -96,30 +96,39 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {/* Linha de stat cards */}
+        {/* Linha de stat cards — 2x2 em telas estreitas, 1x4 em telas largas
+            (espelha grid-cols-2 lg:grid-cols-4 do DashboardPage web) */}
         {stats ? (
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} accent="primary"
-              sub={`#${stats.rankPosition > 0 ? stats.rankPosition : '–'} no ranking`}
-            />
-            <StatCard
-              label="Sequência" value={stats.currentStreak} accent="amber"
-              sub={stats.currentStreak === 1 ? 'dia consecutivo' : 'dias consecutivos'}
-            />
-            <StatCard
-              label="Nível" value={stats.level} accent="lime"
-              sub={`${stats.achievementsCount} conquistas`}
-            />
-            <StatCard
-              label="Esta Semana" value={stats.tasksCompletedThisWeek} accent="blue"
-              sub={`${stats.pointsThisWeek} pts esta semana`}
-            />
+          <View style={[styles.statsRow, !isWide && styles.statsRowWrap]}>
+            <View style={isWide ? styles.statCell : styles.statCellHalf}>
+              <StatCard
+                label="Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} accent="primary"
+                sub={`#${stats.rankPosition > 0 ? stats.rankPosition : '–'} no ranking`}
+              />
+            </View>
+            <View style={isWide ? styles.statCell : styles.statCellHalf}>
+              <StatCard
+                label="Sequência" value={stats.currentStreak} accent="amber"
+                sub={stats.currentStreak === 1 ? 'dia consecutivo' : 'dias consecutivos'}
+              />
+            </View>
+            <View style={isWide ? styles.statCell : styles.statCellHalf}>
+              <StatCard
+                label="Nível" value={stats.level} accent="lime"
+                sub={`${stats.achievementsCount} conquistas`}
+              />
+            </View>
+            <View style={isWide ? styles.statCell : styles.statCellHalf}>
+              <StatCard
+                label="Esta Semana" value={stats.tasksCompletedThisWeek} accent="blue"
+                sub={`${stats.pointsThisWeek} pts esta semana`}
+              />
+            </View>
           </View>
         ) : (
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, !isWide && styles.statsRowWrap]}>
             {['Pontos','Sequência','Nível','Esta Semana'].map((l) => (
-              <View key={l} style={[styles.statPlaceholder]}>
+              <View key={l} style={[styles.statPlaceholder, !isWide && styles.statCellHalf]}>
                 <Text style={styles.placeholderText}>{l}</Text>
               </View>
             ))}
@@ -276,7 +285,10 @@ const styles = StyleSheet.create({
   greetTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
   greetSub:   { fontSize: FONT.base, color: COLORS.textMuted, marginTop: SPACING.xs },
 
-  statsRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
+  statsRow:     { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
+  statsRowWrap: { flexWrap: 'wrap' },
+  statCell:     { flex: 1 },
+  statCellHalf: { width: '48%' },
   statPlaceholder: {
     flex:            1,
     height:          80,
