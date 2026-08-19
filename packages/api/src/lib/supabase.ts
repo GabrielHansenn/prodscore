@@ -6,12 +6,16 @@ import type { User } from '@prodscore/shared';
 // ---------------------------------------------------------------------------
 const supabaseUrl            = process.env['SUPABASE_URL'];
 const supabaseServiceRoleKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+const supabaseAnonKey        = process.env['SUPABASE_ANON_KEY'];
 
 if (!supabaseUrl) {
   throw new Error('[supabase] Variável de ambiente SUPABASE_URL não definida.');
 }
 if (!supabaseServiceRoleKey) {
   throw new Error('[supabase] Variável de ambiente SUPABASE_SERVICE_ROLE_KEY não definida.');
+}
+if (!supabaseAnonKey) {
+  throw new Error('[supabase] Variável de ambiente SUPABASE_ANON_KEY não definida.');
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +47,40 @@ export const supabase: SupabaseClient = createClient(
     },
   },
 );
+
+// ---------------------------------------------------------------------------
+// Cliente com sessão do usuário — necessário para supabase.auth.mfa.*
+// ---------------------------------------------------------------------------
+
+/**
+ * Cria um cliente Supabase autenticado como o próprio usuário chamador (não
+ * service role), a partir do access/refresh token da sessão dele.
+ *
+ * Necessário especificamente para `supabase.auth.mfa.*`: esses métodos leem
+ * a sessão interna do cliente (populada via `setSession`), não o cabeçalho
+ * Authorization da requisição — o cliente `supabase` (service role, stateless)
+ * não serve para eles. Um cliente novo é criado a cada chamada porque a
+ * sessão do usuário muda a cada requisição (não dá pra reusar um singleton).
+ *
+ * @param accessToken  - JWT da sessão atual do usuário (do cabeçalho Authorization)
+ * @param refreshToken - Refresh token da mesma sessão (enviado pelo cliente no corpo)
+ */
+export async function createUserScopedClient(
+  accessToken: string,
+  refreshToken: string,
+): Promise<{ client: SupabaseClient; error: string | null }> {
+  const client = createClient(supabaseUrl as string, supabaseAnonKey as string, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { error } = await client.auth.setSession({
+    access_token:  accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (error) return { client, error: error.message };
+  return { client, error: null };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers de autenticação
