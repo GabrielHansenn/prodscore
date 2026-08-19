@@ -43,7 +43,9 @@ interface TaskRow {
   requires_proof?: boolean;
   // Presente apenas quando a query usa o embed `task_proofs(id)` do Supabase
   // (foreign table embedding via FK) — ausente em updates/inserts que não pedem o join.
-  task_proofs?: Array<{ id: string }> | null;
+  // Objeto único (não array): task_proofs.task_id tem UNIQUE, então o
+  // PostgREST detecta a relação como to-one e embeda um objeto ou null.
+  task_proofs?: { id: string } | null;
 }
 
 /** Converte a linha do banco (snake_case) para a interface Task (camelCase) */
@@ -65,7 +67,7 @@ export function mapTaskRow(row: TaskRow): Task {
     createdAt:        row.created_at,
     updatedAt:        row.updated_at,
     requiresProof:    row.requires_proof ?? false,
-    hasProof:         (row.task_proofs?.length ?? 0) > 0,
+    hasProof:         row.task_proofs != null,
   };
 }
 
@@ -221,7 +223,10 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     .single();
 
   if (error || !data) {
-    throw new AppError('Erro ao criar tarefa.', 500, 'CRIACAO_FALHOU');
+    // TODO(debug): motivo real do erro do Supabase estava sendo descartado aqui —
+    // mensagem detalhada temporária pra investigação, reverter para genérica depois
+    console.error('[task.service.createTask] insert falhou:', error, { input });
+    throw new AppError(`Erro ao criar tarefa: ${error?.message ?? 'motivo desconhecido'}`, 500, 'CRIACAO_FALHOU');
   }
 
   return mapTaskRow(data as TaskRow);
@@ -298,7 +303,9 @@ export async function updateTask(
     .from('tasks')
     .update(patch)
     .eq('id', taskId)
-    .select('*')
+    // Mesmo motivo do embed em completeTask — evita que hasProof volte
+    // errado (false) na resposta usada pra atualizar o estado local.
+    .select('*, task_proofs(id)')
     .single();
 
   if (error || !data) {
@@ -481,7 +488,10 @@ export async function completeTask(
       points_earned: pointsEarned,
     })
     .eq('id', taskId)
-    .select('*')
+    // Embed de task_proofs(id) — sem isso hasProof volta false mesmo quando a
+    // prova foi confirmada no passo 1b, escondendo o botão "Ver comprovação"
+    // até o próximo refresh da lista completa (que já embeda corretamente).
+    .select('*, task_proofs(id)')
     .single();
 
   if (updateError || !updatedData) {

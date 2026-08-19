@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getTaskProofUrl } from '../services/proof.service.js';
 
 function PhotoIcon({ className }: { className?: string }) {
@@ -23,6 +24,8 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const triggerRef  = useRef<HTMLButtonElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -37,14 +40,24 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
     return () => { active = false; };
   }, [taskId]);
 
-  // Fecha o lightbox com Esc — acessibilidade por teclado
+  // Fecha com Esc, prende o foco no diálogo (único elemento focável é o botão
+  // de fechar) e devolve o foco à miniatura de origem ao fechar
   useEffect(() => {
     if (!lightboxOpen) return;
+    closeBtnRef.current?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightboxOpen(false);
+      if (e.key === 'Escape') { setLightboxOpen(false); return; }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        closeBtnRef.current?.focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      triggerRef.current?.focus();
+    };
   }, [lightboxOpen]);
 
   if (error) return null;
@@ -52,6 +65,7 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setLightboxOpen(true)}
         disabled={loading || !url}
@@ -64,7 +78,10 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
         }
       </button>
 
-      {lightboxOpen && url && (
+      {/* Portal pro <body> — o card da tarefa concluída usa opacity-70, que cria
+          um novo stacking context; sem o portal, o diálogo (mesmo fixed/z-50)
+          fica preso nessa camada e sai "lavado" atrás dos outros cards. */}
+      {lightboxOpen && url && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -79,6 +96,7 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
             onClick={(e) => e.stopPropagation()}
           />
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={() => setLightboxOpen(false)}
             aria-label="Fechar imagem"
@@ -86,7 +104,8 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
           >
             ✕
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

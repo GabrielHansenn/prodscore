@@ -207,6 +207,30 @@ describe('getTaskProofSignedUrl', () => {
     const url = await getTaskProofSignedUrl(taskId, ownerId);
     expect(url).toBe('https://signed.example/proof.jpg');
   });
+
+  it('deve retornar 404 com mensagem em português quando a tarefa não tem comprovação', async () => {
+    mockFrom
+      // assertCanViewProof: tarefa existe e pertence ao usuário
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: pendingTaskRow(), error: null }),
+          }),
+        }),
+      })
+      // busca em task_proofs: nenhum registro encontrado
+      .mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      });
+
+    await expect(getTaskProofSignedUrl(taskId, ownerId)).rejects.toThrow(
+      'Esta tarefa não tem comprovação anexada.',
+    );
+  });
 });
 
 describe('deleteTaskProof', () => {
