@@ -56,6 +56,36 @@ const PRIORITY_MULT: Record<TaskPriority, number> = {
 };
 
 // ---------------------------------------------------------------------------
+// Máscara de data brasileira (DD/MM/AAAA) para o campo Prazo
+// ---------------------------------------------------------------------------
+
+/** Aplica a máscara DD/MM/AAAA conforme o usuário digita (só dígitos, insere as barras) */
+function maskDateBR(text: string): string {
+  const digits = text.replace(/\D/g, '').slice(0, 8);
+  if (digits.length > 4) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
+}
+
+/** Converte DD/MM/AAAA (completo e válido) em AAAA-MM-DD para a API — null se incompleta/inválida */
+function parseDateBR(masked: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(masked);
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match as unknown as [string, string, string, string];
+  const day = Number(dd), month = Number(mm), year = Number(yyyy);
+  const date = new Date(year, month - 1, day);
+  // new Date() "rola" datas inválidas (ex: 31/02 vira 03/03) — se não bater, não existe
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** AAAA-MM-DD (como vem da API) → DD/MM/AAAA (como o usuário vê) */
+function isoToBR(iso: string): string {
+  const [yyyy, mm, dd] = iso.split('-');
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// ---------------------------------------------------------------------------
 // Modal de criar/editar tarefa — espelha TaskModal do web
 // ---------------------------------------------------------------------------
 
@@ -74,7 +104,7 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
   const [difficulty,     setDifficulty]     = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
   const [priority,       setPriority]       = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estMinutes,     setEstMinutes]     = useState(task?.estimatedMinutes?.toString() ?? '');
-  const [dueDate,        setDueDate]        = useState(task?.dueDate ? task.dueDate.split('T')[0]! : '');
+  const [dueDateInput,   setDueDateInput]   = useState(task?.dueDate ? isoToBR(task.dueDate.split('T')[0]!) : '');
   const [requiresProof,  setRequiresProof]  = useState(task?.requiresProof ?? false);
   const [error,          setError]          = useState('');
   const [loading,        setLoading]        = useState(false);
@@ -85,10 +115,20 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('Título é obrigatório.'); return; }
+
+    let dueDateISO: string | undefined;
+    if (dueDateInput.trim()) {
+      const parsed = parseDateBR(dueDateInput.trim());
+      if (!parsed) { setError('Data de prazo inválida. Use o formato DD/MM/AAAA.'); return; }
+      const isFuture = new Date(`${parsed}T23:59:00`) > new Date();
+      if (!isFuture) { setError('A data de entrega deve ser no futuro.'); return; }
+      dueDateISO = parsed;
+    }
+
     setError('');
     setLoading(true);
     try {
-      const due = dueDate ? `${dueDate}T23:59:00.000Z` : undefined;
+      const due = dueDateISO ? `${dueDateISO}T23:59:00.000Z` : undefined;
       const est = estMinutes ? parseInt(estMinutes, 10) : undefined;
       await onSubmit({
         title: title.trim(), difficulty, priority, requiresProof,
@@ -149,8 +189,10 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Prazo</Text>
                   <TextInput
-                    style={styles.input} value={dueDate} onChangeText={setDueDate} editable={!isCompleted}
-                    placeholder="AAAA-MM-DD" placeholderTextColor={COLORS.textMuted}
+                    style={styles.input} value={dueDateInput}
+                    onChangeText={(t) => setDueDateInput(maskDateBR(t))}
+                    editable={!isCompleted} keyboardType="number-pad" maxLength={10}
+                    placeholder="DD/MM/AAAA" placeholderTextColor={COLORS.textMuted}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -163,7 +205,7 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
               </View>
 
               <View style={styles.proofRow}>
-                <Text style={styles.fieldLabel}>Exige comprovação fotográfica para concluir</Text>
+                <Text style={[styles.fieldLabel, styles.proofLabel]}>Exige comprovação fotográfica para concluir</Text>
                 <Switch
                   value={requiresProof}
                   onValueChange={setRequiresProof}
@@ -409,7 +451,10 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
   rowFields: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+
   proofRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md, gap: SPACING.sm },
+  // flex:1 trava a largura do rótulo — sem isso o texto longo empurra o Switch pra fora da tela
+  proofLabel: { flex: 1, marginBottom: 0 },
   ptsPreview: { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md },
   ptsText: { fontSize: 12, color: COLORS.primary },
   error: { color: COLORS.red, fontSize: FONT.sm, marginTop: SPACING.sm },
