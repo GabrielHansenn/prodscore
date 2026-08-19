@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions, type DimensionValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { TaskStatus } from '@prodscore/shared';
@@ -8,16 +8,22 @@ import { useTaskStore } from '../store/taskStore';
 import LevelBar from '../components/LevelBar';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
-function StatTile({ icon, iconBg, label, value, color, sub }: {
+/** Largura de cada tile por nº de colunas — espelha os breakpoints sm/lg do Tailwind na web */
+function basisFor(cols: number): { flexBasis: DimensionValue } {
+  return { flexBasis: cols === 1 ? '100%' : cols === 2 ? '48%' : cols === 3 ? '31%' : '22%' };
+}
+
+function StatTile({ icon, iconBg, label, value, color, sub, basis }: {
   icon:   keyof typeof Ionicons.glyphMap;
   iconBg: string;
   label:  string;
   value:  string | number;
   color:  string;
   sub?:   string;
+  basis:  { flexBasis: DimensionValue };
 }) {
   return (
-    <View style={styles.tile}>
+    <View style={[styles.tile, basis]}>
       <View style={[styles.tileIcon, { backgroundColor: iconBg }]}>
         <Ionicons name={icon} size={18} color="#fff" />
       </View>
@@ -42,6 +48,7 @@ function SectionTitle({ icon, children }: { icon: keyof typeof Ionicons.glyphMap
 /** Tela de estatísticas — espelha /estatisticas no web */
 export default function StatisticsScreen({ navigation }: { navigation: { goBack: () => void } }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { stats, fetchStats } = useUserStore();
   const { tasks, fetchTasks } = useTaskStore();
 
@@ -49,6 +56,11 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
     void fetchStats();
     void fetchTasks();
   }, []);
+
+  // Mesmos breakpoints sm(640)/lg(1024) usados pela StatisticsPage web
+  const cols3     = width >= 640 ? 3 : 1;
+  const cols2     = width >= 640 ? 2 : 1;
+  const colsGeral = width >= 1024 ? 4 : width >= 640 ? 2 : 1;
 
   const completed   = tasks.filter((t) => t.status === TaskStatus.Completed).length;
   const total       = tasks.length;
@@ -88,25 +100,25 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
           {/* Esta semana */}
           <SectionTitle icon="calendar-outline">ESTA SEMANA</SectionTitle>
           <View style={styles.grid3}>
-            <StatTile icon="flash"           iconBg={COLORS.primary} label="Pontos Ganhos"      value={stats.pointsThisWeek.toLocaleString('pt-BR')} color={COLORS.primary} />
-            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompletedThisWeek} color={COLORS.success} />
-            <StatTile icon="trending-up"      iconBg={COLORS.blue}    label="Consistência"       value={`${Math.round(stats.consistencyRate)}%`} color={COLORS.blue} sub="dos dias ativos" />
+            <StatTile icon="flash"           iconBg={COLORS.primary} label="Pontos Ganhos"      value={stats.pointsThisWeek.toLocaleString('pt-BR')} color={COLORS.primary} basis={basisFor(cols3)} />
+            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompletedThisWeek} color={COLORS.success} basis={basisFor(cols3)} />
+            <StatTile icon="trending-up"      iconBg={COLORS.blue}    label="Consistência"       value={`${Math.round(stats.consistencyRate)}%`} color={COLORS.blue} sub="dos dias ativos" basis={basisFor(cols3)} />
           </View>
 
           {/* Sequências */}
           <SectionTitle icon="flame-outline">SEQUÊNCIAS</SectionTitle>
           <View style={styles.grid2}>
-            <StatTile icon="flame" iconBg="rgba(245,158,11,0.2)" label="Sequência atual (dias)" value={stats.currentStreak} color={COLORS.amber} />
-            <StatTile icon="flame" iconBg="rgba(249,115,22,0.2)" label="Maior sequência (dias)" value={stats.longestStreak} color={COLORS.orange} />
+            <StatTile icon="flame" iconBg="rgba(245,158,11,0.2)" label="Sequência atual (dias)" value={stats.currentStreak} color={COLORS.amber} basis={basisFor(cols2)} />
+            <StatTile icon="flame" iconBg="rgba(249,115,22,0.2)" label="Maior sequência (dias)" value={stats.longestStreak} color={COLORS.orange} basis={basisFor(cols2)} />
           </View>
 
           {/* Geral */}
           <SectionTitle icon="trophy-outline">GERAL</SectionTitle>
           <View style={styles.grid2}>
-            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompleted} color={COLORS.success} />
-            <StatTile icon="clipboard"        iconBg={COLORS.textSecondary} label="Taxa de Conclusão" value={`${completePct}%`} color={COLORS.text} sub={`${completed} de ${total} tarefas`} />
-            <StatTile icon="trophy"           iconBg={COLORS.amber} label="Conquistas"    value={stats.achievementsCount} color={COLORS.amber} />
-            <StatTile icon="flash"            iconBg={COLORS.primary} label="Total de Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} color={COLORS.primary} />
+            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompleted} color={COLORS.success} basis={basisFor(colsGeral)} />
+            <StatTile icon="clipboard"        iconBg={COLORS.textSecondary} label="Taxa de Conclusão" value={`${completePct}%`} color={COLORS.text} sub={`${completed} de ${total} tarefas`} basis={basisFor(colsGeral)} />
+            <StatTile icon="trophy"           iconBg={COLORS.amber} label="Conquistas"    value={stats.achievementsCount} color={COLORS.amber} basis={basisFor(colsGeral)} />
+            <StatTile icon="flash"            iconBg={COLORS.primary} label="Total de Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} color={COLORS.primary} basis={basisFor(colsGeral)} />
           </View>
 
         </ScrollView>
@@ -142,7 +154,7 @@ const styles = StyleSheet.create({
   grid2: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
 
   tile: {
-    flexBasis: '47%', flexGrow: 1,
+    flexGrow: 1,
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
     padding: SPACING.md, ...CARD_SHADOW,
