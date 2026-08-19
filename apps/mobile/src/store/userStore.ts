@@ -41,7 +41,9 @@ export const useUserStore = create<UserStoreState>((set) => ({
     try {
       const { data } = await api.get<{ estatisticas: UserStats }>('/users/me/stats');
       set({ stats: data.estatisticas, isLoading: false });
-    } catch {
+    } catch (err) {
+      // TODO(debug): stats fica preso em null sem isso — remover depois de achar a causa raiz
+      console.error('[userStore.fetchStats] falhou:', err);
       set({ isLoading: false });
     }
   },
