@@ -3,6 +3,8 @@ import * as SecureStore from '../lib/storage';
 
 /** Chave usada para guardar o access token no SecureStore */
 export const TOKEN_KEY = 'prodscore_access_token';
+/** Chave usada para guardar o refresh token no SecureStore */
+export const REFRESH_TOKEN_KEY = 'prodscore_refresh_token';
 
 /**
  * Instância central do cliente HTTP.
@@ -10,7 +12,7 @@ export const TOKEN_KEY = 'prodscore_access_token';
  * Em desenvolvimento local, aponta para o backend Express na rede local.
  */
 export const api = axios.create({
-  baseURL: process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:3000',
+  baseURL: process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:3333',
   timeout: 10_000,
 });
 
