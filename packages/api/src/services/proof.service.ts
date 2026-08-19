@@ -140,10 +140,9 @@ export async function uploadTaskProof(
     .upload(storagePath, buffer, { contentType, upsert: true });
 
   if (uploadError) {
-    // TODO(debug): motivo real do erro do Storage estava sendo descartado aqui
+    // Log só no servidor — o motivo real nunca deve chegar na resposta ao cliente
     console.error('[proof.service.uploadTaskProof] upload falhou:', uploadError, { storagePath, contentType, size: buffer.length });
-    const detail = JSON.stringify(uploadError);
-    throw new AppError(`Erro ao enviar a imagem: ${uploadError.message} | ${detail}`, 500, 'UPLOAD_FALHOU');
+    throw new AppError('Erro ao enviar a imagem. Tente novamente.', 500, 'UPLOAD_FALHOU');
   }
 
   // Se o path mudou (ex: formato diferente do anterior), remove o arquivo antigo

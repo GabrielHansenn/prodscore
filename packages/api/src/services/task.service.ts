@@ -223,10 +223,9 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     .single();
 
   if (error || !data) {
-    // TODO(debug): motivo real do erro do Supabase estava sendo descartado aqui —
-    // mensagem detalhada temporária pra investigação, reverter para genérica depois
+    // Log só no servidor — o motivo real nunca deve chegar na resposta ao cliente
     console.error('[task.service.createTask] insert falhou:', error, { input });
-    throw new AppError(`Erro ao criar tarefa: ${error?.message ?? 'motivo desconhecido'}`, 500, 'CRIACAO_FALHOU');
+    throw new AppError('Erro ao criar tarefa.', 500, 'CRIACAO_FALHOU');
   }
 
   return mapTaskRow(data as TaskRow);
