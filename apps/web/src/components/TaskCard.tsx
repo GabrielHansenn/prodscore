@@ -111,7 +111,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
   const [showProofUpload, setShowProofUpload] = useState(false);
 
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
-  const dueInfo      = parseDueDate(task.dueDate);
+  const dueInfo      = task.status === TaskStatus.Completed ? null : parseDueDate(task.dueDate);
   const pointsLabel  = getPointsPreview(task);
 
   /** Tarefas com requiresProof exigem a foto antes de concluir de verdade */

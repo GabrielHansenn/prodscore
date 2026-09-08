@@ -84,7 +84,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   const [showProofUpload, setShowProofUpload] = useState(false);
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
   const isCompleted  = task.status === TaskStatus.Completed;
-  const dueInfo      = parseDueDate(task.dueDate);
+  const dueInfo      = isCompleted ? null : parseDueDate(task.dueDate);
   const pointsLabel  = getPointsPreview(task);
   const priorityBadge = task.priority ? PRIORITY_BADGE[task.priority] : undefined;
 
