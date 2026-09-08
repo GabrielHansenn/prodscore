@@ -99,11 +99,16 @@ export async function getGroupMissions(id: string): Promise<MissionWithParticipa
 }
 
 /**
- * Atualiza nome, descrição ou URL da imagem do grupo.
+ * Atualiza nome, descrição, URL da imagem ou configuração de missões do grupo.
  */
 export async function updateGroupInfo(
   id: string,
-  input: { name?: string; description?: string | null; imageUrl?: string | null },
+  input: {
+    name?: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    countExternalTasksInMissions?: boolean;
+  },
 ): Promise<Group> {
   const { data } = await api.patch<{ grupo: Group }>(`/groups/${id}`, input);
   return data.grupo;

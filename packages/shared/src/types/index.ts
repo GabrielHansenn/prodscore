@@ -148,6 +148,8 @@ export interface Group {
   ownerId: string;
   /** Código de convite para novos membros entrarem */
   inviteCode: string;
+  /** Se true, tarefas concluídas fora do grupo também contam para missões coletivas */
+  countExternalTasksInMissions: boolean;
   /** Timestamp de criação */
   createdAt: string;
 }

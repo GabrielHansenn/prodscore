@@ -18,6 +18,7 @@ interface GroupRow {
   image_url: string | null;
   owner_id: string;
   invite_code: string;
+  count_external_tasks_in_missions: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +53,7 @@ function mapGroupRow(row: GroupRow): Group {
     imageUrl:    row.image_url,
     ownerId:     row.owner_id,
     inviteCode:  row.invite_code,
+    countExternalTasksInMissions: row.count_external_tasks_in_missions,
     createdAt:   row.created_at,
   };
 }
@@ -398,14 +400,9 @@ export async function getGroupMembers(
 ): Promise<GroupMemberWithStats[]> {
   await requireMembership(groupId, userId);
 
-  const { data, error } = await supabase
+  const { data: membersData, error } = await supabase
     .from('group_members')
-    .select(`
-      user_id, role, joined_at,
-      profiles (
-        username, avatar_url, level, total_points, current_streak, longest_streak
-      )
-    `)
+    .select('user_id, role, joined_at')
     .eq('group_id', groupId)
     .order('joined_at', { ascending: true });
 
@@ -413,21 +410,38 @@ export async function getGroupMembers(
     throw new AppError('Erro ao buscar membros.', 500, 'BUSCA_FALHOU');
   }
 
-  return (data ?? []).map((row) => {
-    const r = row as {
-      user_id: string; role: string; joined_at: string;
-      profiles: ProfileRow;
-    };
+  const members = (membersData ?? []) as Array<{ user_id: string; role: string; joined_at: string }>;
+  if (members.length === 0) return [];
+
+  // Não há FK entre group_members e profiles (ambas referenciam auth.users,
+  // mas não uma à outra) — o embed automático `profiles(...)` do PostgREST
+  // não encontra a relação e falha. Busca os perfis em uma segunda consulta
+  // e junta em JS.
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, level, total_points, current_streak, longest_streak')
+    .in('id', members.map((m) => m.user_id));
+
+  if (profilesError) {
+    throw new AppError('Erro ao buscar membros.', 500, 'BUSCA_FALHOU');
+  }
+
+  const profilesMap = new Map<string, ProfileRow>(
+    (profilesData as ProfileRow[] ?? []).map((p) => [p.id, p]),
+  );
+
+  return members.map((m) => {
+    const profile = profilesMap.get(m.user_id);
     return {
-      userId:        r.user_id,
-      role:          r.role as MemberRole,
-      joinedAt:      r.joined_at,
-      username:      r.profiles.username,
-      avatarUrl:     r.profiles.avatar_url,
-      level:         r.profiles.level,
-      totalPoints:   r.profiles.total_points,
-      currentStreak: r.profiles.current_streak,
-      longestStreak: r.profiles.longest_streak,
+      userId:        m.user_id,
+      role:          m.role as MemberRole,
+      joinedAt:      m.joined_at,
+      username:      profile?.username ?? '???',
+      avatarUrl:     profile?.avatar_url ?? null,
+      level:         profile?.level ?? 1,
+      totalPoints:   profile?.total_points ?? 0,
+      currentStreak: profile?.current_streak ?? 0,
+      longestStreak: profile?.longest_streak ?? 0,
     };
   });
 }
@@ -443,7 +457,12 @@ export async function getGroupMembers(
 export async function updateGroup(
   groupId: string,
   userId: string,
-  input: { name?: string; description?: string | null; imageUrl?: string | null },
+  input: {
+    name?: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    countExternalTasksInMissions?: boolean;
+  },
 ): Promise<Group> {
   const { role } = await requireMembership(groupId, userId);
 
@@ -455,6 +474,9 @@ export async function updateGroup(
   if (input.name        !== undefined) updates['name']        = input.name;
   if (input.description !== undefined) updates['description'] = input.description;
   if (input.imageUrl    !== undefined) updates['image_url']   = input.imageUrl;
+  if (input.countExternalTasksInMissions !== undefined) {
+    updates['count_external_tasks_in_missions'] = input.countExternalTasksInMissions;
+  }
 
   if (Object.keys(updates).length === 0) {
     throw new AppError('Nenhum campo para atualizar.', 400, 'NADA_A_ATUALIZAR');

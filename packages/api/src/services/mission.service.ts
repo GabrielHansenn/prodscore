@@ -39,11 +39,22 @@ interface ParticipantRow {
 // Helpers internos
 // ---------------------------------------------------------------------------
 
-/** Converte a linha do banco para a interface Mission, com progresso injetado */
+/**
+ * Converte a linha do banco para a interface Mission, com progresso injetado.
+ *
+ * Para missões de grupo, o progresso é coletivo: `groupTotalValue` deve ser a
+ * soma de `current_value` de TODOS os participantes da missão, não apenas do
+ * usuário que está consultando — do contrário cada membro veria um número
+ * diferente (o próprio, em vez do total do grupo). Para missões individuais,
+ * `groupTotalValue` é ignorado e o progresso é sempre o do próprio `participant`.
+ */
 function mapMissionRow(
   row: MissionRow,
   participant?: ParticipantRow | null,
+  groupTotalValue?: number,
 ): Mission {
+  const isGroup = row.type === 'group';
+  const currentValue = isGroup ? (groupTotalValue ?? 0) : (participant?.current_value ?? 0);
   return {
     id:           row.id,
     title:        row.title,
@@ -53,10 +64,17 @@ function mapMissionRow(
     targetValue:  row.target_value,
     rewardPoints: row.reward_points,
     expiresAt:    row.expires_at,
-    isCompleted:  participant?.is_completed ?? false,
-    currentValue: participant?.current_value ?? 0,
+    // Missão de grupo: "concluída" é o time ter batido a meta (igual pra todos).
+    // Missão individual: reflete a própria participação do usuário.
+    isCompleted:  isGroup ? currentValue >= row.target_value : (participant?.is_completed ?? false),
+    currentValue,
     createdAt:    row.created_at,
   };
+}
+
+/** Soma o current_value de uma lista de linhas de mission_participants */
+function sumParticipantsValue(rows: Array<{ current_value: number }>): number {
+  return rows.reduce((sum, r) => sum + r.current_value, 0);
 }
 
 /** Verifica se uma missão expirou */
@@ -138,10 +156,26 @@ export async function getMissionsForUser(
     participationMap.set(row.mission_id, row);
   });
 
+  // Para missões de grupo, o progresso exibido é o total do grupo (soma de
+  // TODOS os participantes), não só do usuário — busca em lote, sem filtrar
+  // por user_id, e soma por missão.
+  const groupMissionIds = missions.filter((m) => m.type === 'group').map((m) => m.id);
+  const groupTotals = new Map<string, number>();
+  if (groupMissionIds.length > 0) {
+    const { data: allParticipantsData } = await supabase
+      .from('mission_participants')
+      .select('mission_id, current_value')
+      .in('mission_id', groupMissionIds);
+
+    for (const row of (allParticipantsData ?? []) as Array<{ mission_id: string; current_value: number }>) {
+      groupTotals.set(row.mission_id, (groupTotals.get(row.mission_id) ?? 0) + row.current_value);
+    }
+  }
+
   return missions.map((mission) => {
     const participant = participationMap.get(mission.id) ?? null;
     return {
-      ...mapMissionRow(mission, participant),
+      ...mapMissionRow(mission, participant, groupTotals.get(mission.id)),
       isParticipating: participant !== null,
       joinedAt:        participant?.joined_at ?? null,
     };
@@ -216,28 +250,46 @@ export async function getMissionById(
 
   const participant = (participantData ?? null) as ParticipantRow | null;
 
-  // Para missões de grupo, busca o placar completo com perfis
+  // Para missões de grupo, busca o placar completo com perfis.
+  // Não dá pra usar o embed automático `profiles(...)` do PostgREST aqui:
+  // não existe FK direta entre mission_participants e profiles (ambas
+  // referenciam auth.users, mas não uma à outra), então esse embed falha
+  // silenciosamente. Busca em duas etapas e junta em JS.
   let leaderboard: MissionDetails['leaderboard'] = [];
+  let groupTotalValue: number | undefined;
 
   if (mission.type === 'group') {
     const { data: participantsData } = await supabase
       .from('mission_participants')
-      .select(`
-        user_id, current_value, is_completed,
-        profiles (username, avatar_url)
-      `)
+      .select('user_id, current_value, is_completed')
       .eq('mission_id', missionId)
       .order('current_value', { ascending: false });
 
-    leaderboard = (participantsData ?? []).map((p) => {
-      const row = p as unknown as {
-        user_id: string; current_value: number; is_completed: boolean;
-        profiles: { username: string; avatar_url: string | null };
-      };
+    const participantsRows = (participantsData ?? []) as Array<{
+      user_id: string; current_value: number; is_completed: boolean;
+    }>;
+
+    groupTotalValue = sumParticipantsValue(participantsRows);
+
+    const userIds = participantsRows.map((r) => r.user_id);
+    const profilesMap = new Map<string, { username: string; avatar_url: string | null }>();
+    if (userIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+
+      for (const p of (profilesData ?? []) as Array<{ id: string; username: string; avatar_url: string | null }>) {
+        profilesMap.set(p.id, { username: p.username, avatar_url: p.avatar_url });
+      }
+    }
+
+    leaderboard = participantsRows.map((row) => {
+      const profile = profilesMap.get(row.user_id);
       return {
         userId:       row.user_id,
-        username:     row.profiles.username,
-        avatarUrl:    row.profiles.avatar_url,
+        username:     profile?.username ?? '???',
+        avatarUrl:    profile?.avatar_url ?? null,
         currentValue: row.current_value,
         isCompleted:  row.is_completed,
       };
@@ -245,7 +297,7 @@ export async function getMissionById(
   }
 
   return {
-    ...mapMissionRow(mission, participant),
+    ...mapMissionRow(mission, participant, groupTotalValue),
     isParticipating: participant !== null,
     joinedAt:        participant?.joined_at ?? null,
     leaderboard,
@@ -367,22 +419,27 @@ export async function getMissionsForGroup(
 
   const missionIds = missions.map((m) => m.id);
 
-  const { data: participationData } = await supabase
+  // Busca TODOS os participantes dessas missões (não só o usuário logado) —
+  // são todas missões de grupo, então o progresso exibido é o total do grupo,
+  // igual pra todo mundo. A própria participação do usuário vem do mesmo lote.
+  const { data: allParticipantsData } = await supabase
     .from('mission_participants')
     .select('*')
-    .eq('user_id', userId)
     .in('mission_id', missionIds);
 
+  const allParticipants = (allParticipantsData ?? []) as ParticipantRow[];
+
   const participationMap = new Map<string, ParticipantRow>();
-  (participationData ?? []).forEach((p) => {
-    const row = p as ParticipantRow;
-    participationMap.set(row.mission_id, row);
-  });
+  const groupTotals = new Map<string, number>();
+  for (const row of allParticipants) {
+    if (row.user_id === userId) participationMap.set(row.mission_id, row);
+    groupTotals.set(row.mission_id, (groupTotals.get(row.mission_id) ?? 0) + row.current_value);
+  }
 
   return missions.map((mission) => {
     const participant = participationMap.get(mission.id) ?? null;
     return {
-      ...mapMissionRow(mission, participant),
+      ...mapMissionRow(mission, participant, groupTotals.get(mission.id)),
       isParticipating: participant !== null,
       joinedAt:        participant?.joined_at ?? null,
     };
@@ -547,19 +604,53 @@ export async function checkMissionProgress(userId: string): Promise<void> {
       missions:    Pick<MissionRow, 'id' | 'type' | 'group_id' | 'target_value' | 'reward_points' | 'expires_at'>;
     }>;
 
+    // Para missões de grupo, busca se o grupo permite contar tarefas de fora
+    // (padrão: não conta — só tarefas com group_id igual ao da missão).
+    const missionGroupIds = Array.from(
+      new Set(
+        participations
+          .map((p) => p.missions.group_id)
+          .filter((id): id is string => id !== null),
+      ),
+    );
+
+    const externalTasksAllowedByGroup = new Map<string, boolean>();
+    if (missionGroupIds.length > 0) {
+      const { data: groupsData } = await supabase
+        .from('groups')
+        .select('id, count_external_tasks_in_missions')
+        .in('id', missionGroupIds);
+
+      for (const g of (groupsData ?? []) as Array<{ id: string; count_external_tasks_in_missions: boolean }>) {
+        externalTasksAllowedByGroup.set(g.id, g.count_external_tasks_in_missions);
+      }
+    }
+
     for (const participation of participations) {
       const mission = participation.missions;
 
       // Ignora missões expiradas
       if (isMissionExpired(mission.expires_at)) continue;
 
-      // Conta as tarefas concluídas pelo usuário desde que entrou na missão
-      const { count: completedCount } = await supabase
+      // Conta as tarefas concluídas pelo usuário desde que entrou na missão.
+      // Missões de grupo só contam tarefas do próprio grupo, a menos que o
+      // grupo tenha habilitado explicitamente contar tarefas externas.
+      let tasksQuery = supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('status', 'completed')
         .gte('completed_at', participation.joined_at);
+
+      if (
+        mission.type === 'group' &&
+        mission.group_id &&
+        !externalTasksAllowedByGroup.get(mission.group_id)
+      ) {
+        tasksQuery = tasksQuery.eq('group_id', mission.group_id);
+      }
+
+      const { count: completedCount } = await tasksQuery;
 
       const newValue = completedCount ?? 0;
 
@@ -595,7 +686,13 @@ export async function checkMissionProgress(userId: string): Promise<void> {
       }
 
       if (missionCompleted) {
-        await completeMission(participation.mission_id, userId, mission.reward_points);
+        if (mission.type === 'group' && mission.group_id) {
+          // Meta coletiva batida — recompensa TODO o grupo, não só quem
+          // completou a tarefa que fechou a conta.
+          await completeGroupMissionForAllMembers(participation.mission_id, mission.group_id, mission.reward_points);
+        } else {
+          await completeMission(participation.mission_id, userId, mission.reward_points);
+        }
       }
     }
   } catch (err) {
@@ -660,4 +757,87 @@ export async function completeMission(
   } catch (err) {
     console.error('[missões] Erro ao verificar conquistas após missão:', err);
   }
+}
+
+/**
+ * Marca uma missão de GRUPO como concluída para TODOS os membros do grupo e
+ * concede a recompensa a cada um deles — a meta é coletiva, então a recompensa
+ * também é. Isso inclui membros que nunca completaram uma tarefa e por isso
+ * ainda não tinham linha em mission_participants (criada aqui, já concluída).
+ *
+ * Idempotente: só recompensa quem ainda não tinha sido marcado como concluído.
+ *
+ * @param missionId    - UUID da missão de grupo
+ * @param groupId      - UUID do grupo (mission.group_id)
+ * @param rewardPoints - Pontos a conceder a cada membro
+ */
+async function completeGroupMissionForAllMembers(
+  missionId: string,
+  groupId: string,
+  rewardPoints: number,
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  const { data: membersData } = await supabase
+    .from('group_members')
+    .select('user_id')
+    .eq('group_id', groupId);
+
+  const memberIds = (membersData ?? []).map((m) => (m as { user_id: string }).user_id);
+  if (memberIds.length === 0) return;
+
+  const { data: existingData } = await supabase
+    .from('mission_participants')
+    .select('user_id, is_completed')
+    .eq('mission_id', missionId)
+    .in('user_id', memberIds);
+
+  const existingRows = (existingData ?? []) as Array<{ user_id: string; is_completed: boolean }>;
+  const existingMap = new Map(existingRows.map((r) => [r.user_id, r.is_completed]));
+
+  // Membros que já participavam mas ainda não tinham sido marcados como concluídos
+  const toUpdate = memberIds.filter((id) => existingMap.get(id) === false);
+  if (toUpdate.length > 0) {
+    await supabase
+      .from('mission_participants')
+      .update({ is_completed: true, completed_at: now })
+      .eq('mission_id', missionId)
+      .in('user_id', toUpdate);
+  }
+
+  // Membros que nunca completaram nenhuma tarefa do grupo e por isso nunca
+  // tinham entrado na missão — criados aqui já como concluídos.
+  const toInsert = memberIds.filter((id) => !existingMap.has(id));
+  if (toInsert.length > 0) {
+    await supabase.from('mission_participants').insert(
+      toInsert.map((id) => ({
+        mission_id:    missionId,
+        user_id:       id,
+        current_value: 0,
+        is_completed:  true,
+        completed_at:  now,
+      })),
+    );
+  }
+
+  const rewardedUserIds = [...toUpdate, ...toInsert];
+
+  if (rewardPoints > 0) {
+    await Promise.all(rewardedUserIds.map(async (id) => {
+      try {
+        await recordTransaction(id, rewardPoints, PointReason.MissionReward, missionId);
+      } catch (err) {
+        console.error(`[missões] Erro ao conceder recompensa de missão de grupo para ${id}:`, err);
+      }
+    }));
+    console.log(`[missões] Recompensa de ${rewardPoints} pts concedida a ${rewardedUserIds.length} membro(s) na missão de grupo ${missionId}`);
+  }
+
+  await Promise.all(rewardedUserIds.map(async (id) => {
+    try {
+      await checkAchievements(id);
+    } catch (err) {
+      console.error(`[missões] Erro ao verificar conquistas após missão de grupo para ${id}:`, err);
+    }
+  }));
 }
