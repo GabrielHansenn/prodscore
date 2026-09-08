@@ -7,6 +7,7 @@ import {
 } from '@prodscore/shared';
 import { compressImage } from '../lib/imageCompression.js';
 import { uploadTaskProof } from '../services/proof.service.js';
+import FormFeedback from './FormFeedback.js';
 
 function CameraIcon({ className }: { className?: string }) {
   return (
@@ -158,11 +159,7 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
           </div>
         )}
 
-        {error && (
-          <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
-            {error}
-          </p>
-        )}
+        {error && <div className="mt-3"><FormFeedback variant="error" message={error} /></div>}
 
         <div className="mt-5 flex gap-3">
           <button type="button" onClick={onCancel} disabled={uploading} className="btn-secondary flex-1">

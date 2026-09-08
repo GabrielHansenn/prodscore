@@ -1,5 +1,5 @@
 import { type Task, type TaskDifficulty, type TaskPriority, type Achievement } from '@prodscore/shared';
-import { api } from './api.js';
+import { api, callApi } from './api.js';
 
 /** Parâmetros de filtro para listagem de tarefas */
 export interface GetTasksParams {
@@ -23,8 +23,10 @@ export interface CompleteTaskResult {
  * Busca todas as tarefas do usuário autenticado com filtros opcionais.
  */
 export async function getTasks(params?: GetTasksParams): Promise<Task[]> {
-  const { data } = await api.get<{ tarefas: Task[] }>('/tasks', { params });
-  return data.tarefas;
+  return callApi(async () => {
+    const { data } = await api.get<{ tarefas: Task[] }>('/tasks', { params });
+    return data.tarefas;
+  }, 'Erro ao carregar suas tarefas.');
 }
 
 /**
@@ -39,8 +41,10 @@ export async function createTask(input: {
   dueDate?:          string;
   groupId?:          string;
 }): Promise<Task> {
-  const { data } = await api.post<{ tarefa: Task }>('/tasks', input);
-  return data.tarefa;
+  return callApi(async () => {
+    const { data } = await api.post<{ tarefa: Task }>('/tasks', input);
+    return data.tarefa;
+  }, 'Erro ao criar a tarefa.');
 }
 
 /**
@@ -50,21 +54,25 @@ export async function updateTask(
   id:      string,
   updates: Partial<Pick<Task, 'title' | 'description' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate'>>,
 ): Promise<Task> {
-  const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, updates);
-  return data.tarefa;
+  return callApi(async () => {
+    const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, updates);
+    return data.tarefa;
+  }, 'Erro ao salvar a tarefa.');
 }
 
 /**
  * Remove permanentemente uma tarefa.
  */
 export async function deleteTask(id: string): Promise<void> {
-  await api.delete(`/tasks/${id}`);
+  await callApi(() => api.delete(`/tasks/${id}`), 'Erro ao excluir a tarefa.');
 }
 
 /**
  * Conclui uma tarefa e retorna o resultado completo da gamificação.
  */
 export async function completeTask(id: string): Promise<CompleteTaskResult> {
-  const { data } = await api.patch<CompleteTaskResult>(`/tasks/${id}/complete`);
-  return data;
+  return callApi(async () => {
+    const { data } = await api.patch<CompleteTaskResult>(`/tasks/${id}/complete`);
+    return data;
+  }, 'Erro ao concluir a tarefa.');
 }

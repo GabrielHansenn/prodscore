@@ -7,11 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { BehavioralProfileType, type BehavioralProfile, type BehavioralTag } from '@prodscore/shared';
+import { BehavioralProfileType, validateUsername, type BehavioralProfile, type BehavioralTag } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import { getBehavioralProfile } from '../services/behavioral.service';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { showToast } from '../store/toastStore';
 import AchievementBadge, { type BadgeData } from '../components/AchievementBadge';
+import InlineFeedback from '../components/InlineFeedback';
 import LevelBar from '../components/LevelBar';
 import { api } from '../services/api';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
@@ -73,7 +76,7 @@ export default function ProfileScreen() {
   const [username, setUsername] = useState(user?.username ?? '');
   const [bio,      setBio]      = useState(user?.bio ?? '');
   const [saving,   setSaving]   = useState(false);
-  const [saveMsg,  setSaveMsg]  = useState<{ ok: boolean; msg: string } | null>(null);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     void fetchStats();
@@ -99,14 +102,17 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
+    const usernameError = validateUsername(username);
+    if (usernameError) { setSaveError(usernameError); return; }
+
     setSaving(true);
-    setSaveMsg(null);
+    setSaveError('');
     try {
       await api.patch('/users/me', { username: username.trim(), bio: bio.trim() || null });
-      setSaveMsg({ ok: true, msg: 'Perfil atualizado com sucesso!' });
       setEditing(false);
+      showToast('Perfil atualizado com sucesso!');
     } catch (err) {
-      setSaveMsg({ ok: false, msg: err instanceof Error ? err.message : 'Erro ao salvar perfil.' });
+      setSaveError(getFriendlyErrorMessage(err, 'Erro ao salvar perfil.'));
     } finally {
       setSaving(false);
     }
@@ -163,15 +169,10 @@ export default function ProfileScreen() {
                 style={[styles.input, { height: 64 }]} value={bio} onChangeText={setBio}
                 multiline maxLength={160} placeholder="Conte um pouco sobre você..." placeholderTextColor={COLORS.textMuted}
               />
-              {saveMsg && !saveMsg.ok && <Text style={styles.errorMsg}>{saveMsg.msg}</Text>}
+              {saveError ? <InlineFeedback variant="error" message={saveError} /> : null}
               <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSaveProfile()} disabled={saving}>
                 {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Salvar alterações</Text>}
               </TouchableOpacity>
-            </View>
-          )}
-          {saveMsg?.ok && !editing && (
-            <View style={styles.successBanner}>
-              <Text style={styles.successBannerText}>✓ {saveMsg.msg}</Text>
             </View>
           )}
         </View>
@@ -326,11 +327,8 @@ const styles = StyleSheet.create({
   editForm: { marginTop: SPACING.md, gap: 4 },
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
-  errorMsg: { color: COLORS.red, fontSize: 12, marginTop: SPACING.xs },
   btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.sm },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
-  successBanner: { marginTop: SPACING.md, backgroundColor: COLORS.successDim, borderRadius: RADIUS.md, padding: SPACING.sm },
-  successBannerText: { color: '#047857', fontSize: 12, fontWeight: '600' },
 
   menuCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, marginBottom: SPACING.md, overflow: 'hidden', ...CARD_SHADOW },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },

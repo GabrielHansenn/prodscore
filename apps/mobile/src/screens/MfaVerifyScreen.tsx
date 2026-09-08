@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { translateMFAErrorMessage } from '../services/mfa.service';
+import InlineFeedback from '../components/InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 
 /**
@@ -55,11 +56,7 @@ export default function MfaVerifyScreen() {
             autoFocus
           />
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <View style={{ width: '100%' }}><InlineFeedback variant="error" message={error} /></View> : null}
 
           <TouchableOpacity
             style={[styles.btn, isLoading && styles.btnDisabled]}
@@ -104,16 +101,6 @@ const styles = StyleSheet.create({
     textAlign:       'center',
     color:           COLORS.text,
   },
-
-  errorBox: {
-    width: '100%',
-    backgroundColor: COLORS.redDim,
-    borderRadius:    RADIUS.sm,
-    borderWidth:     1,
-    borderColor:     'rgba(248,113,113,0.3)',
-    padding:         SPACING.sm,
-  },
-  errorText: { color: COLORS.red, fontSize: FONT.sm, textAlign: 'center' },
 
   btn: {
     width: '100%',

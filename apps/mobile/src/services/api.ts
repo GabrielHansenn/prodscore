@@ -27,9 +27,11 @@ api.interceptors.request.use(async (config) => {
 
 // Interceptor de resposta:
 // - 401 → limpa token (store trata o redirecionamento)
-// - reescreve error.message com o campo `erro` retornado pela API
-//   (formato { erro, codigo? } — ver packages/api/src/lib/errors.ts),
-//   já que por padrão o axios só expõe "Request failed with status code XXX".
+// - reescreve error.message com uma mensagem amigável em português:
+//   - sem resposta nenhuma (rede caiu/timeout) → aviso de conexão
+//   - campo `erro` da API (formato { erro, codigo? } — ver packages/api/src/lib/errors.ts) → usa direto
+//   - 500+ sem `erro` → mensagem genérica
+//   Sem isso, o axios só expõe "Request failed with status code XXX" ou "Network Error".
 api.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
@@ -37,9 +39,16 @@ api.interceptors.response.use(
       if (error.response?.status === 401) {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
       }
-      const serverMessage = (error.response?.data as { erro?: string } | undefined)?.erro;
-      if (serverMessage) {
-        error.message = serverMessage;
+
+      if (!error.response) {
+        error.message = 'Não foi possível conectar. Verifique sua internet.';
+      } else {
+        const serverMessage = (error.response.data as { erro?: string } | undefined)?.erro;
+        if (serverMessage) {
+          error.message = serverMessage;
+        } else if (error.response.status >= 500) {
+          error.message = 'Algo deu errado. Tente novamente em instantes.';
+        }
       }
     }
     return Promise.reject(error);

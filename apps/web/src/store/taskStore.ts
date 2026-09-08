@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { TaskStatus, TaskDifficulty, TaskPriority, type Task, type Achievement, type LevelReward } from '@prodscore/shared';
 import { api } from '../services/api.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -84,18 +85,22 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   createTask: async (input) => {
-    const { data } = await api.post<{ tarefa: Task }>('/tasks', {
-      title:            input.title,
-      difficulty:       input.difficulty,
-      priority:         input.priority,
-      estimatedMinutes: input.estimatedMinutes,
-      dueDate:          input.dueDate,
-      description:      input.description,
-      groupId:          input.groupId,
-      requiresProof:    input.requiresProof,
-    });
-    set((state) => ({ tasks: [data.tarefa, ...state.tasks] }));
-    return data.tarefa;
+    try {
+      const { data } = await api.post<{ tarefa: Task }>('/tasks', {
+        title:            input.title,
+        difficulty:       input.difficulty,
+        priority:         input.priority,
+        estimatedMinutes: input.estimatedMinutes,
+        dueDate:          input.dueDate,
+        description:      input.description,
+        groupId:          input.groupId,
+        requiresProof:    input.requiresProof,
+      });
+      set((state) => ({ tasks: [data.tarefa, ...state.tasks] }));
+      return data.tarefa;
+    } catch (err) {
+      throw new Error(getFriendlyErrorMessage(err, 'Erro ao criar a tarefa.'));
+    }
   },
 
   updateTask: async (id, updates) => {
@@ -109,15 +114,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (updates.dueDate          !== undefined) body['dueDate']          = updates.dueDate;
     if (updates.requiresProof    !== undefined) body['requiresProof']    = updates.requiresProof;
 
-    const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, body);
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? data.tarefa : t)),
-    }));
+    try {
+      const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, body);
+      set((state) => ({
+        tasks: state.tasks.map((t) => (t.id === id ? data.tarefa : t)),
+      }));
+    } catch (err) {
+      throw new Error(getFriendlyErrorMessage(err, 'Erro ao salvar a tarefa.'));
+    }
   },
 
   deleteTask: async (id) => {
-    await api.delete(`/tasks/${id}`);
-    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+    try {
+      await api.delete(`/tasks/${id}`);
+      set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+    } catch (err) {
+      throw new Error(getFriendlyErrorMessage(err, 'Erro ao excluir a tarefa.'));
+    }
   },
 
   completeTask: async (id) => {
@@ -143,7 +156,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     } catch (err) {
       // Reverte para o snapshot anterior em caso de falha
       set({ tasks: original });
-      throw err;
+      throw new Error(getFriendlyErrorMessage(err, 'Erro ao concluir a tarefa.'));
     }
   },
 

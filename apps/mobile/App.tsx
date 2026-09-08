@@ -12,6 +12,7 @@ import {
   Montserrat_800ExtraBold,
 } from '@expo-google-fonts/montserrat';
 import AppNavigation from './src/navigation/index';
+import ToastHost from './src/components/ToastHost';
 import { COLORS } from './src/constants/theme';
 import './src/lib/globalFont';
 
@@ -34,6 +35,7 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="dark" backgroundColor="#f9fafb" />
         <AppNavigation />
+        <ToastHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

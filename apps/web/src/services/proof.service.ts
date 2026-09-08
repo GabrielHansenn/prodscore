@@ -1,5 +1,6 @@
 import type { TaskProof } from '@prodscore/shared';
-import { api, extractApiErrorMessage } from './api.js';
+import { api } from './api.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 
 /**
  * Envia (ou substitui) a foto de comprovação de conclusão de uma tarefa.
@@ -29,7 +30,7 @@ export async function uploadTaskProof(
     });
     return data.prova;
   } catch (err) {
-    throw new Error(extractApiErrorMessage(err, 'Erro ao enviar a foto de comprovação.'));
+    throw new Error(getFriendlyErrorMessage(err, 'Erro ao enviar a foto de comprovação.'));
   }
 }
 
@@ -42,7 +43,7 @@ export async function getTaskProofUrl(taskId: string): Promise<string> {
     const { data } = await api.get<{ url: string }>(`/tasks/${taskId}/proof`);
     return data.url;
   } catch (err) {
-    throw new Error(extractApiErrorMessage(err, 'Erro ao carregar a foto de comprovação.'));
+    throw new Error(getFriendlyErrorMessage(err, 'Erro ao carregar a foto de comprovação.'));
   }
 }
 
@@ -51,6 +52,6 @@ export async function deleteTaskProof(taskId: string): Promise<void> {
   try {
     await api.delete(`/tasks/${taskId}/proof`);
   } catch (err) {
-    throw new Error(extractApiErrorMessage(err, 'Erro ao remover a comprovação.'));
+    throw new Error(getFriendlyErrorMessage(err, 'Erro ao remover a comprovação.'));
   }
 }

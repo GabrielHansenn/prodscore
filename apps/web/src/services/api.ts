@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getAccessToken } from '../lib/supabase.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 
 /**
  * Instância Axios centralizada para todas as chamadas ao backend Express.
@@ -42,13 +43,19 @@ api.interceptors.response.use(
 );
 
 /**
- * Extrai a mensagem de erro em português enviada pela API (formato
- * `{ erro, codigo? }`), com fallback genérico quando não disponível.
+ * Executa uma chamada à API e, se falhar, relança um `Error` com mensagem
+ * amigável em português (ver `getFriendlyErrorMessage`) — assim qualquer
+ * componente que capturar o erro e usar `err.message` já mostra algo legível,
+ * sem precisar tratar cada chamada individualmente.
+ *
+ * @param fn       - Função que executa a chamada à API e retorna o resultado
+ * @param fallback - Mensagem específica da ação, usada quando a API não
+ *                   retornar um `erro` amigável (ex: falha de rede, 500)
  */
-export function extractApiErrorMessage(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err)) {
-    const body = err.response?.data as { erro?: string } | undefined;
-    if (body?.erro) return body.erro;
+export async function callApi<T>(fn: () => Promise<T>, fallback: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    throw new Error(getFriendlyErrorMessage(err, fallback));
   }
-  return err instanceof Error ? err.message : fallback;
 }

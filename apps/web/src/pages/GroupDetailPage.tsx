@@ -12,7 +12,10 @@ import {
 } from '../services/group.service.js';
 import { createGroupMission, type MissionWithParticipation } from '../services/mission.service.js';
 import { getTasks, createTask } from '../services/task.service.js';
+import { validateRequired, validatePositiveNumber } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
+import { showToast } from '../store/toastStore.js';
+import FormFeedback from '../components/FormFeedback.js';
 import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
 import { UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon } from '../components/icons.js';
@@ -156,6 +159,16 @@ function CreateMissionForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    const titleError  = validateRequired(title, 'Título');
+    const targetError = validatePositiveNumber(target, 'Meta');
+    const rewardNum   = Number(reward);
+    const rewardError = !reward.trim() || !Number.isFinite(rewardNum) || rewardNum < 0
+      ? 'Recompensa precisa ser um número maior ou igual a zero.'
+      : null;
+    const firstError = titleError ?? targetError ?? rewardError;
+    if (firstError) { setError(firstError); return; }
+
     setSaving(true);
     setError('');
     try {
@@ -166,6 +179,7 @@ function CreateMissionForm({
         rewardPoints: Number(reward),
         ...(expires ? { expiresAt: new Date(expires).toISOString() } : {}),
       });
+      showToast('Missão criada com sucesso!');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar missão.');
       setSaving(false);
@@ -229,7 +243,7 @@ function CreateMissionForm({
           />
         </div>
 
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
+        {error && <FormFeedback variant="error" message={error} />}
 
         <div className="flex gap-2 pt-1">
           <button type="submit" disabled={saving} className="btn-primary flex-1 text-sm disabled:opacity-50">
@@ -289,6 +303,8 @@ function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task)
       const { completeTask } = await import('../services/task.service.js');
       const result = await completeTask(task.id);
       onComplete(result.tarefa);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao concluir a tarefa.', 'error');
     } finally {
       setCompleting(false);
     }
@@ -365,7 +381,9 @@ function GroupTasksTab({
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    const titleError = validateRequired(title, 'Título');
+    if (titleError) { setError(titleError); return; }
+
     setSaving(true);
     setError('');
     try {
@@ -381,6 +399,7 @@ function GroupTasksTab({
       setTitle(''); setDesc(''); setDueDate('');
       setDiff(TaskDifficulty.Medium); setPriority(TaskPriority.Medium);
       setShowForm(false);
+      showToast('Tarefa criada com sucesso!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar tarefa.');
     } finally {
@@ -456,7 +475,7 @@ function GroupTasksTab({
               />
             </div>
 
-            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
+            {error && <FormFeedback variant="error" message={error} />}
 
             <div className="flex gap-2 pt-1">
               <button type="submit" disabled={saving} className="btn-primary flex-1 text-sm disabled:opacity-50">

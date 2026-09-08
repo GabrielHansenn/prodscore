@@ -6,9 +6,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MemberRole } from '@prodscore/shared';
+import { MemberRole, validateRequired, validateInviteCode } from '@prodscore/shared';
 import GroupCard, { type GroupCardData } from '../components/GroupCard';
 import { api } from '../services/api';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { showToast } from '../store/toastStore';
+import InlineFeedback from '../components/InlineFeedback';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 import type { AppStackParamList } from '../navigation/index';
@@ -57,15 +60,17 @@ function CreateModal({ visible, onClose, onCreate }: {
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
-    if (!name.trim()) { setError('Nome é obrigatório.'); return; }
+    const nameError = validateRequired(name, 'Nome do grupo');
+    if (nameError) { setError(nameError); return; }
     setError('');
     setLoading(true);
     try {
       const g = await createGroupApi(name.trim(), desc.trim() || undefined);
       onCreate(g);
       setName(''); setDesc(''); onClose();
+      showToast('Grupo criado com sucesso!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar grupo.');
+      setError(getFriendlyErrorMessage(err, 'Erro ao criar grupo.'));
     } finally { setLoading(false); }
   };
 
@@ -83,7 +88,7 @@ function CreateModal({ visible, onClose, onCreate }: {
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Devs Produtivos" placeholderTextColor={COLORS.textMuted} autoFocus />
           <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Descrição (opcional)</Text>
           <TextInput style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" placeholderTextColor={COLORS.textMuted} multiline />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <InlineFeedback variant="error" message={error} /> : null}
           <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={() => void handleCreate()} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar Grupo</Text>}
           </TouchableOpacity>
@@ -108,15 +113,17 @@ function JoinModal({ visible, onClose, onJoin }: {
   const [loading, setLoading] = useState(false);
 
   const handleJoin = async () => {
-    if (code.trim().length < 4) { setError('Código inválido.'); return; }
+    const codeError = validateInviteCode(code);
+    if (codeError) { setError(codeError); return; }
     setError('');
     setLoading(true);
     try {
       const g = await joinGroupApi(code.trim());
       onJoin(g);
       setCode(''); onClose();
+      showToast(`Você entrou no grupo "${g.name}"!`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Código inválido.');
+      setError(getFriendlyErrorMessage(err, 'Código de convite inválido.'));
     } finally { setLoading(false); }
   };
 
@@ -140,7 +147,7 @@ function JoinModal({ visible, onClose, onJoin }: {
             autoFocus
             maxLength={8}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <InlineFeedback variant="error" message={error} /> : null}
           <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={() => void handleJoin()} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Entrar no Grupo</Text>}
           </TouchableOpacity>
@@ -167,8 +174,13 @@ export default function GroupsScreen() {
 
   useEffect(() => {
     void (async () => {
-      try   { setGroups(await fetchGroups()); }
-      finally { setIsLoading(false); }
+      try {
+        setGroups(await fetchGroups());
+      } catch (err) {
+        showToast(getFriendlyErrorMessage(err, 'Erro ao carregar seus grupos.'), 'error');
+      } finally {
+        setIsLoading(false);
+      }
     })();
   }, []);
 
@@ -268,7 +280,6 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary },
   input:      { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: COLORS.text },
   codeInput:  { textAlign: 'center', fontSize: FONT.xl, letterSpacing: 8, fontWeight: '700' },
-  error:      { color: COLORS.red, fontSize: FONT.sm },
   btn:        { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnText:    { color: '#fff', fontWeight: '700', fontSize: FONT.md },
 });

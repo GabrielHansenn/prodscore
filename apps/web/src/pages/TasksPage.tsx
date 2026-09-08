@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { TaskDifficulty, TaskPriority, TaskStatus, type Task, type TaskSuggestion } from '@prodscore/shared';
+import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task, type TaskSuggestion } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
+import { showToast } from '../store/toastStore.js';
+import FormFeedback from '../components/FormFeedback.js';
 import TaskCard from '../components/TaskCard.js';
 import { ClipboardIcon, SparklesIcon } from '../components/icons.js';
 import { getTaskSuggestions } from '../services/behavioral.service.js';
@@ -74,7 +76,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) { setError('Título é obrigatório.'); return; }
+    const titleError = validateRequired(title, 'Título');
+    if (titleError) { setError(titleError); return; }
     setError('');
     setLoading(true);
     try {
@@ -91,6 +94,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
         ...(due      ? { dueDate: due }              : {}),
       });
       onClose();
+      showToast(isEdit ? 'Tarefa atualizada com sucesso!' : 'Tarefa criada com sucesso!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar tarefa.');
     } finally {
@@ -212,9 +216,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
             {dueDate && ` · +${Math.floor(pts * 0.2)} pts se entregue no prazo`}
           </div>
 
-          {error && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{error}</p>
-          )}
+          {error && <FormFeedback variant="error" message={error} />}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
@@ -257,7 +259,11 @@ export default function TasksPage() {
 
   const handleComplete = async (id: string) => {
     setCompleting((prev) => new Set(prev).add(id));
-    try { await completeTask(id); } finally {
+    try {
+      await completeTask(id);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao concluir a tarefa.', 'error');
+    } finally {
       setCompleting((prev) => { const n = new Set(prev); n.delete(id); return n; });
     }
   };
@@ -377,7 +383,12 @@ export default function TasksPage() {
               <TaskCard
                 task={task}
                 onComplete={(id) => void handleComplete(id)}
-                onDelete={(id) => void (window.confirm('Excluir esta tarefa permanentemente?') && deleteTask(id))}
+                onDelete={(id) => {
+                  if (!window.confirm('Excluir esta tarefa permanentemente?')) return;
+                  void deleteTask(id).catch((err: unknown) => {
+                    showToast(err instanceof Error ? err.message : 'Erro ao excluir a tarefa.', 'error');
+                  });
+                }}
                 onEdit={(t) => setEditingTask(t)}
               />
             </div>

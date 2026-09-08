@@ -6,6 +6,7 @@ import { useAuthStore } from './store/authStore.js';
 import AppLayout from './components/AppLayout.js';
 import CookieBanner from './components/CookieBanner.js';
 import CookiePreferences from './components/CookiePreferences.js';
+import ToastContainer from './components/ToastContainer.js';
 
 // Páginas públicas
 import LandingPage        from './pages/LandingPage.js';
@@ -152,6 +153,7 @@ export default function App() {
       {/* Elementos globais de consentimento de cookies — presentes em toda rota */}
       <CookieBanner />
       <CookiePreferences />
+      <ToastContainer />
     </>
   );
 }
