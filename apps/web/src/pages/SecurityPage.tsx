@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import EnrollMFA from '../components/EnrollMFA.js';
 import RequireAAL2 from '../components/RequireAAL2.js';
+import FormFeedback from '../components/FormFeedback.js';
 import { useAuthStore } from '../store/authStore.js';
 import { changePassword, deleteAccount } from '../services/security.service.js';
 
@@ -57,14 +59,11 @@ function ChangePasswordForm() {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 8) {
-      setError('A nova senha deve ter no mínimo 8 caracteres.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('As senhas não coincidem.');
-      return;
-    }
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) { setError(passwordError); return; }
+
+    const confirmError = validatePasswordConfirmation(newPassword, confirmPassword);
+    if (confirmError) { setError(confirmError); return; }
 
     setSaving(true);
     try {
@@ -103,16 +102,8 @@ function ChangePasswordForm() {
         />
       </div>
 
-      {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </p>
-      )}
-      {saved && (
-        <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-600 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-          Senha alterada com sucesso!
-        </p>
-      )}
+      {error && <FormFeedback variant="error" message={error} />}
+      {saved && <FormFeedback variant="success" message="Senha alterada com sucesso!" />}
 
       <button type="submit" disabled={saving} className="btn-secondary">
         {saving ? 'Salvando...' : 'Alterar senha'}
@@ -176,11 +167,7 @@ export default function SecurityPage() {
         </p>
         <RequireAAL2>
           <div>
-            {deleteError && (
-              <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-                {deleteError}
-              </p>
-            )}
+            {deleteError && <div className="mb-3"><FormFeedback variant="error" message={deleteError} /></div>}
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}

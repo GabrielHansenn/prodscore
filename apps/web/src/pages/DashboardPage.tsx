@@ -3,6 +3,7 @@ import { TaskStatus, MissionType, type LevelReward, type PointTransaction, type 
 import { useAuthStore } from '../store/authStore.js';
 import { useTaskStore } from '../store/taskStore.js';
 import { useUserStore } from '../store/userStore.js';
+import { showToast } from '../store/toastStore.js';
 import { supabase } from '../lib/supabase.js';
 import TaskCard from '../components/TaskCard.js';
 import LevelProgress from '../components/LevelProgress.js';
@@ -11,12 +12,6 @@ import MissionCard from '../components/MissionCard.js';
 import PointTransactionFeed from '../components/PointTransactionFeed.js';
 import { SparklesIcon, FlameIcon, ExclamationTriangleIcon } from '../components/icons.js';
 import { getProcrastinationAlerts } from '../services/behavioral.service.js';
-
-interface Toast {
-  id:      number;
-  message: string;
-  type:    'success' | 'milestone';
-}
 
 interface Celebration {
   days: number;
@@ -61,7 +56,6 @@ export default function DashboardPage() {
   }));
 
   const [transactions,   setTransactions]   = useState<PointTransaction[]>([]);
-  const [toasts,         setToasts]         = useState<Toast[]>([]);
   const [celebration,    setCelebration]    = useState<Celebration | null>(null);
   const [levelRewardPop, setLevelRewardPop] = useState<LevelReward | null>(null);
   const [completing,     setCompleting]     = useState<Set<string>>(new Set());
@@ -116,19 +110,19 @@ export default function DashboardPage() {
     setCompleting((prev) => new Set(prev).add(taskId));
     try {
       const result = await completeTask(taskId);
-      const toastId = Date.now();
-      setToasts((prev) => [...prev, { id: toastId, message: `Tarefa concluída! +${result.pontosGanhos} pts`, type: 'success' }]);
-      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== toastId)), 4000);
+      showToast(`Tarefa concluída! +${result.pontosGanhos} pts`);
       if (result.marcoStreak    !== null) setCelebration({ days: result.marcoStreak });
       if (result.recompensaNivel)         setLevelRewardPop(result.recompensaNivel);
       void fetchStats();
       if (user) {
         setTransactions((prev) => [
-          { id: `local-${toastId}`, userId: user.id, amount: result.pontosGanhos, reason: 'task_completed' as PointTransaction['reason'], referenceId: taskId, createdAt: new Date().toISOString() },
+          { id: `local-${Date.now()}`, userId: user.id, amount: result.pontosGanhos, reason: 'task_completed' as PointTransaction['reason'], referenceId: taskId, createdAt: new Date().toISOString() },
           ...prev.slice(0, 4),
         ]);
       }
-    } catch { /* erro tratado pelo store */ } finally {
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao concluir a tarefa.', 'error');
+    } finally {
       setCompleting((prev) => { const n = new Set(prev); n.delete(taskId); return n; });
     }
   };
@@ -299,26 +293,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
-      {/* P8: aria-live="polite" — screen readers anunciam sem interromper */}
-      <div
-        aria-live="polite"
-        aria-atomic="false"
-        className="fixed bottom-6 right-6 z-50 flex flex-col gap-2"
-      >
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role="status"
-            className="flex items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 shadow-card-hover animate-in dark:border-brand-800/60"
-          >
-            <svg className="h-4 w-4 shrink-0 text-lime-600 dark:text-lime-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            <span className="text-sm font-medium text-gray-800">{toast.message}</span>
-          </div>
-        ))}
-      </div>
 
       {/* Modal de recompensa de nível */}
       {levelRewardPop && (

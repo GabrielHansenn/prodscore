@@ -4,11 +4,21 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import InlineFeedback, { FieldError } from '../components/InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 import type { AuthStackParamList } from '../navigation/index';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
+
+interface FieldErrors {
+  username?:        string;
+  email?:           string;
+  password?:        string;
+  confirmPassword?: string;
+}
 
 /** Tela de cadastro com nome de usuário, e-mail, senha e confirmação */
 export default function RegisterScreen({ navigation }: Props) {
@@ -18,28 +28,36 @@ export default function RegisterScreen({ navigation }: Props) {
   const [email,           setEmail]           = useState('');
   const [password,        setPassword]        = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error,           setError]           = useState('');
+  const [fieldErrors,     setFieldErrors]     = useState<FieldErrors>({});
+  const [globalError,     setGlobalError]     = useState('');
   const [loading,         setLoading]         = useState(false);
   const [confirmEmail,    setConfirmEmail]    = useState(false);
 
   const handleRegister = async () => {
-    if (!username.trim())         { setError('Informe um nome de usuário.');          return; }
-    if (username.trim().length < 3) { setError('Nome de usuário: mínimo 3 caracteres.'); return; }
-    if (!email.trim())            { setError('Informe seu e-mail.');                   return; }
-    if (!password)                { setError('Informe uma senha.');                    return; }
-    if (password.length < 8)      { setError('Senha: mínimo 8 caracteres.');           return; }
-    if (password !== confirmPassword) { setError('As senhas não coincidem.');           return; }
+    const errs: FieldErrors = {};
+    const usernameErr = validateUsername(username);
+    if (usernameErr) errs.username = usernameErr;
+    const emailErr = validateEmail(email);
+    if (emailErr) errs.email = emailErr;
+    const passwordErr = validatePassword(password);
+    if (passwordErr) errs.password = passwordErr;
+    const confirmErr = validatePasswordConfirmation(password, confirmPassword);
+    if (confirmErr) errs.confirmPassword = confirmErr;
 
-    setError('');
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
+    setGlobalError('');
     setLoading(true);
     try {
       await register(username.trim(), email.trim(), password);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg === 'CONFIRM_EMAIL') {
+      if (err instanceof Error && err.message === 'CONFIRM_EMAIL') {
         setConfirmEmail(true);
       } else {
-        setError(msg || 'Erro ao criar conta. Tente novamente.');
+        setGlobalError(getFriendlyErrorMessage(err, 'Erro ao criar conta. Tente novamente.'));
       }
     } finally {
       setLoading(false);
@@ -77,33 +95,64 @@ export default function RegisterScreen({ navigation }: Props) {
         <View style={styles.card}>
           <Text style={styles.title}>Criar Conta</Text>
 
-          {[
-            { label: 'Nome de usuário', value: username, set: setUsername, placeholder: 'meu_usuario', type: 'default' as const, secure: false },
-            { label: 'E-mail',          value: email,    set: setEmail,    placeholder: 'seu@email.com', type: 'email-address' as const, secure: false },
-            { label: 'Senha',           value: password, set: setPassword, placeholder: '••••••••', type: 'default' as const, secure: true },
-            { label: 'Confirmar senha', value: confirmPassword, set: setConfirmPassword, placeholder: '••••••••', type: 'default' as const, secure: true },
-          ].map((f) => (
-            <View key={f.label} style={styles.field}>
-              <Text style={styles.label}>{f.label}</Text>
-              <TextInput
-                style={styles.input}
-                value={f.value}
-                onChangeText={f.set}
-                placeholder={f.placeholder}
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType={f.type}
-                autoCapitalize={f.type === 'email-address' ? 'none' : 'none'}
-                secureTextEntry={f.secure}
-                autoCorrect={false}
-              />
-            </View>
-          ))}
+          <View style={styles.field}>
+            <Text style={styles.label}>Nome de usuário</Text>
+            <TextInput
+              style={styles.input}
+              value={username}
+              onChangeText={(v) => { setUsername(v); if (fieldErrors.username) setFieldErrors((p) => ({ ...p, username: undefined })); }}
+              placeholder="meu_usuario"
+              placeholderTextColor={COLORS.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <FieldError msg={fieldErrors.username} />
+          </View>
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          <View style={styles.field}>
+            <Text style={styles.label}>E-mail</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={(v) => { setEmail(v); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }}
+              placeholder="seu@email.com"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <FieldError msg={fieldErrors.email} />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Senha</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={(v) => { setPassword(v); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
+              placeholder="Mín. 8 caracteres, com letras e números"
+              placeholderTextColor={COLORS.textMuted}
+              secureTextEntry
+              autoCorrect={false}
+            />
+            <FieldError msg={fieldErrors.password} />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Confirmar senha</Text>
+            <TextInput
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={(v) => { setConfirmPassword(v); if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: undefined })); }}
+              placeholder="••••••••"
+              placeholderTextColor={COLORS.textMuted}
+              secureTextEntry
+              autoCorrect={false}
+            />
+            <FieldError msg={fieldErrors.confirmPassword} />
+          </View>
+
+          {globalError ? <InlineFeedback variant="error" message={globalError} /> : null}
 
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
@@ -152,8 +201,6 @@ const styles = StyleSheet.create({
     fontSize:          FONT.base,
     color:             COLORS.text,
   },
-  errorBox:  { backgroundColor: COLORS.redDim, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: 'rgba(248,113,113,0.3)', padding: SPACING.sm },
-  errorText: { color: COLORS.red, fontSize: FONT.sm },
   btn:       { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnDisabled: { opacity: 0.6 },
   btnText:   { color: '#fff', fontWeight: '700', fontSize: FONT.md },

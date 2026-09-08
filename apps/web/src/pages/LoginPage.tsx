@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { LogoWordmark } from '../components/Logo.js';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
+import FormFeedback from '../components/FormFeedback.js';
 import { TrophyIcon, FlameIcon, FlagIcon } from '../components/icons.js';
 
 function EyeIcon({ className }: { className?: string }) {
@@ -47,13 +49,13 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      if (msg === 'MFA_REQUIRED') {
+      const rawMsg = err instanceof Error ? err.message : '';
+      if (rawMsg === 'MFA_REQUIRED') {
         navigate('/verificar-2fa');
-      } else if (msg.toLowerCase().includes('email not confirmed') || msg.toLowerCase().includes('not confirmed')) {
+      } else if (rawMsg.toLowerCase().includes('not confirmed')) {
         setNeedsConfirm(true);
       } else {
-        setError(msg || 'Erro ao fazer login. Tente novamente.');
+        setError(getFriendlyErrorMessage(err, 'Erro ao fazer login. Tente novamente.'));
       }
     }
   };
@@ -62,7 +64,7 @@ export default function LoginPage() {
     setResendStatus('sending');
     const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
     setResendStatus(resendError ? 'idle' : 'sent');
-    if (resendError) setError('Não foi possível reenviar o e-mail. Tente novamente.');
+    if (resendError) setError(getFriendlyErrorMessage(resendError, 'Não foi possível reenviar o e-mail. Tente novamente.'));
   };
 
   return (
@@ -176,11 +178,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {error && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
-                {error}
-              </p>
-            )}
+            {error && <FormFeedback variant="error" message={error} />}
 
             <button
               type="submit"

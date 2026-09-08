@@ -14,6 +14,8 @@ import {
   type GroupMember,
 } from '../services/group.service.js';
 import { useAuthStore } from '../store/authStore.js';
+import { showToast } from '../store/toastStore.js';
+import FormFeedback from '../components/FormFeedback.js';
 import { FlameIcon, CogIcon, TrashIcon } from '../components/icons.js';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -111,12 +113,18 @@ function GroupInfoSection({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!id || !dirty) return;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setFeedback({ type: 'err', msg: 'Nome do grupo é obrigatório.' });
+      return;
+    }
+
     setSaving(true);
     setFeedback(null);
     try {
-      const trimmedName = name.trim();
       const updated = await updateGroupInfo(id, {
-        ...(trimmedName ? { name: trimmedName } : {}),
+        name: trimmedName,
         description: description.trim() || null,
         imageUrl:    imageUrl.trim() || null,
         countExternalTasksInMissions: countExternal,
@@ -185,15 +193,7 @@ function GroupInfoSection({
             </span>
           </label>
 
-          {feedback && (
-            <p className={`rounded-lg px-3 py-2 text-xs ${
-              feedback.type === 'ok'
-                ? 'bg-lime-50 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400'
-                : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-            }`}>
-              {feedback.msg}
-            </p>
-          )}
+          {feedback && <FormFeedback variant={feedback.type === 'ok' ? 'success' : 'error'} message={feedback.msg} />}
 
           <div className="flex justify-end">
             <button
@@ -248,8 +248,8 @@ function InviteCodeSection({
       setCurrentCode(newCode);
       onNewCode(newCode);
       setConfirm(false);
-    } catch {
-      // erro silencioso — o modal fecha e o usuário pode tentar de novo
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao gerar novo código.', 'error');
     } finally {
       setLoading(false);
     }
@@ -373,11 +373,7 @@ function MembersSection({
         </h2>
       </div>
 
-      {error && (
-        <p className="mx-6 mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">
-          {error}
-        </p>
-      )}
+      {error && <div className="mx-6 mt-4"><FormFeedback variant="error" message={error} /></div>}
 
       <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
         {members.map((m) => {
@@ -522,11 +518,7 @@ function DangerZoneSection({
         </h2>
       </div>
 
-      {error && (
-        <p className="mx-6 mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-400">
-          {error}
-        </p>
-      )}
+      {error && <div className="mx-6 mt-4"><FormFeedback variant="error" message={error} /></div>}
 
       <div className="divide-y divide-red-100 dark:divide-red-900/30">
         {/* Sair do grupo — apenas para não-owners */}

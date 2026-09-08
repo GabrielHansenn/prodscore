@@ -5,10 +5,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
 import { decodeJwtAal } from '../lib/jwt';
 import { changePassword, deleteAccount } from '../services/security.service';
+import { getFriendlyErrorMessage } from '../lib/errors';
 import EnrollMFA from '../components/EnrollMFA';
+import InlineFeedback from '../components/InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
 /** Aviso exibido no lugar de uma ação sensível quando a sessão ainda não está em aal2 */
@@ -35,8 +38,10 @@ function ChangePasswordForm() {
 
   const handleSubmit = async () => {
     setError('');
-    if (newPassword.length < 8) { setError('A nova senha deve ter no mínimo 8 caracteres.'); return; }
-    if (newPassword !== confirmPassword) { setError('As senhas não coincidem.'); return; }
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) { setError(passwordError); return; }
+    const confirmError = validatePasswordConfirmation(newPassword, confirmPassword);
+    if (confirmError) { setError(confirmError); return; }
 
     setSaving(true);
     try {
@@ -46,7 +51,7 @@ function ChangePasswordForm() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao alterar a senha.');
+      setError(getFriendlyErrorMessage(err, 'Erro ao alterar a senha.'));
     } finally {
       setSaving(false);
     }
@@ -69,8 +74,8 @@ function ChangePasswordForm() {
         />
       </View>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      {saved ? <Text style={styles.savedText}>Senha alterada com sucesso!</Text> : null}
+      {error ? <InlineFeedback variant="error" message={error} /> : null}
+      {saved ? <InlineFeedback variant="success" message="Senha alterada com sucesso!" /> : null}
 
       <TouchableOpacity style={[styles.secondaryBtn, saving && { opacity: 0.6 }]} onPress={() => void handleSubmit()} disabled={saving}>
         {saving
@@ -107,7 +112,7 @@ export default function SecurityScreen({ navigation }: { navigation: { goBack: (
               await deleteAccount();
               await logout();
             } catch (err) {
-              setDeleteError(err instanceof Error ? err.message : 'Erro ao excluir a conta.');
+              setDeleteError(getFriendlyErrorMessage(err, 'Erro ao excluir a conta.'));
             } finally {
               setDeleting(false);
             }
@@ -147,7 +152,7 @@ export default function SecurityScreen({ navigation }: { navigation: { goBack: (
           <Text style={[styles.cardTitle, { color: COLORS.red }]}>Zona de risco</Text>
           {isAAL2 ? (
             <View>
-              {deleteError ? <Text style={styles.errorText}>{deleteError}</Text> : null}
+              {deleteError ? <InlineFeedback variant="error" message={deleteError} /> : null}
               <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount} disabled={deleting}>
                 {deleting
                   ? <ActivityIndicator color={COLORS.red} size="small" />
@@ -197,8 +202,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text,
   },
 
-  errorText: { fontSize: 12, color: COLORS.red, backgroundColor: COLORS.redDim, borderRadius: RADIUS.sm, padding: SPACING.sm },
-  savedText: { fontSize: 12, color: COLORS.success, backgroundColor: COLORS.successDim, borderRadius: RADIUS.sm, padding: SPACING.sm },
 
   secondaryBtn: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,

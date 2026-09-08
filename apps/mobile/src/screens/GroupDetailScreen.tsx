@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, TextInput, Modal, Pressable, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, TextInput, Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole, TaskDifficulty, type Task } from '@prodscore/shared';
+import { MemberRole, TaskDifficulty, validateRequired, validatePositiveNumber, type Task } from '@prodscore/shared';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { showToast } from '../store/toastStore';
+import InlineFeedback from '../components/InlineFeedback';
 import {
   getGroupDetail, getGroupMembers, getGroupRanking, getGroupMissions,
   type GroupDetails, type GroupMember, type GroupRankingRow,
@@ -249,12 +252,16 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     key={t.id}
                     task={t}
                     onComplete={(id) => {
-                      void completeTask(id).then(() => void load()).catch(() => {
-                        Alert.alert('Erro', 'Não foi possível concluir a tarefa.');
+                      void completeTask(id).then(() => void load()).catch((err: unknown) => {
+                        showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
                       });
                     }}
                     onDelete={(id) => {
-                      void deleteTask(id).then(() => setTasks((prev) => prev.filter((x) => x.id !== id)));
+                      void deleteTask(id)
+                        .then(() => setTasks((prev) => prev.filter((x) => x.id !== id)))
+                        .catch((err: unknown) => {
+                          showToast(getFriendlyErrorMessage(err, 'Não foi possível excluir a tarefa.'), 'error');
+                        });
                     }}
                   />
                 ))}
@@ -275,6 +282,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 const created = await createGroupMission(groupId, data);
                 setMissions((prev) => [{ ...created, isParticipating: true, joinedAt: null }, ...prev]);
                 setShowMissionForm(false);
+                showToast('Missão criada com sucesso!');
               }}
             />
           </Pressable>
@@ -293,6 +301,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 await createTask({ title, difficulty: TaskDifficulty.Medium, groupId });
                 setShowTaskForm(false);
                 void load();
+                showToast('Tarefa criada com sucesso!');
               }}
             />
           </Pressable>
@@ -318,13 +327,21 @@ function CreateMissionForm({ onSave, onCancel }: {
   const [error,  setError]  = useState('');
 
   const handleSave = async () => {
-    if (!title.trim()) { setError('Título é obrigatório.'); return; }
+    const titleError  = validateRequired(title, 'Título');
+    const targetError = validatePositiveNumber(target, 'Meta');
+    const rewardNum   = Number(reward);
+    const rewardError = !reward.trim() || !Number.isFinite(rewardNum) || rewardNum < 0
+      ? 'Recompensa precisa ser um número maior ou igual a zero.'
+      : null;
+    const firstError = titleError ?? targetError ?? rewardError;
+    if (firstError) { setError(firstError); return; }
+
     setSaving(true);
     setError('');
     try {
-      await onSave({ title: title.trim(), description: '', targetValue: Number(target) || 1, rewardPoints: Number(reward) || 0 });
+      await onSave({ title: title.trim(), description: '', targetValue: Number(target), rewardPoints: Number(reward) });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar missão.');
+      setError(getFriendlyErrorMessage(err, 'Erro ao criar missão.'));
       setSaving(false);
     }
   };
@@ -345,7 +362,7 @@ function CreateMissionForm({ onSave, onCancel }: {
           <TextInput style={styles.input} value={reward} onChangeText={setReward} keyboardType="number-pad" />
         </View>
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <InlineFeedback variant="error" message={error} /> : null}
       <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSave()} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar missão</Text>}
       </TouchableOpacity>
@@ -363,11 +380,21 @@ function CreateMissionForm({ onSave, onCancel }: {
 function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => Promise<void>; onCancel: () => void }) {
   const [title,  setTitle]  = useState('');
   const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    const titleError = validateRequired(title, 'Título');
+    if (titleError) { setError(titleError); return; }
+
     setSaving(true);
-    try { await onSave(title.trim()); } finally { setSaving(false); }
+    setError('');
+    try {
+      await onSave(title.trim());
+    } catch (err) {
+      setError(getFriendlyErrorMessage(err, 'Erro ao criar tarefa.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -376,6 +403,7 @@ function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => 
       <Text style={styles.modalTitle}>Nova tarefa do grupo</Text>
       <Text style={styles.fieldLabel}>Título</Text>
       <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Revisar documentação" placeholderTextColor={COLORS.textMuted} autoFocus />
+      {error ? <InlineFeedback variant="error" message={error} /> : null}
       <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSave()} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar tarefa</Text>}
       </TouchableOpacity>
@@ -456,7 +484,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: COLORS.text },
-  error: { color: COLORS.red, fontSize: FONT.sm, marginTop: SPACING.xs },
   btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.md },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.md },
   cancelText: { color: COLORS.textMuted, fontSize: FONT.sm, fontWeight: '600' },

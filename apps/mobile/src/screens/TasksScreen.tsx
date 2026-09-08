@@ -6,11 +6,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskDifficulty, TaskPriority, TaskStatus, type Task, type TaskSuggestion } from '@prodscore/shared';
+import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task, type TaskSuggestion } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore';
 import { getTaskSuggestions } from '../services/behavioral.service';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { showToast } from '../store/toastStore';
 import TaskItem from '../components/TaskItem';
 import Dropdown from '../components/Dropdown';
+import InlineFeedback from '../components/InlineFeedback';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
@@ -114,7 +117,8 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
   const pts         = Math.floor(BASE_POINTS[difficulty] * PRIORITY_MULT[priority]);
 
   const handleSubmit = async () => {
-    if (!title.trim()) { setError('Título é obrigatório.'); return; }
+    const titleError = validateRequired(title, 'Título');
+    if (titleError) { setError(titleError); return; }
 
     let dueDateISO: string | undefined;
     if (dueDateInput.trim()) {
@@ -137,8 +141,9 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
         ...(due ? { dueDate: due } : {}),
       });
       onClose();
+      showToast(isEdit ? 'Tarefa atualizada com sucesso!' : 'Tarefa criada com sucesso!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar tarefa.');
+      setError(getFriendlyErrorMessage(err, 'Erro ao salvar tarefa.'));
     } finally {
       setLoading(false);
     }
@@ -221,7 +226,7 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
                 </Text>
               </View>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <InlineFeedback variant="error" message={error} /> : null}
 
               <View style={styles.formBtnRow}>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
@@ -279,13 +284,23 @@ export default function TasksScreen() {
   });
 
   const handleComplete = async (id: string) => {
-    try { await completeTask(id); } catch { /* erros silenciados — UI já reverteu */ }
+    try {
+      await completeTask(id);
+    } catch (err) {
+      showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
+    }
   };
 
   const handleDelete = (id: string) => {
     Alert.alert('Excluir tarefa?', 'Esta ação não pode ser desfeita.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => void deleteTask(id) },
+      {
+        text: 'Excluir', style: 'destructive', onPress: () => {
+          void deleteTask(id).catch((err: unknown) => {
+            showToast(getFriendlyErrorMessage(err, 'Não foi possível excluir a tarefa.'), 'error');
+          });
+        },
+      },
     ]);
   };
 
@@ -457,7 +472,6 @@ const styles = StyleSheet.create({
   proofLabel: { flex: 1, marginBottom: 0 },
   ptsPreview: { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md },
   ptsText: { fontSize: 12, color: COLORS.primary },
-  error: { color: COLORS.red, fontSize: FONT.sm, marginTop: SPACING.sm },
   formBtnRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md },
   secondaryBtn: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
   secondaryBtnText: { fontSize: FONT.base, fontWeight: '600', color: COLORS.textSecondary },

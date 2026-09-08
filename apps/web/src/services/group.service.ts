@@ -1,5 +1,5 @@
 import { type Group, MemberRole } from '@prodscore/shared';
-import { api } from './api.js';
+import { api, callApi } from './api.js';
 import type { MissionWithParticipation } from './mission.service.js';
 
 // ---------------------------------------------------------------------------
@@ -48,8 +48,10 @@ export interface GroupRankingRow {
  * Retorna todos os grupos dos quais o usuário autenticado é membro.
  */
 export async function getGroups(): Promise<GroupWithMeta[]> {
-  const { data } = await api.get<{ grupos: GroupWithMeta[] }>('/groups');
-  return data.grupos;
+  return callApi(async () => {
+    const { data } = await api.get<{ grupos: GroupWithMeta[] }>('/groups');
+    return data.grupos;
+  }, 'Erro ao carregar seus grupos.');
 }
 
 /**
@@ -60,42 +62,52 @@ export async function createGroup(input: {
   description?: string;
   imageUrl?:    string;
 }): Promise<Group> {
-  const { data } = await api.post<{ grupo: Group }>('/groups', input);
-  return data.grupo;
+  return callApi(async () => {
+    const { data } = await api.post<{ grupo: Group }>('/groups', input);
+    return data.grupo;
+  }, 'Erro ao criar grupo.');
 }
 
 /**
  * Entra em um grupo usando o código de convite.
  */
 export async function joinGroup(inviteCode: string): Promise<Group> {
-  const { data } = await api.post<{ grupo: Group }>('/groups/join', {
-    invite_code: inviteCode.trim().toUpperCase(),
-  });
-  return data.grupo;
+  return callApi(async () => {
+    const { data } = await api.post<{ grupo: Group }>('/groups/join', {
+      invite_code: inviteCode.trim().toUpperCase(),
+    });
+    return data.grupo;
+  }, 'Código de convite inválido ou expirado.');
 }
 
 /**
  * Retorna os detalhes completos de um grupo (apenas para membros).
  */
 export async function getGroupDetail(id: string): Promise<GroupDetails> {
-  const { data } = await api.get<{ grupo: GroupDetails }>(`/groups/${id}`);
-  return data.grupo;
+  return callApi(async () => {
+    const { data } = await api.get<{ grupo: GroupDetails }>(`/groups/${id}`);
+    return data.grupo;
+  }, 'Erro ao carregar o grupo.');
 }
 
 /**
  * Lista os membros de um grupo com suas estatísticas de gamificação.
  */
 export async function getGroupMembers(id: string): Promise<GroupMember[]> {
-  const { data } = await api.get<{ membros: GroupMember[] }>(`/groups/${id}/members`);
-  return data.membros;
+  return callApi(async () => {
+    const { data } = await api.get<{ membros: GroupMember[] }>(`/groups/${id}/members`);
+    return data.membros;
+  }, 'Erro ao carregar os membros do grupo.');
 }
 
 /**
  * Retorna as missões ativas do grupo com o progresso do usuário.
  */
 export async function getGroupMissions(id: string): Promise<MissionWithParticipation[]> {
-  const { data } = await api.get<{ missoes: MissionWithParticipation[] }>(`/groups/${id}/missions`);
-  return data.missoes;
+  return callApi(async () => {
+    const { data } = await api.get<{ missoes: MissionWithParticipation[] }>(`/groups/${id}/missions`);
+    return data.missoes;
+  }, 'Erro ao carregar as missões do grupo.');
 }
 
 /**
@@ -110,16 +122,20 @@ export async function updateGroupInfo(
     countExternalTasksInMissions?: boolean;
   },
 ): Promise<Group> {
-  const { data } = await api.patch<{ grupo: Group }>(`/groups/${id}`, input);
-  return data.grupo;
+  return callApi(async () => {
+    const { data } = await api.patch<{ grupo: Group }>(`/groups/${id}`, input);
+    return data.grupo;
+  }, 'Erro ao salvar as informações do grupo.');
 }
 
 /**
  * Gera um novo código de convite para o grupo.
  */
 export async function regenerateInviteCode(id: string): Promise<string> {
-  const { data } = await api.post<{ inviteCode: string }>(`/groups/${id}/regenerate-invite`, {});
-  return data.inviteCode;
+  return callApi(async () => {
+    const { data } = await api.post<{ inviteCode: string }>(`/groups/${id}/regenerate-invite`, {});
+    return data.inviteCode;
+  }, 'Erro ao gerar novo código de convite.');
 }
 
 /**
@@ -130,50 +146,64 @@ export async function updateMemberRole(
   targetUserId: string,
   role: 'admin' | 'member',
 ): Promise<void> {
-  await api.patch(`/groups/${groupId}/members/${targetUserId}`, { role });
+  await callApi(
+    () => api.patch(`/groups/${groupId}/members/${targetUserId}`, { role }),
+    'Erro ao alterar o papel do membro.',
+  );
 }
 
 /**
  * Remove um membro do grupo (kick).
  */
 export async function kickMember(groupId: string, targetUserId: string): Promise<void> {
-  await api.delete(`/groups/${groupId}/members/${targetUserId}`);
+  await callApi(
+    () => api.delete(`/groups/${groupId}/members/${targetUserId}`),
+    'Erro ao remover o membro.',
+  );
 }
 
 /**
  * Sai do grupo (para membros e admins — não o owner).
  */
 export async function leaveGroup(groupId: string): Promise<void> {
-  await api.post(`/groups/${groupId}/leave`, {});
+  await callApi(
+    () => api.post(`/groups/${groupId}/leave`, {}),
+    'Erro ao sair do grupo.',
+  );
 }
 
 /**
  * Exclui permanentemente o grupo (apenas o owner).
  */
 export async function deleteGroup(groupId: string): Promise<void> {
-  await api.delete(`/groups/${groupId}`);
+  await callApi(
+    () => api.delete(`/groups/${groupId}`),
+    'Erro ao excluir o grupo.',
+  );
 }
 
 /**
  * Retorna o ranking interno do grupo com pontuação multi-fator.
  */
 export async function getGroupRanking(id: string): Promise<GroupRankingRow[]> {
-  const { data } = await api.get<{ ranking: Array<{
-    position: number;
-    user: { id: string; username: string; avatarUrl: string | null; level: number };
-    score: number;
-    currentStreak: number;
-    consistencyRate: number;
-  }> }>(`/groups/${id}/ranking`);
+  return callApi(async () => {
+    const { data } = await api.get<{ ranking: Array<{
+      position: number;
+      user: { id: string; username: string; avatarUrl: string | null; level: number };
+      score: number;
+      currentStreak: number;
+      consistencyRate: number;
+    }> }>(`/groups/${id}/ranking`);
 
-  return data.ranking.map((row) => ({
-    position:        row.position,
-    userId:          row.user.id,
-    username:        row.user.username,
-    avatarUrl:       row.user.avatarUrl,
-    level:           row.user.level,
-    score:           row.score,
-    currentStreak:   row.currentStreak,
-    consistencyRate: row.consistencyRate,
-  }));
+    return data.ranking.map((row) => ({
+      position:        row.position,
+      userId:          row.user.id,
+      username:        row.user.username,
+      avatarUrl:       row.user.avatarUrl,
+      level:           row.user.level,
+      score:           row.score,
+      currentStreak:   row.currentStreak,
+      consistencyRate: row.consistencyRate,
+    }));
+  }, 'Erro ao carregar o ranking do grupo.');
 }

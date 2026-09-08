@@ -9,6 +9,7 @@ import {
   type TOTPEnrollment,
 } from '../lib/supabase.js';
 import { ClipboardDocumentIcon, CheckCircleIcon } from './icons.js';
+import FormFeedback from './FormFeedback.js';
 
 /** Estado do fluxo de ativação/gerenciamento do 2FA */
 type Phase = 'checking' | 'active' | 'setup' | 'success' | 'error';
@@ -197,11 +198,7 @@ export default function EnrollMFA() {
           </div>
         </div>
 
-        {error && (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <div className="mt-3"><FormFeedback variant="error" message={error} /></div>}
 
         <button
           type="button"
@@ -218,9 +215,7 @@ export default function EnrollMFA() {
   if (phase === 'error') {
     return (
       <div>
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </p>
+        <FormFeedback variant="error" message={error} />
         <button type="button" onClick={() => void startEnrollment()} className="btn-secondary mt-4">
           Tentar novamente
         </button>
@@ -302,11 +297,7 @@ export default function EnrollMFA() {
           />
         </div>
 
-        {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <FormFeedback variant="error" message={error} />}
 
         <button type="submit" disabled={submitting} className="btn-primary w-full">
           {submitting ? 'Confirmando...' : 'Ativar'}

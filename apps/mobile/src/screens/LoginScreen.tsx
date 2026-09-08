@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import InlineFeedback from '../components/InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 import type { AuthStackParamList } from '../navigation/index';
 
@@ -28,8 +30,7 @@ export default function LoginScreen({ navigation }: Props) {
       await login(email.trim(), password);
       // Navegação é tratada pelo RootNavigator via isAuthenticated
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'E-mail ou senha incorretos.';
-      setError(msg.replace(/^Error:\s*/, ''));
+      setError(getFriendlyErrorMessage(err, 'E-mail ou senha incorretos.'));
     } finally {
       setLoading(false);
     }
@@ -78,11 +79,7 @@ export default function LoginScreen({ navigation }: Props) {
             />
           </View>
 
-          {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <InlineFeedback variant="error" message={error} /> : null}
 
           <TouchableOpacity
             style={[styles.btn, loading && styles.btnDisabled]}
@@ -165,17 +162,6 @@ const styles = StyleSheet.create({
     paddingVertical:   12,
     fontSize:        FONT.base,
     color:           COLORS.text,
-  },
-  errorBox: {
-    backgroundColor: COLORS.redDim,
-    borderRadius:    RADIUS.sm,
-    borderWidth:     1,
-    borderColor:     'rgba(248,113,113,0.3)',
-    padding:         SPACING.sm,
-  },
-  errorText: {
-    color:    COLORS.red,
-    fontSize: FONT.sm,
   },
   btn: {
     backgroundColor: COLORS.primary,

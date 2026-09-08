@@ -6,13 +6,16 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole } from '@prodscore/shared';
+import { MemberRole, validateRequired } from '@prodscore/shared';
 import {
   getGroupDetail, getGroupMembers, updateGroupInfo, regenerateInviteCode,
   updateMemberRole, kickMember, leaveGroup, deleteGroup,
   type GroupDetails, type GroupMember,
 } from '../services/group.service';
 import { useAuthStore } from '../store/authStore';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { showToast } from '../store/toastStore';
+import InlineFeedback from '../components/InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import type { AppStackParamList } from '../navigation/index';
 
@@ -72,6 +75,10 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
 
   const handleSaveInfo = async () => {
     if (!group || !dirty) return;
+
+    const nameError = validateRequired(name, 'Nome do grupo');
+    if (nameError) { setFeedback({ ok: false, msg: nameError }); return; }
+
     setSaving(true);
     setFeedback(null);
     try {
@@ -83,7 +90,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
       setGroup({ ...group, ...updated });
       setFeedback({ ok: true, msg: 'Informações salvas com sucesso.' });
     } catch (err) {
-      setFeedback({ ok: false, msg: err instanceof Error ? err.message : 'Erro ao salvar.' });
+      setFeedback({ ok: false, msg: getFriendlyErrorMessage(err, 'Erro ao salvar.') });
     } finally {
       setSaving(false);
     }
@@ -109,6 +116,8 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
               try {
                 const code = await regenerateInviteCode(groupId);
                 setGroup((g) => g ? { ...g, inviteCode: code } : g);
+              } catch (err) {
+                showToast(getFriendlyErrorMessage(err, 'Erro ao gerar novo código.'), 'error');
               } finally { setRegenLoading(false); }
             })();
           },
@@ -129,7 +138,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
               setMembers((prev) => prev.map((x) => x.userId === m.userId
                 ? { ...x, role: role === 'admin' ? MemberRole.Admin : MemberRole.Member }
                 : x));
-            }).catch(() => Alert.alert('Erro', 'Não foi possível concluir a ação.'));
+            }).catch((err: unknown) => showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a ação.'), 'error'));
           },
         },
       ],
@@ -146,7 +155,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
           text: 'Remover', style: 'destructive', onPress: () => {
             void kickMember(groupId, m.userId).then(() => {
               setMembers((prev) => prev.filter((x) => x.userId !== m.userId));
-            }).catch(() => Alert.alert('Erro', 'Não foi possível remover o membro.'));
+            }).catch((err: unknown) => showToast(getFriendlyErrorMessage(err, 'Não foi possível remover o membro.'), 'error'));
           },
         },
       ],
@@ -163,7 +172,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
           text: 'Sair do grupo', style: 'destructive', onPress: () => {
             void leaveGroup(groupId)
               .then(() => navigation.navigate('Tabs'))
-              .catch(() => Alert.alert('Erro', 'Não foi possível sair do grupo.'));
+              .catch((err: unknown) => showToast(getFriendlyErrorMessage(err, 'Não foi possível sair do grupo.'), 'error'));
           },
         },
       ],
@@ -180,7 +189,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
           text: 'Excluir definitivamente', style: 'destructive', onPress: () => {
             void deleteGroup(groupId)
               .then(() => navigation.navigate('Tabs'))
-              .catch(() => Alert.alert('Erro', 'Não foi possível excluir o grupo.'));
+              .catch((err: unknown) => showToast(getFriendlyErrorMessage(err, 'Não foi possível excluir o grupo.'), 'error'));
           },
         },
       ],
@@ -234,9 +243,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
                   </View>
                   <Switch value={countExternal} onValueChange={setCountExternal} />
                 </View>
-                {feedback && (
-                  <Text style={[styles.feedback, feedback.ok ? styles.feedbackOk : styles.feedbackErr]}>{feedback.msg}</Text>
-                )}
+                {feedback && <InlineFeedback variant={feedback.ok ? 'success' : 'error'} message={feedback.msg} />}
                 <TouchableOpacity
                   style={[styles.btn, (!dirty || saving) && { opacity: 0.5 }]}
                   onPress={() => void handleSaveInfo()}
@@ -337,9 +344,6 @@ const styles = StyleSheet.create({
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm },
   switchHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  feedback: { fontSize: 12, marginTop: SPACING.sm },
-  feedbackOk:  { color: '#4d7c0f' },
-  feedbackErr: { color: COLORS.red },
   btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.md },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
 

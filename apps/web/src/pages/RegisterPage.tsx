@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
+import FormFeedback, { FieldError } from '../components/FormFeedback.js';
 import { BoltIcon, ArrowTrendingUpIcon, UsersIcon } from '../components/icons.js';
 import { LogoWordmark } from '../components/Logo.js';
 
@@ -32,12 +35,8 @@ function MailIcon({ className }: { className?: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers de validação
+// Validação de campos — regras compartilhadas com o mobile (@prodscore/shared)
 // ---------------------------------------------------------------------------
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PASS_HAS_LETTER  = /[a-zA-Z]/;
-const PASS_HAS_NUMBER  = /[0-9]/;
-
 interface FieldErrors {
   username?:       string;
   email?:          string;
@@ -53,46 +52,19 @@ function validateFields(
 ): FieldErrors {
   const errs: FieldErrors = {};
 
-  if (!username.trim())
-    errs.username = 'Nome de usuário é obrigatório.';
-  else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username))
-    errs.username = 'Use 3–30 caracteres: letras, números ou _.';
+  const usernameErr = validateUsername(username);
+  if (usernameErr) errs.username = usernameErr;
 
-  if (!email.trim())
-    errs.email = 'E-mail é obrigatório.';
-  else if (!EMAIL_RE.test(email))
-    errs.email = 'Informe um e-mail válido (ex: nome@dominio.com).';
+  const emailErr = validateEmail(email);
+  if (emailErr) errs.email = emailErr;
 
-  if (!password)
-    errs.password = 'Senha é obrigatória.';
-  else if (password.length < 8)
-    errs.password = 'A senha precisa ter pelo menos 8 caracteres.';
-  else if (!PASS_HAS_LETTER.test(password))
-    errs.password = 'A senha precisa conter pelo menos uma letra.';
-  else if (!PASS_HAS_NUMBER.test(password))
-    errs.password = 'A senha precisa conter pelo menos um número.';
+  const passwordErr = validatePassword(password);
+  if (passwordErr) errs.password = passwordErr;
 
-  if (!confirmPassword)
-    errs.confirmPassword = 'Confirme sua senha.';
-  else if (password && confirmPassword !== password)
-    errs.confirmPassword = 'As senhas não coincidem.';
+  const confirmErr = validatePasswordConfirmation(password, confirmPassword);
+  if (confirmErr) errs.confirmPassword = confirmErr;
 
   return errs;
-}
-
-function mapSupabaseError(raw: string): string {
-  const msg = raw.toLowerCase();
-  if (msg.includes('user already registered') || msg.includes('already registered') || msg.includes('already been registered'))
-    return 'Este e-mail já possui uma conta. Tente fazer login.';
-  if (msg.includes('invalid email') || msg.includes('unable to validate email'))
-    return 'Endereço de e-mail inválido.';
-  if (msg.includes('password should be at least') || msg.includes('password is too short'))
-    return 'A senha deve ter no mínimo 8 caracteres.';
-  if (msg.includes('rate limit') || msg.includes('too many requests') || msg.includes('email rate limit'))
-    return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
-  if (msg.includes('signup is disabled') || msg.includes('signups not allowed'))
-    return 'Cadastros estão temporariamente desativados. Tente mais tarde.';
-  return 'Erro ao criar conta. Tente novamente mais tarde.';
 }
 
 // ---------------------------------------------------------------------------
@@ -223,18 +195,6 @@ function EmailConfirmStep({ email }: { email: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Componente de erro por campo
-// ---------------------------------------------------------------------------
-function FieldError({ msg }: { msg?: string }) {
-  if (!msg) return null;
-  return (
-    <p className="mt-1 text-xs text-red-600" role="alert">
-      {msg}
-    </p>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Página principal
 // ---------------------------------------------------------------------------
 export default function RegisterPage() {
@@ -280,7 +240,7 @@ export default function RegisterPage() {
         setStep('confirm');
         return;
       }
-      setGlobalError(err instanceof Error ? mapSupabaseError(err.message) : 'Erro inesperado. Tente novamente.');
+      setGlobalError(getFriendlyErrorMessage(err, 'Erro ao criar conta. Tente novamente mais tarde.'));
     }
   };
 
@@ -416,11 +376,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Erro global (Supabase) */}
-              {globalError && (
-                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
-                  {globalError}
-                </div>
-              )}
+              {globalError && <FormFeedback variant="error" message={globalError} />}
 
               <button
                 type="submit"

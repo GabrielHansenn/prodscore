@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogoWordmark } from '../components/Logo.js';
 import { useAuthStore } from '../store/authStore.js';
 import { translateMFAErrorMessage } from '../lib/supabase.js';
+import FormFeedback from '../components/FormFeedback.js';
 
 /**
  * Tela de verificação em duas etapas exibida após o login com e-mail e senha
@@ -76,11 +77,7 @@ export default function MfaVerifyPage() {
             />
           </div>
 
-          {error && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-              {error}
-            </p>
-          )}
+          {error && <FormFeedback variant="error" message={error} />}
 
           <button type="submit" disabled={isLoading} className="btn-primary w-full py-3">
             {isLoading ? 'Verificando...' : 'Confirmar'}

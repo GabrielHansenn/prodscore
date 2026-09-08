@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { MemberRole } from '@prodscore/shared';
+import { MemberRole, validateRequired, validateInviteCode } from '@prodscore/shared';
 import { useNavigate } from 'react-router-dom';
 import {
   getGroups,
@@ -7,6 +7,8 @@ import {
   joinGroup,
   type GroupWithMeta,
 } from '../services/group.service.js';
+import { showToast } from '../store/toastStore.js';
+import FormFeedback from '../components/FormFeedback.js';
 import { UsersIcon, UserIcon, CalendarIcon } from '../components/icons.js';
 
 function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate: (g: GroupWithMeta) => void }) {
@@ -17,7 +19,8 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Nome do grupo é obrigatório.'); return; }
+    const nameError = validateRequired(name, 'Nome do grupo');
+    if (nameError) { setError(nameError); return; }
     setError('');
     setLoading(true);
     try {
@@ -25,6 +28,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
       const grupo = await createGroup({ name: name.trim(), ...(desc ? { description: desc } : {}) });
       onCreate({ ...grupo, role: MemberRole.Owner, memberCount: 1 });
       onClose();
+      showToast('Grupo criado com sucesso!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar grupo.');
     } finally {
@@ -58,7 +62,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
               className="input w-full resize-none"
             />
           </div>
-          {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-400">{error}</p>}
+          {error && <FormFeedback variant="error" message={error} />}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
@@ -78,13 +82,15 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (code.trim().length < 4) { setError('Código inválido.'); return; }
+    const codeError = validateInviteCode(code);
+    if (codeError) { setError(codeError); return; }
     setError('');
     setLoading(true);
     try {
       const grupo = await joinGroup(code.trim());
       onJoined({ ...grupo, role: MemberRole.Member, memberCount: 0 });
       onClose();
+      showToast(`Você entrou no grupo "${grupo.name}"!`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Código de convite inválido.');
     } finally {
@@ -106,7 +112,7 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
             maxLength={8}
             className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3.5 text-center font-mono text-xl font-bold tracking-widest text-gray-900 placeholder-gray-300 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-600"
           />
-          {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800/40 dark:bg-red-900/20 dark:text-red-400">{error}</p>}
+          {error && <FormFeedback variant="error" message={error} />}
           <div className="flex gap-3">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">
@@ -180,8 +186,13 @@ export default function GroupsPage() {
 
   useEffect(() => {
     void (async () => {
-      try   { setGroups(await getGroups()); }
-      finally { setIsLoading(false); }
+      try {
+        setGroups(await getGroups());
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Erro ao carregar seus grupos.', 'error');
+      } finally {
+        setIsLoading(false);
+      }
     })();
   }, []);
 

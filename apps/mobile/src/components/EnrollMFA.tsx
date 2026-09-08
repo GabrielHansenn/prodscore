@@ -8,6 +8,7 @@ import {
   enrollMfa, verifyMfaCode, unenrollMfa, getMfaFactors, translateMFAErrorMessage,
   type TOTPEnrollment,
 } from '../services/mfa.service';
+import InlineFeedback from './InlineFeedback';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 
 type Phase = 'checking' | 'active' | 'setup' | 'success' | 'error';
@@ -143,7 +144,7 @@ export default function EnrollMFA() {
           </View>
         </View>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <InlineFeedback variant="error" message={error} /> : null}
 
         <TouchableOpacity onPress={() => void handleDisable()} disabled={submitting} style={styles.disableBtn}>
           <Text style={styles.disableText}>{submitting ? 'Desativando...' : 'Desativar 2FA'}</Text>
@@ -155,7 +156,7 @@ export default function EnrollMFA() {
   if (phase === 'error') {
     return (
       <View>
-        <Text style={styles.errorText}>{error}</Text>
+        <InlineFeedback variant="error" message={error} />
         <TouchableOpacity style={styles.retryBtn} onPress={() => void startEnrollment()}>
           <Text style={styles.retryText}>Tentar novamente</Text>
         </TouchableOpacity>
@@ -215,7 +216,7 @@ export default function EnrollMFA() {
         maxLength={6}
       />
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <InlineFeedback variant="error" message={error} /> : null}
 
       <TouchableOpacity
         style={[styles.confirmBtn, submitting && { opacity: 0.6 }]}
@@ -280,10 +281,6 @@ const styles = StyleSheet.create({
     textAlign: 'center', color: COLORS.text, marginBottom: SPACING.sm,
   },
 
-  errorText: {
-    fontSize: FONT.sm, color: COLORS.red, marginBottom: SPACING.sm,
-    backgroundColor: COLORS.redDim, borderRadius: RADIUS.sm, padding: SPACING.sm,
-  },
 
   confirmBtn: {
     backgroundColor: COLORS.primary, borderRadius: RADIUS.md,

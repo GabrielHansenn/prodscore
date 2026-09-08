@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
-import { levelThreshold, BehavioralProfileType, type BehavioralProfile } from '@prodscore/shared';
+import { levelThreshold, BehavioralProfileType, validateUsername, type BehavioralProfile } from '@prodscore/shared';
 import { api } from '../services/api.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 import { supabase } from '../lib/supabase.js';
+import { showToast } from '../store/toastStore.js';
+import FormFeedback from '../components/FormFeedback.js';
 import { FlameIcon } from '../components/icons.js';
 import { getBehavioralProfile } from '../services/behavioral.service.js';
 
@@ -128,7 +131,6 @@ export default function ProfilePage() {
   const [avatarPreview,      setAvatarPreview]      = useState<string | null>(null);
   const [saveError,          setSaveError]          = useState('');
   const [saving,             setSaving]             = useState(false);
-  const [saveOk,             setSaveOk]             = useState(false);
   const [behavioralProfile,  setBehavioralProfile]  = useState<BehavioralProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,7 +176,8 @@ export default function ProfilePage() {
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) { setSaveError('Nome de usuário é obrigatório.'); return; }
+    const usernameError = validateUsername(username);
+    if (usernameError) { setSaveError(usernameError); return; }
     setSaveError('');
     setSaving(true);
     try {
@@ -194,18 +197,21 @@ export default function ProfilePage() {
         newAvatarUrl = publicUrl;
       }
 
-      await api.patch('/users/me', {
-        username:  username.trim(),
-        bio:       bio.trim() || null,
-        ...(newAvatarUrl !== undefined ? { avatarUrl: newAvatarUrl } : {}),
-      });
+      try {
+        await api.patch('/users/me', {
+          username:  username.trim(),
+          bio:       bio.trim() || null,
+          ...(newAvatarUrl !== undefined ? { avatarUrl: newAvatarUrl } : {}),
+        });
+      } catch (err) {
+        throw new Error(getFriendlyErrorMessage(err, 'Erro ao salvar perfil.'));
+      }
 
       await loadSession();
       setAvatarFile(null);
       if (avatarPreview) { URL.revokeObjectURL(avatarPreview); setAvatarPreview(null); }
-      setSaveOk(true);
       setEditing(false);
-      setTimeout(() => setSaveOk(false), 3000);
+      showToast('Perfil atualizado com sucesso!');
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Erro ao salvar perfil.');
     } finally {
@@ -352,9 +358,7 @@ export default function ProfilePage() {
               )}
               <p className="mt-1 text-xs text-gray-400">JPG, PNG, WebP ou GIF &bull; máx. 2 MB</p>
             </div>
-            {saveError && (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">{saveError}</p>
-            )}
+            {saveError && <FormFeedback variant="error" message={saveError} />}
             <button type="submit" disabled={saving} className="btn-primary w-full">
               {saving
                 ? avatarFile ? 'Enviando foto...' : 'Salvando...'
@@ -362,12 +366,6 @@ export default function ProfilePage() {
               }
             </button>
           </form>
-        </div>
-      )}
-
-      {saveOk && (
-        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-          ✓ Perfil atualizado com sucesso!
         </div>
       )}
 

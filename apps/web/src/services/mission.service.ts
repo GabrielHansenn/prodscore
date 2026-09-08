@@ -1,5 +1,5 @@
 import { type Mission } from '@prodscore/shared';
-import { api } from './api.js';
+import { api, callApi } from './api.js';
 
 /** Missão com indicadores de participação do usuário */
 export interface MissionWithParticipation extends Mission {
@@ -12,8 +12,10 @@ export interface MissionWithParticipation extends Mission {
  * Inclui missões individuais ativas e missões dos grupos do usuário.
  */
 export async function getMissions(): Promise<MissionWithParticipation[]> {
-  const { data } = await api.get<{ missoes: MissionWithParticipation[] }>('/missions');
-  return data.missoes;
+  return callApi(async () => {
+    const { data } = await api.get<{ missoes: MissionWithParticipation[] }>('/missions');
+    return data.missoes;
+  }, 'Erro ao carregar as missões.');
 }
 
 /**
@@ -29,19 +31,23 @@ export async function createGroupMission(
     expiresAt?:   string;
   },
 ): Promise<Mission> {
-  const { data } = await api.post<{ missao: Mission }>(
-    `/groups/${groupId}/missions`,
-    input,
-  );
-  return data.missao;
+  return callApi(async () => {
+    const { data } = await api.post<{ missao: Mission }>(
+      `/groups/${groupId}/missions`,
+      input,
+    );
+    return data.missao;
+  }, 'Erro ao criar a missão.');
 }
 
 /**
  * Registra a participação do usuário em uma missão individual.
  */
 export async function joinMission(missionId: string): Promise<{ mission: Mission; joinedAt: string }> {
-  const { data } = await api.post<{ missao: Mission; entradaEm: string }>(
-    `/missions/${missionId}/join`,
-  );
-  return { mission: data.missao, joinedAt: data.entradaEm };
+  return callApi(async () => {
+    const { data } = await api.post<{ missao: Mission; entradaEm: string }>(
+      `/missions/${missionId}/join`,
+    );
+    return { mission: data.missao, joinedAt: data.entradaEm };
+  }, 'Erro ao entrar na missão.');
 }
