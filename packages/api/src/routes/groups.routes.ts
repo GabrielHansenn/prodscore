@@ -101,6 +101,8 @@ const updateGroupSchema = z.object({
     .url({ message: 'URL da imagem inválida.' })
     .nullable()
     .optional(),
+
+  countExternalTasksInMissions: z.boolean().optional(),
 });
 
 const updateMemberRoleSchema = z.object({
@@ -317,10 +319,18 @@ router.patch('/:id', authGuard, async (req, res) => {
     if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
 
     const body = updateGroupSchema.parse(req.body);
-    const input: { name?: string; description?: string | null; imageUrl?: string | null } = {};
+    const input: {
+      name?: string;
+      description?: string | null;
+      imageUrl?: string | null;
+      countExternalTasksInMissions?: boolean;
+    } = {};
     if (body.name        !== undefined) input.name        = body.name;
     if (body.description !== undefined) input.description = body.description;
     if (body.imageUrl    !== undefined) input.imageUrl    = body.imageUrl;
+    if (body.countExternalTasksInMissions !== undefined) {
+      input.countExternalTasksInMissions = body.countExternalTasksInMissions;
+    }
     const updated = await updateGroup(groupId, user.id, input);
     return res.status(200).json({ grupo: updated });
   } catch (err) {

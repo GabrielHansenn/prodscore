@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Switch,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +39,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
 
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [countExternal, setCountExternal] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -53,6 +54,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
         setGroup(detailRes.value);
         setName(detailRes.value.name);
         setDesc(detailRes.value.description ?? '');
+        setCountExternal(detailRes.value.countExternalTasksInMissions);
       }
       if (memsRes.status === 'fulfilled') setMembers(memsRes.value);
       setLoading(false);
@@ -62,14 +64,22 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   const myRole  = group?.role;
   const isOwner = myRole === MemberRole.Owner;
   const isAdmin = isOwner || myRole === MemberRole.Admin;
-  const dirty   = !!group && (name !== group.name || desc !== (group.description ?? ''));
+  const dirty   = !!group && (
+    name !== group.name ||
+    desc !== (group.description ?? '') ||
+    countExternal !== group.countExternalTasksInMissions
+  );
 
   const handleSaveInfo = async () => {
     if (!group || !dirty) return;
     setSaving(true);
     setFeedback(null);
     try {
-      const updated = await updateGroupInfo(groupId, { name: name.trim(), description: desc.trim() || null });
+      const updated = await updateGroupInfo(groupId, {
+        name: name.trim(),
+        description: desc.trim() || null,
+        countExternalTasksInMissions: countExternal,
+      });
       setGroup({ ...group, ...updated });
       setFeedback({ ok: true, msg: 'Informações salvas com sucesso.' });
     } catch (err) {
@@ -214,6 +224,16 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
                   style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc}
                   multiline maxLength={500} placeholder="Opcional" placeholderTextColor={COLORS.textMuted}
                 />
+                <View style={styles.switchRow}>
+                  <View style={{ flex: 1, marginRight: SPACING.sm }}>
+                    <Text style={styles.fieldLabel}>Contar tarefas de fora do grupo nas missões</Text>
+                    <Text style={styles.switchHint}>
+                      Se desativado (padrão), só tarefas criadas dentro deste grupo contam para o
+                      progresso das missões em equipe.
+                    </Text>
+                  </View>
+                  <Switch value={countExternal} onValueChange={setCountExternal} />
+                </View>
                 {feedback && (
                   <Text style={[styles.feedback, feedback.ok ? styles.feedbackOk : styles.feedbackErr]}>{feedback.msg}</Text>
                 )}
@@ -315,6 +335,8 @@ const styles = StyleSheet.create({
 
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
   input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
+  switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm },
+  switchHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   feedback: { fontSize: 12, marginTop: SPACING.sm },
   feedbackOk:  { color: '#4d7c0f' },
   feedbackErr: { color: COLORS.red },

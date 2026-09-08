@@ -98,13 +98,15 @@ function GroupInfoSection({
   const [name,        setName]        = useState(group.name);
   const [description, setDescription] = useState(group.description ?? '');
   const [imageUrl,    setImageUrl]    = useState(group.imageUrl ?? '');
+  const [countExternal, setCountExternal] = useState(group.countExternalTasksInMissions);
   const [saving,      setSaving]      = useState(false);
   const [feedback,    setFeedback]    = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
 
   const dirty =
     name !== group.name ||
     description !== (group.description ?? '') ||
-    imageUrl !== (group.imageUrl ?? '');
+    imageUrl !== (group.imageUrl ?? '') ||
+    countExternal !== group.countExternalTasksInMissions;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,6 +119,7 @@ function GroupInfoSection({
         ...(trimmedName ? { name: trimmedName } : {}),
         description: description.trim() || null,
         imageUrl:    imageUrl.trim() || null,
+        countExternalTasksInMissions: countExternal,
       });
       onSaved({ ...group, ...updated });
       setFeedback({ type: 'ok', msg: 'Informações salvas com sucesso.' });
@@ -166,6 +169,21 @@ function GroupInfoSection({
               className="input w-full"
             />
           </div>
+          <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={countExternal}
+              onChange={(e) => setCountExternal(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              Contar tarefas de fora do grupo nas missões coletivas
+              <span className="block text-xs text-gray-400 dark:text-gray-500">
+                Se desativado (padrão), só tarefas criadas dentro deste grupo contam para o
+                progresso das missões em equipe.
+              </span>
+            </span>
+          </label>
 
           {feedback && (
             <p className={`rounded-lg px-3 py-2 text-xs ${
