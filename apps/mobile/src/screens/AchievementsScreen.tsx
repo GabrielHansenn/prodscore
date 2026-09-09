@@ -6,6 +6,8 @@ import {
   getAchievements, getUserAchievements,
   type AchievementItem, type UserAchievementItem,
 } from '../services/achievement.service';
+import { useUserStore } from '../store/userStore';
+import { ACHIEVEMENT_ICONS, ACHIEVEMENT_ICON_FALLBACK } from '../constants/achievementIcons';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
 type Filter = 'todas' | 'conquistadas' | 'bloqueadas';
@@ -16,16 +18,42 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'bloqueadas',   label: 'Bloqueadas' },
 ];
 
-function AchievementCard({ item, earned, earnedAt }: {
-  item: AchievementItem; earned: boolean; earnedAt?: string;
+function AchievementCard({ item, earned, earnedAt, progress }: {
+  item: AchievementItem; earned: boolean; earnedAt?: string; progress?: number;
 }) {
+  const threshold = item.criteria?.threshold ?? 0;
+  const hasProgress = !earned && progress !== undefined && threshold > 0;
+  const pct = hasProgress ? Math.min((progress! / threshold) * 100, 100) : 0;
+
   return (
     <View style={[styles.card, !earned && styles.cardLocked]}>
-      <View style={[styles.iconBox, earned ? styles.iconBoxEarned : styles.iconBoxLocked]}>
-        <Text style={styles.icon}>{item.icon}</Text>
+      <View style={styles.cardTop}>
+        <View style={[styles.iconBox, earned ? styles.iconBoxEarned : styles.iconBoxLocked]}>
+          <Ionicons
+            name={ACHIEVEMENT_ICONS[item.icon] ?? ACHIEVEMENT_ICON_FALLBACK}
+            size={22}
+            color={earned ? COLORS.amber : COLORS.textMuted}
+          />
+        </View>
+        {earned && (
+          <View style={styles.earnedBadge}>
+            <Ionicons name="checkmark-circle" size={11} color={COLORS.amberText} />
+            <Text style={styles.earnedText}>Conquistada</Text>
+          </View>
+        )}
       </View>
       <Text style={[styles.name, !earned && styles.textMuted]} numberOfLines={2}>{item.name}</Text>
-      <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
+      <Text style={[styles.desc, !earned && styles.descLocked]} numberOfLines={2}>{item.description}</Text>
+
+      {hasProgress && (
+        <View style={styles.progressBox}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${pct}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{Math.min(progress!, threshold)}/{threshold}</Text>
+        </View>
+      )}
+
       <View style={styles.footer}>
         <Text style={[styles.pts, earned ? styles.ptsEarned : styles.textMuted]}>
           +{item.rewardPoints} pts
@@ -36,12 +64,6 @@ function AchievementCard({ item, earned, earnedAt }: {
           </Text>
         )}
       </View>
-      {earned && (
-        <View style={styles.earnedBadge}>
-          <Ionicons name="checkmark-circle" size={12} color={COLORS.amber} />
-          <Text style={styles.earnedText}>Conquistada</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -56,8 +78,10 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   const [earned,  setEarned]  = useState<UserAchievementItem[]>([]);
   const [filter,  setFilter]  = useState<Filter>('todas');
   const [loading, setLoading] = useState(true);
+  const { stats, fetchStats } = useUserStore();
 
   useEffect(() => {
+    void fetchStats();
     void (async () => {
       try {
         const [all, mine] = await Promise.all([getAchievements(), getUserAchievements()]);
@@ -67,6 +91,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const earnedMap = new Map(earned.map((e) => [e.id, e]));
@@ -77,6 +102,18 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   });
   const earnedCount = earned.length;
   const pct = catalog.length > 0 ? Math.round((earnedCount / catalog.length) * 100) : 0;
+
+  /** Progresso atual do usuário pro tipo de critério da conquista, quando já disponível em `stats`. */
+  const progressFor = (criteriaType: string): number | undefined => {
+    if (!stats) return undefined;
+    switch (criteriaType) {
+      case 'tasks_completed': return stats.tasksCompleted;
+      case 'streak':          return stats.currentStreak;
+      case 'points_earned':   return stats.totalPoints;
+      case 'level_reached':   return stats.level;
+      default:                return undefined;
+    }
+  };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -140,11 +177,13 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
           }
           renderItem={({ item }) => {
             const ua = earnedMap.get(item.id);
+            const progress = progressFor(item.criteria?.type);
             return (
               <AchievementCard
                 item={item}
                 earned={!!ua}
                 {...(ua?.earnedAt ? { earnedAt: ua.earnedAt } : {})}
+                {...(progress !== undefined ? { progress } : {})}
               />
             );
           }}
@@ -185,7 +224,7 @@ const styles = StyleSheet.create({
     marginBottom:    SPACING.md,
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bannerTitle: { fontSize: FONT.base, fontWeight: '600', color: '#b45309' },
+  bannerTitle: { fontSize: FONT.base, fontWeight: '600', color: COLORS.amberText },
   bannerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
   bannerTrack: { height: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(245,158,11,0.15)', overflow: 'hidden', marginTop: SPACING.sm },
   bannerFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.amber },
@@ -201,26 +240,31 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     'rgba(245,158,11,0.25)',
+    borderColor:     'rgba(245,158,11,0.3)',
     padding:         SPACING.md,
     marginBottom:    SPACING.sm,
     ...CARD_SHADOW,
   },
-  cardLocked: { borderColor: COLORS.borderSoft, opacity: 0.7 },
+  cardLocked: { borderColor: COLORS.borderSoft },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   iconBox: {
     width: 44, height: 44, borderRadius: RADIUS.md,
-    alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.sm,
+    alignItems: 'center', justifyContent: 'center',
   },
   iconBoxEarned: { backgroundColor: 'rgba(245,158,11,0.15)' },
   iconBoxLocked: { backgroundColor: COLORS.borderSoft },
-  icon: { fontSize: 22 },
-  name: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text, lineHeight: 18 },
-  desc: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, lineHeight: 15 },
+  name: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text, lineHeight: 18, marginTop: SPACING.sm },
+  desc: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, lineHeight: 15 },
+  descLocked: { color: COLORS.textMuted },
+  progressBox: { marginTop: SPACING.sm },
+  progressTrack: { height: 5, borderRadius: RADIUS.sm, backgroundColor: COLORS.borderSoft, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.amber },
+  progressText: { fontSize: 10, color: COLORS.textMuted, marginTop: 2, textAlign: 'right' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
   pts: { fontSize: 11, fontWeight: '600' },
-  ptsEarned: { color: '#b45309' },
+  ptsEarned: { color: COLORS.amberText },
   date: { fontSize: 10, color: COLORS.textMuted },
   textMuted: { color: COLORS.textMuted },
-  earnedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: SPACING.xs, alignSelf: 'flex-end' },
-  earnedText: { fontSize: 10, fontWeight: '600', color: '#b45309' },
+  earnedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.amberDim, borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  earnedText: { fontSize: 10, fontWeight: '600', color: COLORS.amberText },
 });
