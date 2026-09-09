@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
+import { useUserStore } from '../store/userStore.js';
 import { useThemeStore, type Theme } from '../store/themeStore.js';
 import { useConsentStore } from '../store/consentStore.js';
 import { LogoWordmark } from './Logo.js';
@@ -31,6 +32,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onClose }: SidebarProps) {
   const { user, logout } = useAuthStore((s) => ({ user: s.user, logout: s.logout }));
+  const statsLevel = useUserStore((s) => s.stats?.level);
   const { theme, setTheme } = useThemeStore();
   const resetConsent = useConsentStore((s) => s.resetConsent);
   const navigate = useNavigate();
@@ -98,7 +100,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">{user?.username ?? 'Usuário'}</p>
-            <p className="text-xs text-sidebar-muted">Nível {user?.level ?? 1}</p>
+            <p className="text-xs text-sidebar-muted">Nível {statsLevel ?? user?.level ?? 1}</p>
           </div>
         </div>
 

@@ -17,7 +17,7 @@ import {
   checkLevelUp,
   checkAchievements,
 } from './gamification.service.js';
-import { checkMissionProgress } from './mission.service.js';
+import { checkMissionProgress, type CompletedMissionInfo } from './mission.service.js';
 import { purgeProofFileForTask } from './proof.service.js';
 
 // ---------------------------------------------------------------------------
@@ -123,6 +123,8 @@ export interface CompleteTaskResult {
   freezeUsed:       boolean;
   /** Recompensa de nível concedida (null se não subiu de nível ou não há recompensa) */
   levelReward:      LevelReward | null;
+  /** Missões concluídas como efeito desta tarefa (vazio se nenhuma) */
+  completedMissions: CompletedMissionInfo[];
 }
 
 // ---------------------------------------------------------------------------
@@ -503,24 +505,24 @@ export async function completeTask(
 
   const completedTask = mapTaskRow(updatedData as TaskRow);
 
-  // ── Passos 6–8: gamificação (sequencial — cada passo pode alterar total_points) ──
+  // ── Passos 6–9: gamificação (sequencial — cada passo pode alterar total_points) ──
   //
   // Ordem importa:
-  //   6. updateStreak   → pode adicionar bônus de marco
-  //   7. checkAchievements → pode adicionar bônus de conquista
-  //   8. checkLevelUp   → lê o total_points final para calcular o nível correto
+  //   6. updateStreak         → pode adicionar bônus de marco
+  //   7. checkMissionProgress → aguardado (não é mais fire-and-forget): se essa
+  //      tarefa também fechar uma missão, o bônus entra no total_points ANTES
+  //      dos passos seguintes, e a missão concluída volta na resposta pro
+  //      popup de XP do frontend mostrar os dois ganhos juntos.
+  //   8. checkAchievements    → já enxerga o bônus de missão (ex: conquista de
+  //      "missão concluída" pode desbloquear na mesma resposta)
+  //   9. checkLevelUp         → lê o total_points final para calcular o nível correto
 
-  const streakResult     = await updateStreak(userId);
-  const newAchievements  = await checkAchievements(userId);
-  const levelResult      = await checkLevelUp(userId);
+  const streakResult      = await updateStreak(userId);
+  const completedMissions = await checkMissionProgress(userId);
+  const newAchievements   = await checkAchievements(userId);
+  const levelResult       = await checkLevelUp(userId);
 
-  // ── Passo 9: progresso de missões ─────────────────────────────────────────
-  // Fire-and-forget: falha não interrompe a conclusão da tarefa
-  checkMissionProgress(userId).catch((err) => {
-    console.error('[tarefas] Erro ao verificar progresso de missões:', err);
-  });
-
-  // ── Passo 10: retorno ─────────────────────────────────────────────────────
+  // ── Passo 10: retorno ────────────────────────────────────────────────────
 
   return {
     task:             completedTask,
@@ -532,5 +534,6 @@ export async function completeTask(
     newAchievements,
     freezeUsed:       streakResult.freezeUsed,
     levelReward:      levelResult.levelReward,
+    completedMissions,
   };
 }

@@ -10,6 +10,7 @@ import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task, 
 import { useTaskStore } from '../store/taskStore';
 import { getTaskSuggestions } from '../services/behavioral.service';
 import { getFriendlyErrorMessage } from '../lib/errors';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
 import TaskItem from '../components/TaskItem';
 import Dropdown from '../components/Dropdown';
@@ -285,7 +286,8 @@ export default function TasksScreen() {
 
   const handleComplete = async (id: string) => {
     try {
-      await completeTask(id);
+      const result = await completeTask(id);
+      void refreshStatsAndShowXpGain(result);
     } catch (err) {
       showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
     }

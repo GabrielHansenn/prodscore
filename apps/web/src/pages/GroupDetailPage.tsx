@@ -15,6 +15,7 @@ import { getTasks, createTask } from '../services/task.service.js';
 import { validateRequired, validatePositiveNumber } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
 import FormFeedback from '../components/FormFeedback.js';
 import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
@@ -303,6 +304,7 @@ function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task)
       const { completeTask } = await import('../services/task.service.js');
       const result = await completeTask(task.id);
       onComplete(result.tarefa);
+      void refreshStatsAndShowXpGain(result);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao concluir a tarefa.', 'error');
     } finally {

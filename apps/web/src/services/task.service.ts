@@ -8,15 +8,23 @@ export interface GetTasksParams {
   groupId?:    string;
 }
 
+/** Missão concluída como efeito colateral de uma tarefa */
+export interface CompletedMissionInfo {
+  missaoId:     string;
+  titulo:       string;
+  pontosGanhos: number;
+}
+
 /** Resultado da conclusão de uma tarefa */
 export interface CompleteTaskResult {
-  tarefa:          Task;
-  pontosGanhos:    number;
-  novoStreak:      number;
-  subidoDeNivel:   boolean;
-  novoNivel:       number;
-  marcoStreak:     number | null;
-  novasConquistas: Achievement[];
+  tarefa:            Task;
+  pontosGanhos:      number;
+  novoStreak:        number;
+  subidoDeNivel:     boolean;
+  novoNivel:         number;
+  marcoStreak:       number | null;
+  novasConquistas:   Achievement[];
+  missoesConcluidas: CompletedMissionInfo[];
 }
 
 /**

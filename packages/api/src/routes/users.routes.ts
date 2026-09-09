@@ -287,6 +287,7 @@ router.get('/me/stats', authGuard, async (req, res) => {
         level:          user.level,
         currentStreak:  user.currentStreak,
         longestStreak:  user.longestStreak,
+        streakFreezes:  user.streakFreezes,
 
         // Tarefas
         tasksCompleted:        tasksCompletedResult.count   ?? 0,

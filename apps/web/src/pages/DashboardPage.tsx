@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore.js';
 import { useTaskStore } from '../store/taskStore.js';
 import { useUserStore } from '../store/userStore.js';
 import { showToast } from '../store/toastStore.js';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
 import { supabase } from '../lib/supabase.js';
 import TaskCard from '../components/TaskCard.js';
 import LevelProgress from '../components/LevelProgress.js';
@@ -110,10 +111,9 @@ export default function DashboardPage() {
     setCompleting((prev) => new Set(prev).add(taskId));
     try {
       const result = await completeTask(taskId);
-      showToast(`Tarefa concluída! +${result.pontosGanhos} pts`);
+      void refreshStatsAndShowXpGain(result);
       if (result.marcoStreak    !== null) setCelebration({ days: result.marcoStreak });
       if (result.recompensaNivel)         setLevelRewardPop(result.recompensaNivel);
-      void fetchStats();
       if (user) {
         setTransactions((prev) => [
           { id: `local-${Date.now()}`, userId: user.id, amount: result.pontosGanhos, reason: 'task_completed' as PointTransaction['reason'], referenceId: taskId, createdAt: new Date().toISOString() },
@@ -148,21 +148,21 @@ export default function DashboardPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total de Pontos"
-          value={(user?.totalPoints ?? 0).toLocaleString('pt-BR')}
+          value={(stats?.totalPoints ?? 0).toLocaleString('pt-BR')}
           sub={`#${stats?.rankPosition ?? '–'} no ranking`}
           accent="text-brand-500"
           glow="stat-card-glow-purple"
         />
         <StatCard
           label="Sequência Atual"
-          value={user?.currentStreak ?? 0}
-          sub={`${(user?.currentStreak ?? 0) === 1 ? 'dia consecutivo' : 'dias consecutivos'}`}
+          value={stats?.currentStreak ?? 0}
+          sub={`${(stats?.currentStreak ?? 0) === 1 ? 'dia consecutivo' : 'dias consecutivos'}`}
           accent="text-amber-500"
           glow="stat-card-glow-amber"
         />
         <StatCard
           label="Nível"
-          value={user?.level ?? 1}
+          value={stats?.level ?? 1}
           sub={`${stats?.achievementsCount ?? 0} conquistas`}
           accent="text-lime-700 dark:text-lime-400"
           glow="stat-card-glow-lime"
@@ -177,9 +177,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Barra de XP */}
-      {user && (
+      {stats && (
         <div className="card mb-6 p-5">
-          <LevelProgress level={user.level} totalPoints={user.totalPoints} />
+          <LevelProgress level={stats.level} totalPoints={stats.totalPoints} />
         </div>
       )}
 
@@ -254,11 +254,11 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-4 lg:col-span-2">
-          {user && (
+          {stats && (
             <StreakBadge
-              currentStreak={user.currentStreak}
-              longestStreak={user.longestStreak}
-              streakFreezes={user.streakFreezes}
+              currentStreak={stats.currentStreak}
+              longestStreak={stats.longestStreak}
+              streakFreezes={stats.streakFreezes}
             />
           )}
 
