@@ -8,6 +8,9 @@ import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
  * Host global de toasts — montado uma única vez em `App.tsx`, acima da
  * navegação. Use `showToast(message, variant)` (de `store/toastStore.ts`) de
  * qualquer tela para exibir uma notificação, sem precisar de estado local.
+ *
+ * Fica ancorado embaixo (como o toast do web) — o topo da tela é reservado
+ * pro `GamificationPopup` (XP/conquista), pra nunca sobrepor um no outro.
  */
 export default function ToastHost() {
   const toasts = useToastStore((s) => s.toasts);
@@ -16,7 +19,7 @@ export default function ToastHost() {
   if (toasts.length === 0) return null;
 
   return (
-    <View pointerEvents="none" style={[styles.container, { top: insets.top + SPACING.sm }]}>
+    <View pointerEvents="none" style={[styles.container, { bottom: insets.bottom + SPACING.md }]}>
       {toasts.map((toast) => {
         const isError = toast.variant === 'error';
         return (

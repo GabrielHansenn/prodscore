@@ -2,6 +2,7 @@ import {
   MissionType,
   PointReason,
   type Mission,
+  type Achievement,
 } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
@@ -521,6 +522,13 @@ export interface CompletedMissionInfo {
   rewardPoints: number;
 }
 
+/** Resultado agregado de checkMissionProgress */
+export interface MissionProgressResult {
+  completedMissions:   CompletedMissionInfo[];
+  /** Conquistas desbloqueadas pelo bônus de pontos da missão (só do usuário que agiu) */
+  unlockedAchievements: Achievement[];
+}
+
 /**
  * Verifica e atualiza o progresso do usuário em todas as missões ativas após concluir uma tarefa.
  *
@@ -533,11 +541,13 @@ export interface CompletedMissionInfo {
  * Erros nesta função não interrompem o fluxo de conclusão da tarefa — apenas logados.
  *
  * @param userId - UUID do usuário que concluiu uma tarefa
- * @returns Missões concluídas nesta chamada (vazio se nenhuma) — usado pelo caller
- *          (completeTask) pra incluir o bônus de missão no mesmo popup de XP.
+ * @returns Missões concluídas nesta chamada e conquistas desbloqueadas pelo bônus
+ *          delas (vazio se nenhuma) — usado pelo caller (completeTask) pra incluir
+ *          tudo isso no mesmo popup de XP/conquista.
  */
-export async function checkMissionProgress(userId: string): Promise<CompletedMissionInfo[]> {
+export async function checkMissionProgress(userId: string): Promise<MissionProgressResult> {
   const completed: CompletedMissionInfo[] = [];
+  const unlockedAchievements: Achievement[] = [];
   try {
     // Auto-matricula o usuário em missões de grupo ativas que ele ainda não entrou.
     // joined_at = created_at da missão para contar tarefas retroativamente desde o início.
@@ -605,7 +615,7 @@ export async function checkMissionProgress(userId: string): Promise<CompletedMis
       .eq('user_id', userId)
       .eq('is_completed', false);
 
-    if (error || !participationsData) return completed;
+    if (error || !participationsData) return { completedMissions: completed, unlockedAchievements };
 
     const participations = participationsData as unknown as Array<{
       mission_id:  string;
@@ -696,25 +706,29 @@ export async function checkMissionProgress(userId: string): Promise<CompletedMis
       }
 
       if (missionCompleted) {
+        let achievementsFromMission: Achievement[] = [];
         if (mission.type === 'group' && mission.group_id) {
           // Meta coletiva batida — recompensa TODO o grupo, não só quem
           // completou a tarefa que fechou a conta.
-          await completeGroupMissionForAllMembers(participation.mission_id, mission.group_id, mission.reward_points);
+          achievementsFromMission = await completeGroupMissionForAllMembers(
+            participation.mission_id, mission.group_id, mission.reward_points, userId,
+          );
         } else {
-          await completeMission(participation.mission_id, userId, mission.reward_points);
+          achievementsFromMission = await completeMission(participation.mission_id, userId, mission.reward_points);
         }
         completed.push({
           missionId:    participation.mission_id,
           title:        mission.title,
           rewardPoints: mission.reward_points,
         });
+        unlockedAchievements.push(...achievementsFromMission);
       }
     }
   } catch (err) {
     // Não interrompe o fluxo principal — apenas loga o erro
     console.error('[missões] Erro ao verificar progresso de missões:', err);
   }
-  return completed;
+  return { completedMissions: completed, unlockedAchievements };
 }
 
 // ---------------------------------------------------------------------------
@@ -733,7 +747,7 @@ export async function completeMission(
   missionId: string,
   userId: string,
   rewardPoints: number,
-): Promise<void> {
+): Promise<Achievement[]> {
   const now = new Date().toISOString();
 
   // Marca o participante como concluído
@@ -749,7 +763,7 @@ export async function completeMission(
 
   if (updateError) {
     console.error('[missões] Erro ao marcar missão como concluída:', updateError.message);
-    return;
+    return [];
   }
 
   // Concede a recompensa em pontos (se houver)
@@ -767,11 +781,14 @@ export async function completeMission(
     }
   }
 
-  // Verifica novas conquistas após ganhar os pontos da missão
+  // Verifica novas conquistas após ganhar os pontos da missão — o bônus pode
+  // ter empurrado o usuário sobre um critério (ex: pontos acumulados) que só
+  // seria detectado aqui, então o resultado precisa ser devolvido, não descartado.
   try {
-    await checkAchievements(userId);
+    return await checkAchievements(userId);
   } catch (err) {
     console.error('[missões] Erro ao verificar conquistas após missão:', err);
+    return [];
   }
 }
 
@@ -783,15 +800,23 @@ export async function completeMission(
  *
  * Idempotente: só recompensa quem ainda não tinha sido marcado como concluído.
  *
- * @param missionId    - UUID da missão de grupo
- * @param groupId      - UUID do grupo (mission.group_id)
- * @param rewardPoints - Pontos a conceder a cada membro
+ * @param missionId     - UUID da missão de grupo
+ * @param groupId       - UUID do grupo (mission.group_id)
+ * @param rewardPoints  - Pontos a conceder a cada membro
+ * @param actingUserId  - Usuário cuja ação disparou esta conclusão — só as
+ *                        conquistas desbloqueadas para ELE são retornadas, pois
+ *                        é o único com uma requisição em andamento pra receber
+ *                        essa informação agora. Os demais membros do grupo
+ *                        também podem desbloquear conquistas aqui, mas não há
+ *                        hoje um canal pra avisá-los fora da própria sessão.
+ * @returns Conquistas desbloqueadas para `actingUserId` nesta chamada
  */
 async function completeGroupMissionForAllMembers(
   missionId: string,
   groupId: string,
   rewardPoints: number,
-): Promise<void> {
+  actingUserId: string,
+): Promise<Achievement[]> {
   const now = new Date().toISOString();
 
   const { data: membersData } = await supabase
@@ -800,7 +825,7 @@ async function completeGroupMissionForAllMembers(
     .eq('group_id', groupId);
 
   const memberIds = (membersData ?? []).map((m) => (m as { user_id: string }).user_id);
-  if (memberIds.length === 0) return;
+  if (memberIds.length === 0) return [];
 
   const { data: existingData } = await supabase
     .from('mission_participants')
@@ -849,11 +874,16 @@ async function completeGroupMissionForAllMembers(
     console.log(`[missões] Recompensa de ${rewardPoints} pts concedida a ${rewardedUserIds.length} membro(s) na missão de grupo ${missionId}`);
   }
 
+  let actingUserAchievements: Achievement[] = [];
+
   await Promise.all(rewardedUserIds.map(async (id) => {
     try {
-      await checkAchievements(id);
+      const unlocked = await checkAchievements(id);
+      if (id === actingUserId) actingUserAchievements = unlocked;
     } catch (err) {
       console.error(`[missões] Erro ao verificar conquistas após missão de grupo para ${id}:`, err);
     }
   }));
+
+  return actingUserAchievements;
 }

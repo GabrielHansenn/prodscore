@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Task, LevelReward, TaskPriority } from '@prodscore/shared';
+import type { Task, LevelReward, TaskPriority, Achievement } from '@prodscore/shared';
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { api } from '../services/api';
 
@@ -26,6 +26,7 @@ export interface CompleteTaskResult {
   marcoStreak:       boolean;
   recompensaNivel:   LevelReward | null;
   missoesConcluidas?: CompletedMissionInfo[];
+  novasConquistas?:   Achievement[];
 }
 
 interface CreateTaskInput {

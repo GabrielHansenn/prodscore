@@ -1,34 +1,6 @@
 import type { AchievementItem } from '../services/achievement.service.js';
-import {
-  CheckCircleIcon, FlameIcon, SparklesIcon, GemIcon, ClipboardIcon, RocketIcon,
-  BoltIcon, ClockIcon, UsersIcon, CrownIcon, MedalIcon, StarIcon,
-  ArrowTrendingUpIcon, ShieldIcon, CoinsIcon, FlagIcon, TrophyIcon,
-} from './icons.js';
-
-/** Mapa de chave semântica -> componente de ícone. Ver supabase/seed.sql para o catálogo. */
-const ICONS: Record<string, (props: { className?: string }) => JSX.Element> = {
-  check: CheckCircleIcon,
-  flame: FlameIcon,
-  sparkle: SparklesIcon,
-  gem: GemIcon,
-  list: ClipboardIcon,
-  rocket: RocketIcon,
-  bolt: BoltIcon,
-  clock: ClockIcon,
-  users: UsersIcon,
-  crown: CrownIcon,
-  medal: MedalIcon,
-  star: StarIcon,
-  'trending-up': ArrowTrendingUpIcon,
-  shield: ShieldIcon,
-  coins: CoinsIcon,
-  flag: FlagIcon,
-};
-
-function AchievementIcon({ iconKey, className = '' }: { iconKey: string; className?: string }) {
-  const Icon = ICONS[iconKey] ?? TrophyIcon;
-  return <Icon className={className} />;
-}
+import { AchievementIcon } from '../lib/achievementIcons.js';
+import { CheckCircleIcon } from './icons.js';
 
 interface AchievementCardProps {
   achievement: AchievementItem;

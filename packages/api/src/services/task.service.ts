@@ -517,10 +517,19 @@ export async function completeTask(
   //      "missão concluída" pode desbloquear na mesma resposta)
   //   9. checkLevelUp         → lê o total_points final para calcular o nível correto
 
-  const streakResult      = await updateStreak(userId);
-  const completedMissions = await checkMissionProgress(userId);
-  const newAchievements   = await checkAchievements(userId);
-  const levelResult       = await checkLevelUp(userId);
+  const streakResult   = await updateStreak(userId);
+  const missionResult  = await checkMissionProgress(userId);
+  const achievementsAfterMissions = await checkAchievements(userId);
+  const levelResult    = await checkLevelUp(userId);
+
+  // Mescla as conquistas — a checagem dentro de checkMissionProgress já insere
+  // no banco qualquer conquista destravada pelo bônus da missão, então a
+  // checagem seguinte (achievementsAfterMissions) nunca as repete; a união por
+  // id aqui é só uma proteção extra, não deveria ter overlap na prática.
+  const achievementsById = new Map(
+    [...missionResult.unlockedAchievements, ...achievementsAfterMissions].map((a) => [a.id, a]),
+  );
+  const newAchievements = Array.from(achievementsById.values());
 
   // ── Passo 10: retorno ────────────────────────────────────────────────────
 
@@ -534,6 +543,6 @@ export async function completeTask(
     newAchievements,
     freezeUsed:       streakResult.freezeUsed,
     levelReward:      levelResult.levelReward,
-    completedMissions,
+    completedMissions: missionResult.completedMissions,
   };
 }
