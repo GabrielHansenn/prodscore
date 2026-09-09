@@ -11,14 +11,21 @@ const BASE_POINTS: Record<TaskDifficulty, number> = {
   [TaskDifficulty.Epic]:   100,
 };
 
+export interface CompletedMissionInfo {
+  missaoId:     string;
+  titulo:       string;
+  pontosGanhos: number;
+}
+
 export interface CompleteTaskResult {
-  tarefa:          Task;
-  pontosGanhos:    number;
-  novoStreak:      number;
-  novoNivel:       number;
-  subidoDeNivel:   boolean;
-  marcoStreak:     boolean;
-  recompensaNivel: LevelReward | null;
+  tarefa:            Task;
+  pontosGanhos:      number;
+  novoStreak:        number;
+  novoNivel:         number;
+  subidoDeNivel:     boolean;
+  marcoStreak:       boolean;
+  recompensaNivel:   LevelReward | null;
+  missoesConcluidas?: CompletedMissionInfo[];
 }
 
 interface CreateTaskInput {

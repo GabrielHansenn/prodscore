@@ -9,6 +9,7 @@ import { TaskStatus, type Task, type PointTransaction, type LevelReward } from '
 import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { api } from '../services/api';
 import StatCard  from '../components/StatCard';
 import LevelBar  from '../components/LevelBar';
@@ -67,10 +68,9 @@ export default function DashboardScreen() {
   const handleComplete = async (id: string) => {
     try {
       const result = await completeTask(id);
-      showToast(`Tarefa concluída! +${result.pontosGanhos} pts`);
+      void refreshStatsAndShowXpGain(result);
       if (result.marcoStreak)     setCelebrationStreak(result.novoStreak);
       if (result.recompensaNivel) setLevelReward(result.recompensaNivel);
-      void fetchStats(); // atualiza pontos e streak
       void loadTransactions();
     } catch {
       showToast('Erro ao concluir tarefa.');
@@ -174,12 +174,12 @@ export default function DashboardScreen() {
         </View>
 
         {/* Sequência + últimas transações */}
-        {user && (
+        {stats && (
           <View style={[styles.section, { gap: SPACING.sm }]}>
             <StreakBadge
-              currentStreak={user.currentStreak}
-              longestStreak={user.longestStreak}
-              streakFreezes={user.streakFreezes}
+              currentStreak={stats.currentStreak}
+              longestStreak={stats.longestStreak}
+              streakFreezes={stats.streakFreezes}
             />
             <View style={styles.txCard}>
               <Text style={styles.txCardTitle}>Últimas transações</Text>

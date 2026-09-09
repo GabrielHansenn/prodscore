@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task, type TaskSuggestion } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
 import { showToast } from '../store/toastStore.js';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
 import FormFeedback from '../components/FormFeedback.js';
 import TaskCard from '../components/TaskCard.js';
 import { ClipboardIcon, SparklesIcon } from '../components/icons.js';
@@ -260,7 +261,8 @@ export default function TasksPage() {
   const handleComplete = async (id: string) => {
     setCompleting((prev) => new Set(prev).add(id));
     try {
-      await completeTask(id);
+      const result = await completeTask(id);
+      void refreshStatsAndShowXpGain(result);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao concluir a tarefa.', 'error');
     } finally {

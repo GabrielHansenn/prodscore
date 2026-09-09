@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/montserrat';
 import AppNavigation from './src/navigation/index';
 import ToastHost from './src/components/ToastHost';
+import XpGainPopup from './src/components/XpGainPopup';
 import { COLORS } from './src/constants/theme';
 import './src/lib/globalFont';
 
@@ -36,6 +37,7 @@ export default function App() {
         <StatusBar style="dark" backgroundColor="#f9fafb" />
         <AppNavigation />
         <ToastHost />
+        <XpGainPopup />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

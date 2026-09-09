@@ -514,6 +514,13 @@ export async function createGroupMission(
 // Verificação e atualização de progresso
 // ---------------------------------------------------------------------------
 
+/** Missão concluída durante um checkMissionProgress — usado pra devolver o bônus ao chamador */
+export interface CompletedMissionInfo {
+  missionId:    string;
+  title:        string;
+  rewardPoints: number;
+}
+
 /**
  * Verifica e atualiza o progresso do usuário em todas as missões ativas após concluir uma tarefa.
  *
@@ -526,8 +533,11 @@ export async function createGroupMission(
  * Erros nesta função não interrompem o fluxo de conclusão da tarefa — apenas logados.
  *
  * @param userId - UUID do usuário que concluiu uma tarefa
+ * @returns Missões concluídas nesta chamada (vazio se nenhuma) — usado pelo caller
+ *          (completeTask) pra incluir o bônus de missão no mesmo popup de XP.
  */
-export async function checkMissionProgress(userId: string): Promise<void> {
+export async function checkMissionProgress(userId: string): Promise<CompletedMissionInfo[]> {
+  const completed: CompletedMissionInfo[] = [];
   try {
     // Auto-matricula o usuário em missões de grupo ativas que ele ainda não entrou.
     // joined_at = created_at da missão para contar tarefas retroativamente desde o início.
@@ -589,19 +599,19 @@ export async function checkMissionProgress(userId: string): Promise<void> {
       .select(`
         mission_id, current_value, joined_at,
         missions (
-          id, type, group_id, target_value, reward_points, expires_at
+          id, title, type, group_id, target_value, reward_points, expires_at
         )
       `)
       .eq('user_id', userId)
       .eq('is_completed', false);
 
-    if (error || !participationsData) return;
+    if (error || !participationsData) return completed;
 
     const participations = participationsData as unknown as Array<{
       mission_id:  string;
       current_value: number;
       joined_at:   string;
-      missions:    Pick<MissionRow, 'id' | 'type' | 'group_id' | 'target_value' | 'reward_points' | 'expires_at'>;
+      missions:    Pick<MissionRow, 'id' | 'title' | 'type' | 'group_id' | 'target_value' | 'reward_points' | 'expires_at'>;
     }>;
 
     // Para missões de grupo, busca se o grupo permite contar tarefas de fora
@@ -693,12 +703,18 @@ export async function checkMissionProgress(userId: string): Promise<void> {
         } else {
           await completeMission(participation.mission_id, userId, mission.reward_points);
         }
+        completed.push({
+          missionId:    participation.mission_id,
+          title:        mission.title,
+          rewardPoints: mission.reward_points,
+        });
       }
     }
   } catch (err) {
     // Não interrompe o fluxo principal — apenas loga o erro
     console.error('[missões] Erro ao verificar progresso de missões:', err);
   }
+  return completed;
 }
 
 // ---------------------------------------------------------------------------

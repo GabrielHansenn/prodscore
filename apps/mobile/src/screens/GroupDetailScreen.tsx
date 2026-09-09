@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MemberRole, TaskDifficulty, validateRequired, validatePositiveNumber, type Task } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
+import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
 import {
@@ -252,7 +253,10 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     key={t.id}
                     task={t}
                     onComplete={(id) => {
-                      void completeTask(id).then(() => void load()).catch((err: unknown) => {
+                      void completeTask(id).then((result) => {
+                        void load();
+                        void refreshStatsAndShowXpGain(result);
+                      }).catch((err: unknown) => {
                         showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
                       });
                     }}

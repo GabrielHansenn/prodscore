@@ -16,6 +16,7 @@ export interface UserStats {
   level:                  number;
   currentStreak:          number;
   longestStreak:          number;
+  streakFreezes:          number;
   tasksCompleted:         number;
   tasksCompletedThisWeek: number;
   consistencyRate:        number;

@@ -14,17 +14,25 @@ export interface TaskFilters {
   groupId?:    string;
 }
 
+/** Missão concluída como efeito colateral de uma tarefa */
+export interface CompletedMissionInfo {
+  missaoId:     string;
+  titulo:       string;
+  pontosGanhos: number;
+}
+
 /** Resultado retornado pela API ao concluir uma tarefa */
 export interface CompleteTaskApiResult {
-  tarefa:          Task;
-  pontosGanhos:    number;
-  novoStreak:      number;
-  subidoDeNivel:   boolean;
-  novoNivel:       number;
-  marcoStreak:     number | null;
-  novasConquistas: Achievement[];
-  freezeUsado?:    boolean;
-  recompensaNivel?: LevelReward | null;
+  tarefa:            Task;
+  pontosGanhos:      number;
+  novoStreak:        number;
+  subidoDeNivel:     boolean;
+  novoNivel:         number;
+  marcoStreak:       number | null;
+  novasConquistas:   Achievement[];
+  freezeUsado?:      boolean;
+  recompensaNivel?:  LevelReward | null;
+  missoesConcluidas?: CompletedMissionInfo[];
 }
 
 interface TaskState {

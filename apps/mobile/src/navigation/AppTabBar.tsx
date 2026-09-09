@@ -3,6 +3,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
+import { useUserStore } from '../store/userStore';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { COLORS, FONT, SPACING, RADIUS } from '../constants/theme';
 
@@ -31,6 +32,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const insets = useSafeAreaInsets();
   const { isWide } = useResponsive();
   const { user, logout } = useAuthStore();
+  const statsLevel = useUserStore((s) => s.stats?.level);
 
   if (!isWide) {
     // ---- Modo celular: barra inferior (comportamento original) ----
@@ -125,7 +127,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.userName} numberOfLines={1}>{user?.username ?? 'Usuário'}</Text>
-            <Text style={styles.userLevel}>Nível {user?.level ?? 1}</Text>
+            <Text style={styles.userLevel}>Nível {statsLevel ?? user?.level ?? 1}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>

@@ -315,6 +315,11 @@ router.patch('/:id/complete', authGuard, async (req, res) => {
       novasConquistas:   result.newAchievements,
       freezeUsado:       result.freezeUsed,
       recompensaNivel:   result.levelReward,
+      missoesConcluidas: result.completedMissions.map((m) => ({
+        missaoId:     m.missionId,
+        titulo:       m.title,
+        pontosGanhos: m.rewardPoints,
+      })),
     });
   } catch (err) {
     return sendError(res, err, '[tarefas/complete]');
