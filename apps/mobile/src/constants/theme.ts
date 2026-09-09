@@ -40,8 +40,9 @@ export const COLORS = {
   limeDim:   'rgba(163,230,53,0.14)',
 
   // Semânticas de dificuldade/status
-  amber:    '#f59e0b',
-  amberDim: 'rgba(245,158,11,0.12)',
+  amber:     '#f59e0b',
+  amberDim:  'rgba(245,158,11,0.12)',
+  amberText: '#b45309',
   orange:    '#f97316',
   orangeDim: 'rgba(249,115,22,0.12)',
   red:    '#ef4444',

@@ -180,7 +180,7 @@ export interface Achievement {
   name: string;
   /** Descrição dos critérios para desbloquear */
   description: string;
-  /** Ícone representativo (nome de emoji ou chave de ativo) */
+  /** Chave semântica do ícone (ex: 'flame', 'crown') — cada plataforma mapeia para seu próprio componente de ícone */
   icon: string;
   /** Pontos concedidos ao desbloquear */
   rewardPoints: number;

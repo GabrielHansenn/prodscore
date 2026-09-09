@@ -1,4 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ACHIEVEMENT_ICONS, ACHIEVEMENT_ICON_FALLBACK } from '../constants/achievementIcons';
 import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
 
 export interface BadgeData {
@@ -18,7 +20,7 @@ export default function AchievementBadge({ badge }: AchievementBadgeProps) {
   return (
     <View style={styles.container}>
       <View style={styles.iconBox}>
-        <Text style={styles.icon}>{badge.icon}</Text>
+        <Ionicons name={ACHIEVEMENT_ICONS[badge.icon] ?? ACHIEVEMENT_ICON_FALLBACK} size={24} color={COLORS.amber} />
       </View>
       <Text style={styles.name} numberOfLines={2}>{badge.name}</Text>
       <Text style={styles.pts}>+{badge.rewardPoints}</Text>
@@ -41,9 +43,6 @@ const styles = StyleSheet.create({
     borderColor:     'rgba(245,158,11,0.3)',
     alignItems:      'center',
     justifyContent:  'center',
-  },
-  icon: {
-    fontSize: 26,
   },
   name: {
     fontSize:  FONT.sm,

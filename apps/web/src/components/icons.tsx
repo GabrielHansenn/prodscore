@@ -145,6 +145,73 @@ export function DotsIcon({ className }: P) {
   );
 }
 
+export function GemIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25L12 3l6.75 5.25M5.25 8.25L12 21m-6.75-12.75L2.25 9.75 12 21m0 0l9.75-11.25-2.25-1.5M12 21l6.75-12.75m-13.5 0h13.5" />
+    </svg>
+  );
+}
+
+export function StarIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0l-4.725 2.885a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+    </svg>
+  );
+}
+
+export function RocketIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.194-2.641a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  );
+}
+
+export function MedalIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 2.25L6 8.25m9.75-6l2.25 6M12 21.75a6 6 0 100-12 6 6 0 000 12z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 15.75l1.5 1.5 3-3" />
+    </svg>
+  );
+}
+
+export function CrownIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.25l3.75 3 4.5-6.75 4.5 6.75 3.75-3-1.5 10.5h-13.5L3 8.25z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 21h12" />
+    </svg>
+  );
+}
+
+export function ClockIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+export function ShieldIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
+  );
+}
+
+export function CoinsIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25c3.314 0 6-1.007 6-2.25s-2.686-2.25-6-2.25-6 1.007-6 2.25 2.686 2.25 6 2.25z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6v3c0 1.243 2.686 2.25 6 2.25s6-1.007 6-2.25V6M6 9v3c0 1.243 2.686 2.25 6 2.25s6-1.007 6-2.25V9m-12 3v3c0 1.243 2.686 2.25 6 2.25s6-1.007 6-2.25v-3" />
+    </svg>
+  );
+}
+
 export function CogIcon({ className }: P) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>

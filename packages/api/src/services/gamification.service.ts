@@ -426,12 +426,14 @@ export async function checkLevelUp(
 
 /** Contexto com todas as métricas necessárias para avaliar qualquer conquista */
 interface EvalContext {
-  tasksCompleted:    number;
-  epicCompleted:     number;
-  currentStreak:     number;
-  groupMembersCount: number;
-  totalPoints:       number;
-  level:             number;
+  tasksCompleted:         number;
+  epicCompleted:          number;
+  currentStreak:          number;
+  groupMembersCount:      number;
+  totalPoints:            number;
+  level:                  number;
+  onTimeCompleted:        number;
+  groupMissionsCompleted: number;
 }
 
 /**
@@ -454,6 +456,9 @@ const ACHIEVEMENT_EVALUATORS = new Map<
   // Novos tipos — Fase 3 (mecânica 8)
   ['points_earned',       (ctx, t) => ctx.totalPoints       >= t],
   ['level_reached',       (ctx, t) => ctx.level             >= t],
+  // Novos tipos — refinamento da área de conquistas
+  ['on_time_completed',        (ctx, t) => ctx.onTimeCompleted        >= t],
+  ['group_missions_completed', (ctx, t) => ctx.groupMissionsCompleted >= t],
 ]);
 
 /**
@@ -466,6 +471,8 @@ const ACHIEVEMENT_EVALUATORS = new Map<
  * - group_members:        membros nos grupos que o usuário é owner
  * - points_earned:        total de pontos acumulados         ← novo (Fase 3)
  * - level_reached:        nível atual do usuário             ← novo (Fase 3)
+ * - on_time_completed:    total de tarefas concluídas dentro do prazo (não precisa ser consecutivo)
+ * - group_missions_completed: total de missões de grupo concluídas pelo usuário
  *
  * Para cada conquista desbloqueada: insere em user_achievements e
  * registra uma transação de achievement_bonus.
@@ -503,7 +510,7 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
   if (unearned.length === 0) return [];
 
   // Coleta as métricas necessárias em paralelo
-  const [tasksResult, epicResult, profileResult, groupsResult] = await Promise.all([
+  const [tasksResult, epicResult, profileResult, groupsResult, onTimeTasksResult, completedParticipationsResult] = await Promise.all([
     supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
@@ -528,6 +535,23 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
       .from('groups')
       .select('id')
       .eq('owner_id', userId),
+
+    // Tarefas concluídas com prazo definido — o "dentro do prazo" (completed_at
+    // <= due_date) é comparação entre colunas, que o PostgREST não faz via
+    // filtro simples, então busca as duas datas e compara em JS.
+    supabase
+      .from('tasks')
+      .select('due_date, completed_at')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .not('due_date', 'is', null),
+
+    // Participações já concluídas — usado para contar missões de GRUPO concluídas
+    supabase
+      .from('mission_participants')
+      .select('mission_id')
+      .eq('user_id', userId)
+      .eq('is_completed', true),
   ]);
 
   // Conta membros em todos os grupos do usuário (excluindo o próprio owner)
@@ -542,6 +566,25 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
     groupMembersCount = count ?? 0;
   }
 
+  // Conta tarefas concluídas dentro do prazo (completed_at <= due_date)
+  const onTimeCompleted = ((onTimeTasksResult.data ?? []) as Array<{ due_date: string; completed_at: string | null }>)
+    .filter((t) => t.completed_at !== null && new Date(t.completed_at) <= new Date(t.due_date))
+    .length;
+
+  // Conta quantas das participações concluídas pertencem a missões de GRUPO
+  // (mission_participants não distingue o tipo — precisa checar em missions)
+  let groupMissionsCompleted = 0;
+  const completedMissionIds = ((completedParticipationsResult.data ?? []) as Array<{ mission_id: string }>)
+    .map((p) => p.mission_id);
+  if (completedMissionIds.length > 0) {
+    const { count } = await supabase
+      .from('missions')
+      .select('*', { count: 'exact', head: true })
+      .in('id', completedMissionIds)
+      .eq('type', 'group');
+    groupMissionsCompleted = count ?? 0;
+  }
+
   type ProfileResult = { current_streak: number; total_points: number; level: number };
   const profileRow = profileResult.data as ProfileResult | null;
 
@@ -550,6 +593,8 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
     epicCompleted:     epicResult.count     ?? 0,
     currentStreak:     profileRow?.current_streak ?? 0,
     groupMembersCount,
+    onTimeCompleted,
+    groupMissionsCompleted,
     totalPoints:       profileRow?.total_points   ?? 0,
     level:             profileRow?.level          ?? 1,
   };
