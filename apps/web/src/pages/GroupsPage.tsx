@@ -7,15 +7,20 @@ import {
   joinGroup,
   type GroupWithMeta,
 } from '../services/group.service.js';
+import { useAuthStore } from '../store/authStore.js';
+import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
 import { showToast } from '../store/toastStore.js';
 import FormFeedback from '../components/FormFeedback.js';
+import ImagePickerField from '../components/ImagePickerField.js';
 import { UsersIcon, UserIcon, CalendarIcon } from '../components/icons.js';
 
 function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate: (g: GroupWithMeta) => void }) {
+  const userId = useAuthStore((s) => s.user?.id);
   const [name,        setName]        = useState('');
   const [description, setDescription] = useState('');
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
+  const imageUpload = useImageUpload();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,8 +29,19 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
     setError('');
     setLoading(true);
     try {
+      let imageUrl: string | undefined;
+      if (imageUpload.file && userId) {
+        // Ainda não existe groupId nesse ponto (o grupo só é criado a seguir)
+        // — usa um identificador aleatório só pro nome do arquivo.
+        imageUrl = await uploadToAvatarsBucket(userId, imageUpload.file, `group-new-${crypto.randomUUID()}`);
+      }
+
       const desc  = description.trim();
-      const grupo = await createGroup({ name: name.trim(), ...(desc ? { description: desc } : {}) });
+      const grupo = await createGroup({
+        name: name.trim(),
+        ...(desc     ? { description: desc } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+      });
       onCreate({ ...grupo, role: MemberRole.Owner, memberCount: 1 });
       onClose();
       showToast('Grupo criado com sucesso!');
@@ -62,7 +78,17 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
               className="input w-full resize-none"
             />
           </div>
-          {error && <FormFeedback variant="error" message={error} />}
+          <ImagePickerField
+            label="Imagem do grupo (opcional)"
+            previewUrl={imageUpload.previewUrl}
+            currentUrl={null}
+            fallback={<UsersIcon className="h-6 w-6 text-brand-600 dark:text-brand-400" />}
+            file={imageUpload.file}
+            inputRef={imageUpload.inputRef}
+            onFileChange={imageUpload.handleFileChange}
+            onClear={imageUpload.clear}
+          />
+          {(imageUpload.error || error) && <FormFeedback variant="error" message={imageUpload.error || error} />}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
             <button type="submit" disabled={loading} className="btn-primary flex-1">

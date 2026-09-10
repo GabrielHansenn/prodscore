@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   ActivityIndicator, TextInput, Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -103,6 +103,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
+        <View style={styles.headerIcon}>
+          {group?.imageUrl ? (
+            <Image source={{ uri: group.imageUrl }} style={styles.headerIconImage} />
+          ) : (
+            <Ionicons name="people" size={20} color={COLORS.primary} />
+          )}
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle} numberOfLines={1}>{group?.name ?? groupName}</Text>
           {group && (
@@ -424,6 +431,13 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: FONT.lg, fontWeight: '800', color: COLORS.text },
   headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 1 },
   settingsBtn: { padding: 4 },
+  headerIcon: {
+    width: 40, height: 40, borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryDim,
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  headerIconImage: { width: '100%', height: '100%' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: COLORS.textMuted, fontSize: FONT.base, textAlign: 'center', paddingVertical: SPACING.lg },
 

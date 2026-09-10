@@ -1,11 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import {
   MemberRole,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGE_SIZE_MB,
   type Group,
   type GroupMember,
   type RankingEntry,
 } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
+import { detectDisplayImageType, extensionForDisplayImageType } from '../lib/imageSniff.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos (linhas do banco em snake_case)
@@ -764,4 +768,59 @@ export async function getGroupRanking(
     consistencyRate: Math.round(consistencyRate * 10) / 10,
     rawScore,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Upload da imagem de capa do grupo
+// ---------------------------------------------------------------------------
+
+/**
+ * Sobe uma imagem de capa de grupo pro bucket "avatars" (mesmo bucket do
+ * avatar de perfil) e devolve a URL pública.
+ *
+ * Existe porque o app mobile não fala com o Supabase Storage diretamente
+ * (diferente do web, que faz upload direto do client) — toda a autenticação
+ * e persistência de dados do mobile passa pela API, então o upload também
+ * precisa passar por aqui. O resultado (a URL) é usado exatamente como uma
+ * URL colada manualmente seria: passado pra createGroup/updateGroup.
+ *
+ * Não exige um grupo existente de propósito — permite subir a imagem antes
+ * de criar o grupo (mesmo fluxo que o upload direto do web contorna usando
+ * um nome de arquivo temporário). Quem efetivamente vincula a URL a um grupo
+ * é createGroup/updateGroup, que já verificam permissão (dono/admin).
+ *
+ * @param userId - UUID do usuário autenticado (só usado para organizar o
+ *                 caminho no bucket — sem relação com dono do grupo)
+ * @param buffer - Bytes do arquivo enviado
+ */
+export async function uploadGroupImage(userId: string, buffer: Buffer): Promise<string> {
+  if (buffer.length === 0) {
+    throw new AppError('Arquivo vazio.', 400, 'ARQUIVO_INVALIDO');
+  }
+  if (buffer.length > MAX_IMAGE_SIZE_BYTES) {
+    throw new AppError(`A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB} MB.`, 400, 'ARQUIVO_MUITO_GRANDE');
+  }
+
+  const contentType = detectDisplayImageType(buffer);
+  if (!contentType) {
+    throw new AppError(
+      'Formato de imagem inválido. Envie um arquivo JPEG, PNG, WebP ou GIF.',
+      400,
+      'FORMATO_INVALIDO',
+    );
+  }
+
+  const path = `${userId}/group-${randomUUID()}.${extensionForDisplayImageType(contentType)}`;
+
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, buffer, { contentType, upsert: true });
+
+  if (error) {
+    console.error('[group.service.uploadGroupImage] upload falhou:', error, { path, contentType, size: buffer.length });
+    throw new AppError('Erro ao enviar a imagem. Tente novamente.', 500, 'UPLOAD_FALHOU');
+  }
+
+  const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+  return publicUrl;
 }

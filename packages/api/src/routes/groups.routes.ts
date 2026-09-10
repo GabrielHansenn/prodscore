@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
-import { MemberRole } from '@prodscore/shared';
+import { MemberRole, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
 import {
@@ -16,10 +17,32 @@ import {
   removeMember,
   leaveGroup,
   deleteGroup,
+  uploadGroupImage,
 } from '../services/group.service.js';
 import { getMissionsForGroup, createGroupMission } from '../services/mission.service.js';
 
 const router = Router();
+
+/** Upload em memória — usado só pelo mobile (web faz upload direto pro Supabase Storage) */
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+});
+
+/** Mesma ideia do handler equivalente em tasks.routes.ts — erros do multer não passam pelo try/catch normal */
+function handleImageUpload(req: Request, res: Response, next: NextFunction): void {
+  imageUpload.single('image')(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ erro: `A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB} MB.`, codigo: 'ARQUIVO_MUITO_GRANDE' });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ erro: 'Erro ao processar o arquivo enviado.', codigo: 'UPLOAD_INVALIDO' });
+      return;
+    }
+    next();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Schemas de validação
@@ -177,6 +200,34 @@ router.post('/join', authGuard, async (req, res) => {
     });
   } catch (err) {
     return sendError(res, err, '[grupos/join]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /groups/image — upload da imagem de capa (só o mobile usa; o web sobe
+// direto pro Supabase Storage). Precisa ficar ANTES de /:id pra não colidir
+// com esse path (senão "image" seria interpretado como um ID de grupo).
+// ---------------------------------------------------------------------------
+
+/**
+ * Sobe uma imagem e devolve a URL pública — não associa a nenhum grupo em
+ * si (não exige um grupo existente, então funciona tanto na criação quanto
+ * na edição). A URL retornada é passada em seguida pro POST/PATCH /groups,
+ * que aí sim verifica permissão (dono/admin) antes de persistir.
+ */
+router.post('/image', authGuard, handleImageUpload, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const file = req.file;
+
+    if (!file) {
+      throw new AppError('Nenhum arquivo enviado.', 400, 'ARQUIVO_AUSENTE');
+    }
+
+    const imageUrl = await uploadGroupImage(user.id, file.buffer);
+    return res.status(200).json({ imageUrl });
+  } catch (err) {
+    return sendError(res, err, '[grupos/image]');
   }
 });
 

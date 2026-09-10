@@ -9,13 +9,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { MemberRole, validateRequired } from '@prodscore/shared';
 import {
   getGroupDetail, getGroupMembers, updateGroupInfo, regenerateInviteCode,
-  updateMemberRole, kickMember, leaveGroup, deleteGroup,
+  updateMemberRole, kickMember, leaveGroup, deleteGroup, uploadGroupImage,
   type GroupDetails, type GroupMember,
 } from '../services/group.service';
 import { useAuthStore } from '../store/authStore';
+import { useImageUpload } from '../lib/useImageUpload';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
+import ImagePickerField from '../components/ImagePickerField';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import type { AppStackParamList } from '../navigation/index';
 
@@ -47,6 +49,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [regenLoading, setRegenLoading] = useState(false);
+  const imagePicker = useImageUpload();
 
   useEffect(() => {
     void (async () => {
@@ -70,7 +73,8 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   const dirty   = !!group && (
     name !== group.name ||
     desc !== (group.description ?? '') ||
-    countExternal !== group.countExternalTasksInMissions
+    countExternal !== group.countExternalTasksInMissions ||
+    imagePicker.image !== null
   );
 
   const handleSaveInfo = async () => {
@@ -82,12 +86,18 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
     setSaving(true);
     setFeedback(null);
     try {
+      let imageUrl: string | undefined;
+      if (imagePicker.image) {
+        imageUrl = await uploadGroupImage(imagePicker.image);
+      }
       const updated = await updateGroupInfo(groupId, {
         name: name.trim(),
         description: desc.trim() || null,
         countExternalTasksInMissions: countExternal,
+        ...(imageUrl !== undefined ? { imageUrl } : {}),
       });
       setGroup({ ...group, ...updated });
+      imagePicker.clear();
       setFeedback({ ok: true, msg: 'Informações salvas com sucesso.' });
     } catch (err) {
       setFeedback({ ok: false, msg: getFriendlyErrorMessage(err, 'Erro ao salvar.') });
@@ -233,6 +243,18 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
                   style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc}
                   multiline maxLength={500} placeholder="Opcional" placeholderTextColor={COLORS.textMuted}
                 />
+                <View style={{ marginTop: SPACING.md }}>
+                  <ImagePickerField
+                    label="Imagem do grupo"
+                    image={imagePicker.image}
+                    currentUrl={group.imageUrl}
+                    fallbackIcon="people-outline"
+                    onTakePhoto={() => void imagePicker.takePhoto()}
+                    onPickFromLibrary={() => void imagePicker.pickFromLibrary()}
+                    onClear={imagePicker.clear}
+                  />
+                  {imagePicker.error ? <InlineFeedback variant="error" message={imagePicker.error} /> : null}
+                </View>
                 <View style={styles.switchRow}>
                   <View style={{ flex: 1, marginRight: SPACING.sm }}>
                     <Text style={styles.fieldLabel}>Contar tarefas de fora do grupo nas missões</Text>

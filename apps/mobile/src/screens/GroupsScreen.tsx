@@ -8,7 +8,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MemberRole, validateRequired, validateInviteCode } from '@prodscore/shared';
 import GroupCard, { type GroupCardData } from '../components/GroupCard';
+import ImagePickerField from '../components/ImagePickerField';
 import { api } from '../services/api';
+import { uploadGroupImage } from '../services/group.service';
+import { useImageUpload } from '../lib/useImageUpload';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
@@ -24,6 +27,7 @@ interface MobileGroup {
   id:          string;
   name:        string;
   description: string | null;
+  imageUrl:    string | null;
   inviteCode:  string;
   createdAt:   string;
   role:        MemberRole;
@@ -35,8 +39,8 @@ async function fetchGroups(): Promise<MobileGroup[]> {
   return data.grupos;
 }
 
-async function createGroupApi(name: string, description?: string): Promise<MobileGroup> {
-  const { data } = await api.post<{ grupo: MobileGroup }>('/groups', { name, description });
+async function createGroupApi(name: string, description?: string, imageUrl?: string): Promise<MobileGroup> {
+  const { data } = await api.post<{ grupo: MobileGroup }>('/groups', { name, description, imageUrl });
   return data.grupo;
 }
 
@@ -58,6 +62,7 @@ function CreateModal({ visible, onClose, onCreate }: {
   const [desc,    setDesc]    = useState('');
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const imagePicker = useImageUpload();
 
   const handleCreate = async () => {
     const nameError = validateRequired(name, 'Nome do grupo');
@@ -65,9 +70,13 @@ function CreateModal({ visible, onClose, onCreate }: {
     setError('');
     setLoading(true);
     try {
-      const g = await createGroupApi(name.trim(), desc.trim() || undefined);
+      let imageUrl: string | undefined;
+      if (imagePicker.image) {
+        imageUrl = await uploadGroupImage(imagePicker.image);
+      }
+      const g = await createGroupApi(name.trim(), desc.trim() || undefined, imageUrl);
       onCreate(g);
-      setName(''); setDesc(''); onClose();
+      setName(''); setDesc(''); imagePicker.clear(); onClose();
       showToast('Grupo criado com sucesso!');
     } catch (err) {
       setError(getFriendlyErrorMessage(err, 'Erro ao criar grupo.'));
@@ -88,7 +97,18 @@ function CreateModal({ visible, onClose, onCreate }: {
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Devs Produtivos" placeholderTextColor={COLORS.textMuted} autoFocus />
           <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Descrição (opcional)</Text>
           <TextInput style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" placeholderTextColor={COLORS.textMuted} multiline />
-          {error ? <InlineFeedback variant="error" message={error} /> : null}
+          <View style={{ marginTop: SPACING.md }}>
+            <ImagePickerField
+              label="Imagem do grupo (opcional)"
+              image={imagePicker.image}
+              currentUrl={null}
+              fallbackIcon="people-outline"
+              onTakePhoto={() => void imagePicker.takePhoto()}
+              onPickFromLibrary={() => void imagePicker.pickFromLibrary()}
+              onClear={imagePicker.clear}
+            />
+          </View>
+          {(imagePicker.error || error) ? <InlineFeedback variant="error" message={imagePicker.error || error} /> : null}
           <TouchableOpacity style={[styles.btn, loading && { opacity: 0.6 }]} onPress={() => void handleCreate()} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar Grupo</Text>}
           </TouchableOpacity>
@@ -188,6 +208,7 @@ export default function GroupsScreen() {
     id:          g.id,
     name:        g.name,
     description: g.description,
+    imageUrl:    g.imageUrl,
     memberCount: g.memberCount,
     role:        g.role,
   });
