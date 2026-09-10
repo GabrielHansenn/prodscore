@@ -6,7 +6,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole, TaskDifficulty, validateRequired, validatePositiveNumber, type Task } from '@prodscore/shared';
+import { MemberRole, validateRequired, validatePositiveNumber, type Task } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
@@ -21,6 +21,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
+import TaskFormModal from '../components/TaskFormModal';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -305,24 +306,18 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Modal: criar tarefa do grupo */}
-      <Modal visible={showTaskForm} animationType="slide" transparent>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.overlay} onPress={() => setShowTaskForm(false)}>
-          <Pressable style={styles.sheet}>
-            <CreateGroupTaskForm
-              onCancel={() => setShowTaskForm(false)}
-              onSave={async (title) => {
-                await createTask({ title, difficulty: TaskDifficulty.Medium, groupId });
-                setShowTaskForm(false);
-                void load();
-                showToast('Tarefa criada com sucesso!');
-              }}
-            />
-          </Pressable>
-        </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* Criar tarefa do grupo — mesmo formulário da criação individual (TasksScreen), só com groupId */}
+      {showTaskForm && (
+        <TaskFormModal
+          task={null}
+          groupId={groupId}
+          onClose={() => setShowTaskForm(false)}
+          onSubmit={async (data) => {
+            await createTask(data);
+            void load();
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -382,49 +377,6 @@ function CreateMissionForm({ onSave, onCancel }: {
       {error ? <InlineFeedback variant="error" message={error} /> : null}
       <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSave()} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar missão</Text>}
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onCancel} style={{ marginTop: SPACING.sm, alignItems: 'center' }}>
-        <Text style={styles.cancelText}>Cancelar</Text>
-      </TouchableOpacity>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Formulário: nova tarefa do grupo
-// ---------------------------------------------------------------------------
-
-function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => Promise<void>; onCancel: () => void }) {
-  const colors = useThemeColors();
-  const styles = useStyles();
-  const [title,  setTitle]  = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
-
-  const handleSave = async () => {
-    const titleError = validateRequired(title, 'Título');
-    if (titleError) { setError(titleError); return; }
-
-    setSaving(true);
-    setError('');
-    try {
-      await onSave(title.trim());
-    } catch (err) {
-      setError(getFriendlyErrorMessage(err, 'Erro ao criar tarefa.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <>
-      <View style={styles.handle} />
-      <Text style={styles.modalTitle}>Nova tarefa do grupo</Text>
-      <Text style={styles.fieldLabel}>Título</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Revisar documentação" placeholderTextColor={colors.textMuted} autoFocus />
-      {error ? <InlineFeedback variant="error" message={error} /> : null}
-      <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSave()} disabled={saving}>
-        {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar tarefa</Text>}
       </TouchableOpacity>
       <TouchableOpacity onPress={onCancel} style={{ marginTop: SPACING.sm, alignItems: 'center' }}>
         <Text style={styles.cancelText}>Cancelar</Text>
