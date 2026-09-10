@@ -15,16 +15,18 @@ import FormFeedback from './FormFeedback.js';
 type Phase = 'checking' | 'active' | 'setup' | 'success' | 'error';
 
 /**
- * Remove um eventual prefixo de data URI (ex: "data:image/svg+xml;utf-8,")
- * na frente do XML do SVG, mantendo só o markup puro.
+ * Garante que o SVG do QR code vire uma data URI válida para uso em `<img>`.
+ * O SDK do Supabase já costuma devolver o valor com esse prefixo grudado,
+ * mas cobrimos o caso do SVG puro (sem prefixo) também.
  *
- * Defesa contra qualquer valor que chegue com esse prefixo grudado — o SVG
- * puro do Supabase nunca começa com "data:", então isso é sempre seguro.
+ * Usar `<img>` (em vez de injetar o SVG inline no DOM) é o que garante que o
+ * navegador sempre reescale o conteúdo do QR code para caber no tamanho
+ * pedido — um `<svg>` injetado diretamente e redimensionado via CSS pode ser
+ * cortado nas bordas se o SVG de origem não tiver viewBox compatível.
  */
-function stripDataUriPrefix(value: string): string {
-  if (!value.startsWith('data:')) return value;
-  const commaIndex = value.indexOf(',');
-  return commaIndex === -1 ? value : value.slice(commaIndex + 1);
+function toSvgDataUri(value: string): string {
+  if (value.startsWith('data:')) return value;
+  return `data:image/svg+xml;utf-8,${encodeURIComponent(value)}`;
 }
 
 /**
@@ -246,15 +248,11 @@ export default function EnrollMFA() {
       </p>
 
       {enrollment && (
-        <div className="mb-4 flex justify-center rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700">
-          {/* SVG injetado diretamente no DOM — evita problemas de data URI/cache
-              do navegador. Conteúdo vem do Supabase (não é entrada do usuário),
-              então não há risco de XSS aqui. */}
-          <div
-            role="img"
-            aria-label="QR code para ativação do 2FA"
-            className="[&>svg]:h-40 [&>svg]:w-40"
-            dangerouslySetInnerHTML={{ __html: stripDataUriPrefix(enrollment.qrCodeSvg) }}
+        <div className="mb-4 flex justify-center rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700">
+          <img
+            src={toSvgDataUri(enrollment.qrCodeSvg)}
+            alt="QR code para ativação do 2FA"
+            className="h-40 w-40 object-contain"
           />
         </div>
       )}
