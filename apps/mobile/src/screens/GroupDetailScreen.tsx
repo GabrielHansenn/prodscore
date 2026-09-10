@@ -21,7 +21,9 @@ import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
 
 type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas';
@@ -43,6 +45,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { createTask, completeTask, deleteTask } = useTaskStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [group,    setGroup]    = useState<GroupDetails | null>(null);
   const [members,  setMembers]  = useState<GroupMember[]>([]);
@@ -101,13 +105,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerIcon}>
           {group?.imageUrl ? (
             <Image source={{ uri: group.imageUrl }} style={styles.headerIconImage} />
           ) : (
-            <Ionicons name="people" size={20} color={COLORS.primary} />
+            <Ionicons name="people" size={20} color={colors.primary} />
           )}
         </View>
         <View style={{ flex: 1 }}>
@@ -124,12 +128,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           hitSlop={12}
           style={styles.settingsBtn}
         >
-          <Ionicons name="settings-outline" size={20} color={COLORS.textSecondary} />
+          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : !group ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>Não foi possível carregar o grupo.</Text>
@@ -141,7 +145,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.inviteRow} onPress={() => void copyInvite()}>
               <Text style={styles.inviteCode}>{group.inviteCode}</Text>
               <View style={styles.inviteCopy}>
-                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={14} color={copied ? '#059669' : COLORS.textMuted} />
+                <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={14} color={copied ? '#059669' : colors.textMuted} />
                 <Text style={[styles.inviteCopyText, copied && { color: '#059669' }]}>
                   {copied ? 'Copiado!' : 'Copiar código'}
                 </Text>
@@ -177,12 +181,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   return (
                     <View key={m.userId} style={[styles.memberRow, isMe && styles.memberRowMe]}>
                       <View style={[styles.avatar, isMe && styles.avatarMe]}>
-                        <Text style={[styles.avatarLetter, isMe && { color: COLORS.primary }]}>
+                        <Text style={[styles.avatarLetter, isMe && { color: colors.primary }]}>
                           {m.username.charAt(0).toUpperCase()}
                         </Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.memberName, isMe && { color: COLORS.primary }]} numberOfLines={1}>
+                        <Text style={[styles.memberName, isMe && { color: colors.primary }]} numberOfLines={1}>
                           {m.username}{isMe ? ' (você)' : ''}
                         </Text>
                         <Text style={styles.memberMeta}>🔥 {m.currentStreak} dias · Nível {m.level}</Text>
@@ -215,7 +219,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                     style={styles.addBtn}
                     onPress={() => setShowMissionForm(true)}
                   >
-                    <Ionicons name="add" size={16} color={COLORS.primary} />
+                    <Ionicons name="add" size={16} color={colors.primary} />
                     <Text style={styles.addBtnText}>Criar missão coletiva</Text>
                   </TouchableOpacity>
                 )}
@@ -239,7 +243,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                         <Text style={styles.missionProgressValue}>{m.currentValue}/{m.targetValue}</Text>
                       </View>
                       <View style={styles.missionTrack}>
-                        <View style={[styles.missionFill, { width: `${pct}%` }, m.isCompleted && { backgroundColor: COLORS.lime }]} />
+                        <View style={[styles.missionFill, { width: `${pct}%` }, m.isCompleted && { backgroundColor: colors.lime }]} />
                       </View>
                     </View>
                   );
@@ -250,7 +254,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             {tab === 'tarefas' && (
               <>
                 <TouchableOpacity style={styles.addBtn} onPress={() => setShowTaskForm(true)}>
-                  <Ionicons name="add" size={16} color={COLORS.primary} />
+                  <Ionicons name="add" size={16} color={colors.primary} />
                   <Text style={styles.addBtnText}>Adicionar tarefa ao grupo</Text>
                 </TouchableOpacity>
                 {tasks.length === 0 ? (
@@ -331,6 +335,8 @@ function CreateMissionForm({ onSave, onCancel }: {
   onSave: (data: { title: string; description: string; targetValue: number; rewardPoints: number }) => Promise<void>;
   onCancel: () => void;
 }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [title,  setTitle]  = useState('');
   const [target, setTarget] = useState('10');
   const [reward, setReward] = useState('50');
@@ -362,7 +368,7 @@ function CreateMissionForm({ onSave, onCancel }: {
       <View style={styles.handle} />
       <Text style={styles.modalTitle}>Nova missão coletiva</Text>
       <Text style={styles.fieldLabel}>Título</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Completar 20 tarefas juntos" placeholderTextColor={COLORS.textMuted} autoFocus />
+      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Completar 20 tarefas juntos" placeholderTextColor={colors.textMuted} autoFocus />
       <View style={{ flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md }}>
         <View style={{ flex: 1 }}>
           <Text style={styles.fieldLabel}>Meta</Text>
@@ -389,6 +395,8 @@ function CreateMissionForm({ onSave, onCancel }: {
 // ---------------------------------------------------------------------------
 
 function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => Promise<void>; onCancel: () => void }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [title,  setTitle]  = useState('');
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
@@ -413,7 +421,7 @@ function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => 
       <View style={styles.handle} />
       <Text style={styles.modalTitle}>Nova tarefa do grupo</Text>
       <Text style={styles.fieldLabel}>Título</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Revisar documentação" placeholderTextColor={COLORS.textMuted} autoFocus />
+      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex: Revisar documentação" placeholderTextColor={colors.textMuted} autoFocus />
       {error ? <InlineFeedback variant="error" message={error} /> : null}
       <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSave()} disabled={saving}>
         {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Criar tarefa</Text>}
@@ -425,84 +433,84 @@ function CreateGroupTaskForm({ onSave, onCancel }: { onSave: (title: string) => 
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, padding: SPACING.md },
-  headerTitle: { fontSize: FONT.lg, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 1 },
+  headerTitle: { fontSize: FONT.lg, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 1 },
   settingsBtn: { padding: 4 },
   headerIcon: {
     width: 40, height: 40, borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.primaryDim,
+    backgroundColor: colors.primaryDim,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
   headerIconImage: { width: '100%', height: '100%' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: COLORS.textMuted, fontSize: FONT.base, textAlign: 'center', paddingVertical: SPACING.lg },
+  emptyText: { color: colors.textMuted, fontSize: FONT.base, textAlign: 'center', paddingVertical: SPACING.lg },
 
   inviteRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginHorizontal: SPACING.md, marginBottom: SPACING.sm,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: colors.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
-  inviteCode: { fontSize: FONT.md, fontWeight: '800', letterSpacing: 3, color: COLORS.primary },
+  inviteCode: { fontSize: FONT.md, fontWeight: '800', letterSpacing: 3, color: colors.primary },
   inviteCopy: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  inviteCopyText: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+  inviteCopyText: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
 
-  tabRow: { flexDirection: 'row', gap: 4, marginHorizontal: SPACING.md, marginBottom: SPACING.sm, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: 4 },
+  tabRow: { flexDirection: 'row', gap: 4, marginHorizontal: SPACING.md, marginBottom: SPACING.sm, backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.border, padding: 4 },
   tab: { flex: 1, paddingVertical: 8, borderRadius: RADIUS.md, alignItems: 'center' },
-  tabActive: { backgroundColor: COLORS.primary },
-  tabText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  tabActive: { backgroundColor: colors.primary },
+  tabText: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
   tabTextActive: { color: '#fff' },
 
   content: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.sm },
 
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.sm, ...CARD_SHADOW,
   },
-  memberRowMe: { borderColor: COLORS.primary100, backgroundColor: COLORS.primaryDim },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.borderSoft, alignItems: 'center', justifyContent: 'center' },
-  avatarMe: { backgroundColor: COLORS.primary100 },
-  avatarLetter: { fontWeight: '700', color: COLORS.textSecondary },
-  memberName: { fontSize: FONT.base, fontWeight: '600', color: COLORS.text },
-  memberMeta: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  memberPts: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  roleBadge: { backgroundColor: COLORS.borderSoft, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
-  roleBadgeText: { fontSize: 10, fontWeight: '600', color: COLORS.textSecondary },
+  memberRowMe: { borderColor: colors.primary100, backgroundColor: colors.primaryDim },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.borderSoft, alignItems: 'center', justifyContent: 'center' },
+  avatarMe: { backgroundColor: colors.primary100 },
+  avatarLetter: { fontWeight: '700', color: colors.textSecondary },
+  memberName: { fontSize: FONT.base, fontWeight: '600', color: colors.text },
+  memberMeta: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  memberPts: { fontSize: 12, fontWeight: '700', color: colors.primary },
+  roleBadge: { backgroundColor: colors.borderSoft, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
+  roleBadgeText: { fontSize: 10, fontWeight: '600', color: colors.textSecondary },
 
-  rankingCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, overflow: 'hidden' },
+  rankingCard: { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, overflow: 'hidden' },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: COLORS.primary400, borderRadius: RADIUS.lg,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primary400, borderRadius: RADIUS.lg,
     paddingVertical: SPACING.sm, marginBottom: SPACING.sm,
   },
-  addBtnText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.primary },
+  addBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.primary },
 
-  missionCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.borderSoft, padding: SPACING.md, gap: 6, ...CARD_SHADOW },
-  missionCardDone: { backgroundColor: COLORS.limeDim, borderColor: 'rgba(163,230,53,0.4)' },
+  missionCard: { backgroundColor: colors.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.borderSoft, padding: SPACING.md, gap: 6, ...CARD_SHADOW },
+  missionCardDone: { backgroundColor: colors.limeDim, borderColor: 'rgba(163,230,53,0.4)' },
   missionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
-  missionTitle: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: COLORS.text },
-  missionPtsBadge: { backgroundColor: COLORS.amberDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
+  missionTitle: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: colors.text },
+  missionPtsBadge: { backgroundColor: colors.amberDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
   missionPtsText: { fontSize: 11, fontWeight: '700', color: '#b45309' },
-  missionDesc: { fontSize: 12, color: COLORS.textMuted },
+  missionDesc: { fontSize: 12, color: colors.textMuted },
   missionProgressRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  missionProgressLabel: { fontSize: 11, color: COLORS.textMuted },
-  missionProgressValue: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
-  missionTrack: { height: 6, borderRadius: RADIUS.sm, backgroundColor: COLORS.borderSoft, overflow: 'hidden' },
-  missionFill: { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.primary },
+  missionProgressLabel: { fontSize: 11, color: colors.textMuted },
+  missionProgressValue: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
+  missionTrack: { height: 6, borderRadius: RADIUS.sm, backgroundColor: colors.borderSoft, overflow: 'hidden' },
+  missionFill: { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.primary },
 
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.xs },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: SPACING.sm },
-  modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: COLORS.text },
-  btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.md },
+  sheet: { backgroundColor: colors.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.xs },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: SPACING.sm },
+  modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text, marginBottom: SPACING.xs },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
+  input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: colors.text },
+  btn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.md },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.md },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT.sm, fontWeight: '600' },
-});
+  cancelText: { color: colors.textMuted, fontSize: FONT.sm, fontWeight: '600' },
+}));

@@ -26,7 +26,7 @@ import GroupDetailScreen    from '../screens/GroupDetailScreen';
 import GroupSettingsScreen  from '../screens/GroupSettingsScreen';
 import SecurityScreen       from '../screens/SecurityScreen';
 
-import { COLORS } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
 
 // ---------------------------------------------------------------------------
 // Tipos de navegação
@@ -114,6 +114,7 @@ function AuthStackNavigator() {
 
 export default function AppNavigation() {
   const { isAuthenticated, isLoading, mfaPending, loadSession } = useAuthStore();
+  const colors = useThemeColors();
 
   // Restaura sessão do SecureStore na montagem do app
   useEffect(() => {
@@ -123,8 +124,8 @@ export default function AppNavigation() {
   // Tela de splash enquanto carrega sessão
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={COLORS.primary} size="large" />
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }

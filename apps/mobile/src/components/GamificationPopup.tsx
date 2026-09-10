@@ -9,7 +9,9 @@ import {
   type AchievementPayload,
 } from '../store/gamificationPopupStore';
 import { ACHIEVEMENT_ICONS, ACHIEVEMENT_ICON_FALLBACK } from '../constants/achievementIcons';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 const HOLD_MS_XP          = 3200; // quanto tempo o popup de XP fica visível
 const HOLD_MS_ACHIEVEMENT = 4000; // conquista tem mais texto pra ler, fica um pouco mais
@@ -36,21 +38,23 @@ function XpCard({
   showLevelUp: boolean;
   onClose: () => void;
 }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.pointsRow}>
-          <Ionicons name="sparkles" size={18} color={COLORS.lime} />
+          <Ionicons name="sparkles" size={18} color={colors.lime} />
           <Text style={styles.pointsText}>+{payload.points} XP</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={8}>
-          <Ionicons name="close" size={18} color={COLORS.textMuted} />
+          <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
       {payload.missionBonus?.map((m, i) => (
         <View key={i} style={styles.missionRow}>
-          <Ionicons name="trophy" size={13} color={COLORS.amber} />
+          <Ionicons name="trophy" size={13} color={colors.amber} />
           <Text style={styles.missionText} numberOfLines={1}>
             Missão &quot;{m.title}&quot; concluída <Text style={styles.missionPts}>+{m.points} pts</Text>
           </Text>
@@ -79,18 +83,20 @@ function XpCard({
 
 function AchievementCardPopup({ payload, onClose }: { payload: AchievementPayload; onClose: () => void }) {
   const IconComp = ACHIEVEMENT_ICONS[payload.icon] ?? ACHIEVEMENT_ICON_FALLBACK;
+  const colors = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={[styles.card, styles.achievementCard]}>
       <View style={styles.achievementRow}>
         <View style={styles.iconGlow}>
           <View style={styles.iconBox}>
-            <Ionicons name={IconComp} size={24} color={COLORS.amber} />
+            <Ionicons name={IconComp} size={24} color={colors.amber} />
           </View>
         </View>
 
         <View style={{ flex: 1 }}>
           <View style={styles.unlockedRow}>
-            <Ionicons name="trophy" size={13} color={COLORS.amberText} />
+            <Ionicons name="trophy" size={13} color={colors.amberText} />
             <Text style={styles.unlockedLabel}>Conquista desbloqueada!</Text>
           </View>
           <Text style={styles.achievementName}>{payload.name}</Text>
@@ -103,7 +109,7 @@ function AchievementCardPopup({ payload, onClose }: { payload: AchievementPayloa
         </View>
 
         <TouchableOpacity onPress={onClose} hitSlop={8}>
-          <Ionicons name="close" size={18} color={COLORS.textMuted} />
+          <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -127,6 +133,7 @@ export default function GamificationPopup() {
   const [displayLevel, setDisplayLevel] = useState(1);
   const [barPct,       setBarPct]       = useState(0);
   const [showLevelUp,  setShowLevelUp]  = useState(false);
+  const styles = useStyles();
 
   useEffect(() => {
     const id = barAnim.addListener(({ value }) => setBarPct(value));
@@ -221,7 +228,7 @@ export default function GamificationPopup() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     position: 'absolute',
     left: SPACING.md,
@@ -229,25 +236,25 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   card: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.primary100,
+    borderColor:     colors.primary100,
     padding:         SPACING.md,
     ...CARD_SHADOW,
   },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pointsRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  pointsText: { fontSize: FONT.lg, fontWeight: '800', color: COLORS.text },
+  pointsText: { fontSize: FONT.lg, fontWeight: '800', color: colors.text },
 
   missionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.xs },
-  missionText: { flex: 1, fontSize: 11, color: COLORS.textMuted },
-  missionPts: { fontWeight: '700', color: COLORS.amberText },
+  missionText: { flex: 1, fontSize: 11, color: colors.textMuted },
+  missionPts: { fontWeight: '700', color: colors.amberText },
 
   levelUpBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginTop: SPACING.sm,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: RADIUS.md,
     paddingVertical: 6,
   },
@@ -255,32 +262,32 @@ const styles = StyleSheet.create({
 
   barSection: { marginTop: SPACING.sm },
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  levelLabel: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-  pctLabel:   { fontSize: 12, color: COLORS.textMuted },
-  track: { height: 8, borderRadius: RADIUS.sm, backgroundColor: COLORS.borderSoft, overflow: 'hidden' },
-  fill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.lime },
+  levelLabel: { fontSize: 12, fontWeight: '700', color: colors.primary },
+  pctLabel:   { fontSize: 12, color: colors.textMuted },
+  track: { height: 8, borderRadius: RADIUS.sm, backgroundColor: colors.borderSoft, overflow: 'hidden' },
+  fill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.lime },
 
-  achievementCard: { borderColor: COLORS.amberDim },
+  achievementCard: { borderColor: colors.amberDim },
   achievementRow: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm },
   iconGlow: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: COLORS.amberDim,
+    backgroundColor: colors.amberDim,
     alignItems: 'center', justifyContent: 'center',
   },
   iconBox: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#fff',
-    borderWidth: 2, borderColor: COLORS.amber,
+    borderWidth: 2, borderColor: colors.amber,
     alignItems: 'center', justifyContent: 'center',
   },
   unlockedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  unlockedLabel: { fontSize: 10, fontWeight: '700', color: COLORS.amberText, textTransform: 'uppercase', letterSpacing: 0.3 },
-  achievementName: { fontSize: FONT.base, fontWeight: '800', color: COLORS.text, marginTop: 2 },
-  achievementDesc: { fontSize: 11, color: COLORS.textMuted, marginTop: 2, lineHeight: 15 },
+  unlockedLabel: { fontSize: 10, fontWeight: '700', color: colors.amberText, textTransform: 'uppercase', letterSpacing: 0.3 },
+  achievementName: { fontSize: FONT.base, fontWeight: '800', color: colors.text, marginTop: 2 },
+  achievementDesc: { fontSize: 11, color: colors.textMuted, marginTop: 2, lineHeight: 15 },
   ptsPill: {
     marginTop: SPACING.xs, alignSelf: 'flex-start',
-    backgroundColor: COLORS.amberDim, borderRadius: RADIUS.sm,
+    backgroundColor: colors.amberDim, borderRadius: RADIUS.sm,
     paddingHorizontal: 8, paddingVertical: 2,
   },
-  ptsPillText: { fontSize: 11, fontWeight: '700', color: COLORS.amberText },
-});
+  ptsPillText: { fontSize: 11, fontWeight: '700', color: colors.amberText },
+}));

@@ -10,7 +10,9 @@ import { useUserStore } from '../store/userStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import { api } from '../services/api';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 type Tab = 'global' | 'semanal';
 
@@ -66,6 +68,8 @@ export default function RankingScreen() {
   const { isWide } = useResponsive();
   const { user }              = useAuthStore();
   const { stats, fetchStats } = useUserStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [tab,      setTab]      = useState<Tab>('global');
   const [rows,     setRows]     = useState<RankingRow[]>([]);
@@ -126,8 +130,8 @@ export default function RankingScreen() {
         {tab === 'global' && (
           <TouchableOpacity style={styles.refreshBtn} onPress={() => void handleRefresh()} disabled={isRefreshing}>
             {isRefreshing
-              ? <ActivityIndicator size="small" color={COLORS.textSecondary} />
-              : <Ionicons name="refresh" size={14} color={COLORS.textSecondary} />}
+              ? <ActivityIndicator size="small" color={colors.textSecondary} />
+              : <Ionicons name="refresh" size={14} color={colors.textSecondary} />}
             <Text style={styles.refreshText}>{isRefreshing ? 'Atualizando…' : 'Atualizar'}</Text>
           </TouchableOpacity>
         )}
@@ -149,13 +153,13 @@ export default function RankingScreen() {
             </View>
             <View>
               <View style={styles.summaryStreakRow}>
-                <Ionicons name="flame" size={16} color={COLORS.amber} />
-                <Text style={[styles.summaryValue, { color: COLORS.amber }]}>{summary.streak}</Text>
+                <Ionicons name="flame" size={16} color={colors.amber} />
+                <Text style={[styles.summaryValue, { color: colors.amber }]}>{summary.streak}</Text>
               </View>
               <Text style={styles.summarySub}>Sequência atual</Text>
             </View>
             <View>
-              <Text style={[styles.summaryValue, { color: COLORS.primary }]}>Nível {summary.level}</Text>
+              <Text style={[styles.summaryValue, { color: colors.primary }]}>Nível {summary.level}</Text>
               <Text style={styles.summarySub}>Nível atual</Text>
             </View>
           </View>
@@ -180,7 +184,7 @@ export default function RankingScreen() {
       {/* Lista */}
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={COLORS.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -205,14 +209,14 @@ export default function RankingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root:   { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: SPACING.sm, padding: SPACING.md, paddingBottom: SPACING.sm },
   // flex:1 + minWidth:0 dá uma largura travada pro bloco de texto, senão o
   // subtítulo longo não quebra linha e empurra o botão pra fora da tela
   headerText:  { flex: 1, minWidth: 0 },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
 
   refreshBtn: {
     flexShrink:      0,
@@ -220,32 +224,32 @@ const styles = StyleSheet.create({
     alignItems:      'center',
     gap:             6,
     borderWidth:     1,
-    borderColor:     COLORS.border,
-    backgroundColor: COLORS.card,
+    borderColor:     colors.border,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.md,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 8,
   },
-  refreshText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+  refreshText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
 
   summaryCard: {
     marginHorizontal: SPACING.md,
     marginBottom:     SPACING.md,
-    backgroundColor:  COLORS.primaryDim,
+    backgroundColor:  colors.primaryDim,
     borderRadius:     RADIUS.lg,
     borderWidth:      1,
     borderColor:      'rgba(124,58,237,0.2)',
     padding:          SPACING.md,
   },
-  summaryLabel: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.primaryDark },
+  summaryLabel: { fontSize: FONT.sm, fontWeight: '600', color: colors.primaryDark },
   summaryRow: {
     flexDirection: 'row', flexWrap: 'wrap',
     alignItems: 'center', gap: SPACING.lg, marginTop: SPACING.sm,
   },
-  summaryPosition: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.primaryDark },
-  summaryValue:    { fontSize: FONT.lg, fontWeight: '800', color: COLORS.text },
-  summarySub:      { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  summaryDivider:  { width: 1, height: 32, backgroundColor: COLORS.border },
+  summaryPosition: { fontSize: FONT.xxl, fontWeight: '800', color: colors.primaryDark },
+  summaryValue:    { fontSize: FONT.lg, fontWeight: '800', color: colors.text },
+  summarySub:      { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  summaryDivider:  { width: 1, height: 32, backgroundColor: colors.border },
   summaryStreakRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   segmentRow: {
@@ -254,17 +258,17 @@ const styles = StyleSheet.create({
     marginBottom:     SPACING.md,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.border,
-    backgroundColor: COLORS.card,
+    borderColor:     colors.border,
+    backgroundColor: colors.card,
     padding:         4,
     gap:             4,
   },
   segment:           { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, alignItems: 'center' },
-  segmentActive:     { backgroundColor: COLORS.primary },
-  segmentText:       { fontSize: FONT.base, fontWeight: '600', color: COLORS.textMuted },
+  segmentActive:     { backgroundColor: colors.primary },
+  segmentText:       { fontSize: FONT.base, fontWeight: '600', color: colors.textMuted },
   segmentTextActive: { color: '#ffffff' },
 
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
-  errorText: { color: COLORS.red, fontSize: FONT.base, textAlign: 'center' },
-  emptyText: { color: COLORS.textMuted, fontSize: FONT.base },
-});
+  errorText: { color: colors.red, fontSize: FONT.base, textAlign: 'center' },
+  emptyText: { color: colors.textMuted, fontSize: FONT.base },
+}));

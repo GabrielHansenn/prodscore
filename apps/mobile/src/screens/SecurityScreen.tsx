@@ -12,13 +12,17 @@ import { changePassword, deleteAccount } from '../services/security.service';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import EnrollMFA from '../components/EnrollMFA';
 import InlineFeedback from '../components/InlineFeedback';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 /** Aviso exibido no lugar de uma ação sensível quando a sessão ainda não está em aal2 */
 function RequireAAL2Notice() {
+  const colors = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.aal2Notice}>
-      <Ionicons name="lock-closed-outline" size={16} color={COLORS.amber} style={{ marginTop: 1 }} />
+      <Ionicons name="lock-closed-outline" size={16} color={colors.amber} style={{ marginTop: 1 }} />
       <View style={{ flex: 1 }}>
         <Text style={styles.aal2NoticeTitle}>Esta ação exige verificação em duas etapas.</Text>
         <Text style={styles.aal2NoticeSub}>
@@ -30,6 +34,8 @@ function RequireAAL2Notice() {
 }
 
 function ChangePasswordForm() {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [newPassword,     setNewPassword]     = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error,           setError]           = useState('');
@@ -79,7 +85,7 @@ function ChangePasswordForm() {
 
       <TouchableOpacity style={[styles.secondaryBtn, saving && { opacity: 0.6 }]} onPress={() => void handleSubmit()} disabled={saving}>
         {saving
-          ? <ActivityIndicator color={COLORS.text} size="small" />
+          ? <ActivityIndicator color={colors.text} size="small" />
           : <Text style={styles.secondaryBtnText}>Alterar senha</Text>
         }
       </TouchableOpacity>
@@ -91,6 +97,8 @@ function ChangePasswordForm() {
 export default function SecurityScreen({ navigation }: { navigation: { goBack: () => void } }) {
   const insets = useSafeAreaInsets();
   const { accessToken, logout } = useAuthStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [deleteError, setDeleteError] = useState('');
   const [deleting,    setDeleting]    = useState(false);
 
@@ -126,7 +134,7 @@ export default function SecurityScreen({ navigation }: { navigation: { goBack: (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Segurança</Text>
@@ -149,13 +157,13 @@ export default function SecurityScreen({ navigation }: { navigation: { goBack: (
 
         {/* Zona de risco — exige aal2 */}
         <View style={[styles.card, styles.dangerCard]}>
-          <Text style={[styles.cardTitle, { color: COLORS.red }]}>Zona de risco</Text>
+          <Text style={[styles.cardTitle, { color: colors.red }]}>Zona de risco</Text>
           {isAAL2 ? (
             <View>
               {deleteError ? <InlineFeedback variant="error" message={deleteError} /> : null}
               <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount} disabled={deleting}>
                 {deleting
-                  ? <ActivityIndicator color={COLORS.red} size="small" />
+                  ? <ActivityIndicator color={colors.red} size="small" />
                   : <Text style={styles.dangerBtnText}>Excluir conta</Text>
                 }
               </TouchableOpacity>
@@ -169,50 +177,50 @@ export default function SecurityScreen({ navigation }: { navigation: { goBack: (
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
     padding: SPACING.md, paddingBottom: SPACING.sm,
   },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2, maxWidth: 260 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2, maxWidth: 260 },
 
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.md },
 
   card: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, ...CARD_SHADOW,
   },
-  cardTitle: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
+  cardTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
 
   dangerCard: { borderColor: 'rgba(248,113,113,0.3)' },
 
   aal2Notice: {
     flexDirection: 'row', gap: SPACING.sm,
-    backgroundColor: COLORS.amberDim, borderRadius: RADIUS.md,
+    backgroundColor: colors.amberDim, borderRadius: RADIUS.md,
     borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)', padding: SPACING.sm,
   },
   aal2NoticeTitle: { fontSize: FONT.sm, fontWeight: '600', color: '#b45309' },
   aal2NoticeSub:   { fontSize: 11, color: '#b45309', opacity: 0.9, marginTop: 2 },
 
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
   input: {
-    backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder,
-    paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text,
+    backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder,
+    paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text,
   },
 
 
   secondaryBtn: {
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md,
     paddingVertical: 11, alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: SPACING.lg,
   },
-  secondaryBtnText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
+  secondaryBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
 
   dangerBtn: {
     borderWidth: 1, borderColor: 'rgba(248,113,113,0.4)', borderRadius: RADIUS.md,
     paddingVertical: 11, alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: SPACING.lg,
     marginTop: SPACING.xs,
   },
-  dangerBtnText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.red },
-});
+  dangerBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.red },
+}));

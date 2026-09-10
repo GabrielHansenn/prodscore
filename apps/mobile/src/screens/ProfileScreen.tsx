@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,15 +10,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { BehavioralProfileType, validateUsername, type BehavioralProfile, type BehavioralTag } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
+import { useThemeStore, type Theme } from '../store/themeStore';
 import { getBehavioralProfile } from '../services/behavioral.service';
+import { uploadAvatar } from '../services/user.service';
+import { useImageUpload } from '../lib/useImageUpload';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import AchievementBadge, { type BadgeData } from '../components/AchievementBadge';
+import ImagePickerField from '../components/ImagePickerField';
 import InlineFeedback from '../components/InlineFeedback';
 import LevelBar from '../components/LevelBar';
 import { api } from '../services/api';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import type { AppStackParamList } from '../navigation/index';
 
 // ---------------------------------------------------------------------------
@@ -57,6 +63,13 @@ const TAG_LABELS: Record<BehavioralTag, string> = {
   iniciante:      'Iniciante',
 };
 
+/** Espelha THEME_OPTIONS do Sidebar.tsx (web) */
+const THEME_OPTIONS: { value: Theme; label: string; icon: ComponentProps<typeof Ionicons>['name'] }[] = [
+  { value: 'light',  label: 'Claro',   icon: 'sunny-outline' },
+  { value: 'dark',   label: 'Escuro',  icon: 'moon-outline' },
+  { value: 'system', label: 'Sistema', icon: 'phone-portrait-outline' },
+];
+
 /** Tela de perfil com stats, edição, perfil comportamental, conquistas e histórico */
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -64,8 +77,12 @@ export default function ProfileScreen() {
   // Espelha "grid-cols-2 sm:grid-cols-3" da ProfilePage web (breakpoint sm=640)
   const statCols = width >= 640 ? 3 : 2;
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { user, logout }         = useAuthStore();
+  const { user, logout, loadSession } = useAuthStore();
   const { stats, fetchStats }    = useUserStore();
+  const { theme, setTheme }      = useThemeStore();
+  const avatarUpload = useImageUpload();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [badges,     setBadges]     = useState<BadgeData[]>([]);
   const [txs,        setTxs]        = useState<PointTransaction[]>([]);
@@ -108,7 +125,17 @@ export default function ProfileScreen() {
     setSaving(true);
     setSaveError('');
     try {
-      await api.patch('/users/me', { username: username.trim(), bio: bio.trim() || null });
+      let avatarUrl: string | undefined;
+      if (avatarUpload.image) {
+        avatarUrl = await uploadAvatar(avatarUpload.image);
+      }
+      await api.patch('/users/me', {
+        username: username.trim(),
+        bio: bio.trim() || null,
+        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+      });
+      await loadSession();
+      avatarUpload.clear();
       setEditing(false);
       showToast('Perfil atualizado com sucesso!');
     } catch (err) {
@@ -135,7 +162,11 @@ export default function ProfileScreen() {
         <View style={styles.identityCard}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarLetter}>{user.username.charAt(0).toUpperCase()}</Text>
+              {user.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarLetter}>{user.username.charAt(0).toUpperCase()}</Text>
+              )}
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.username}>{user.username}</Text>
@@ -162,12 +193,22 @@ export default function ProfileScreen() {
 
           {editing && (
             <View style={styles.editForm}>
-              <Text style={styles.fieldLabel}>Nome de usuário</Text>
+              <ImagePickerField
+                label="Foto de perfil"
+                image={avatarUpload.image}
+                currentUrl={user.avatarUrl}
+                fallbackIcon="person-outline"
+                onTakePhoto={() => void avatarUpload.takePhoto()}
+                onPickFromLibrary={() => void avatarUpload.pickFromLibrary()}
+                onClear={avatarUpload.clear}
+              />
+              {avatarUpload.error ? <InlineFeedback variant="error" message={avatarUpload.error} /> : null}
+              <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Nome de usuário</Text>
               <TextInput style={styles.input} value={username} onChangeText={setUsername} maxLength={30} autoCapitalize="none" />
               <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Bio (opcional)</Text>
               <TextInput
                 style={[styles.input, { height: 64 }]} value={bio} onChangeText={setBio}
-                multiline maxLength={160} placeholder="Conte um pouco sobre você..." placeholderTextColor={COLORS.textMuted}
+                multiline maxLength={160} placeholder="Conte um pouco sobre você..." placeholderTextColor={colors.textMuted}
               />
               {saveError ? <InlineFeedback variant="error" message={saveError} /> : null}
               <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSaveProfile()} disabled={saving}>
@@ -180,34 +221,57 @@ export default function ProfileScreen() {
         {/* Menu — telas secundárias (espelha itens da sidebar web) */}
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Achievements')}>
-            <Ionicons name="trophy-outline" size={18} color={COLORS.amber} />
+            <Ionicons name="trophy-outline" size={18} color={colors.amber} />
             <Text style={styles.menuRowText}>Conquistas</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.menuDivider} />
           <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Statistics')}>
-            <Ionicons name="stats-chart-outline" size={18} color={COLORS.blue} />
+            <Ionicons name="stats-chart-outline" size={18} color={colors.blue} />
             <Text style={styles.menuRowText}>Estatísticas</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.menuDivider} />
           <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Security')}>
-            <Ionicons name="lock-closed-outline" size={18} color={COLORS.textSecondary} />
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.menuRowText}>Segurança</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
+        </View>
+
+        {/* Aparência — alterna tema claro/escuro/sistema (espelha Sidebar.tsx do web) */}
+        <View style={styles.menuCard}>
+          <Text style={styles.appearanceLabel}>Aparência</Text>
+          <View style={styles.themeRow} accessibilityRole="radiogroup">
+            {THEME_OPTIONS.map((opt) => {
+              const active = theme === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.themeOption, active && styles.themeOptionActive]}
+                  onPress={() => setTheme(opt.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={opt.label}
+                >
+                  <Ionicons name={opt.icon} size={16} color={active ? '#fff' : colors.textMuted} />
+                  <Text style={[styles.themeOptionText, active && styles.themeOptionTextActive]}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Estatísticas rápidas — espelha a grade de 6 do web */}
         {stats && (
           <View style={styles.statsGrid}>
             {[
-              { label: 'Tarefas Concluídas', value: stats.tasksCompleted,                    color: COLORS.success },
-              { label: 'Sequência Atual',    value: `🔥 ${stats.currentStreak}`,              color: COLORS.amber   },
-              { label: 'Maior Sequência',    value: `${stats.longestStreak} dias`,            color: COLORS.orange  },
-              { label: 'Conquistas',         value: String(stats.achievementsCount),          color: COLORS.amber   },
-              { label: 'Consistência',       value: `${Math.round(stats.consistencyRate)}%`,  color: COLORS.blue    },
-              { label: 'Pts Esta Semana',    value: stats.pointsThisWeek.toLocaleString('pt-BR'), color: COLORS.primary },
+              { label: 'Tarefas Concluídas', value: stats.tasksCompleted,                    color: colors.success },
+              { label: 'Sequência Atual',    value: `🔥 ${stats.currentStreak}`,              color: colors.amber   },
+              { label: 'Maior Sequência',    value: `${stats.longestStreak} dias`,            color: colors.orange  },
+              { label: 'Conquistas',         value: String(stats.achievementsCount),          color: colors.amber   },
+              { label: 'Consistência',       value: `${Math.round(stats.consistencyRate)}%`,  color: colors.blue    },
+              { label: 'Pts Esta Semana',    value: stats.pointsThisWeek.toLocaleString('pt-BR'), color: colors.primary },
             ].map((s) => (
               <View key={s.label} style={[styles.statCell, { minWidth: statCols === 3 ? '30%' : '47%' }]}>
                 <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
@@ -267,7 +331,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Atividade Recente</Text>
           <View style={styles.card}>
             {txLoading ? (
-              <ActivityIndicator color={COLORS.primary} size="small" style={{ padding: SPACING.lg }} />
+              <ActivityIndicator color={colors.primary} size="small" style={{ padding: SPACING.lg }} />
             ) : txs.length === 0 ? (
               <Text style={styles.emptyText}>Nenhuma transação ainda.</Text>
             ) : (
@@ -281,7 +345,7 @@ export default function ProfileScreen() {
                       {new Date(tx.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
-                  <Text style={[styles.txAmount, { color: tx.amount >= 0 ? COLORS.success : COLORS.red }]}>
+                  <Text style={[styles.txAmount, { color: tx.amount >= 0 ? colors.success : colors.red }]}>
                     {tx.amount >= 0 ? '+' : ''}{tx.amount} pts
                   </Text>
                 </View>
@@ -300,40 +364,51 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root:   { flex: 1, backgroundColor: colors.background },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl },
 
   identityCard: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, marginBottom: SPACING.md, ...CARD_SHADOW,
   },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  avatarCircle:  { width: 64, height: 64, borderRadius: RADIUS.xl, backgroundColor: COLORS.primary100, alignItems: 'center', justifyContent: 'center' },
-  avatarLetter:  { fontSize: FONT.xxl, fontWeight: '700', color: COLORS.primary },
+  avatarCircle:  { width: 64, height: 64, borderRadius: RADIUS.xl, backgroundColor: colors.primary100, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarImage:   { width: '100%', height: '100%' },
+  avatarLetter:  { fontSize: FONT.xxl, fontWeight: '700', color: colors.primary },
   profileInfo:   { flex: 1, gap: 2 },
-  username:      { fontSize: FONT.xl, fontWeight: '700', color: COLORS.text },
-  email:         { fontSize: FONT.sm, color: COLORS.textMuted },
-  bio:           { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  username:      { fontSize: FONT.xl, fontWeight: '700', color: colors.text },
+  email:         { fontSize: FONT.sm, color: colors.textMuted },
+  bio:           { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
   xpSection:   { marginTop: SPACING.md },
   xpHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  levelBadge:    { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
-  levelBadgeText: { fontSize: FONT.sm, fontWeight: '700', color: COLORS.primary },
-  xpTotalText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.primary },
+  levelBadge:    { backgroundColor: colors.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
+  levelBadgeText: { fontSize: FONT.sm, fontWeight: '700', color: colors.primary },
+  xpTotalText: { fontSize: FONT.sm, fontWeight: '600', color: colors.primary },
 
-  editToggleBtn: { marginTop: SPACING.md, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center' },
-  editToggleText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
+  editToggleBtn: { marginTop: SPACING.md, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center' },
+  editToggleText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
   editForm: { marginTop: SPACING.md, gap: 4 },
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
-  btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.sm },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
+  input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
+  btn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.sm },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
 
-  menuCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, marginBottom: SPACING.md, overflow: 'hidden', ...CARD_SHADOW },
+  menuCard: { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, marginBottom: SPACING.md, overflow: 'hidden', ...CARD_SHADOW },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
-  menuRowText: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: COLORS.text },
-  menuDivider: { height: 1, backgroundColor: COLORS.borderSoft, marginLeft: SPACING.md },
+  menuRowText: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: colors.text },
+  menuDivider: { height: 1, backgroundColor: colors.borderSoft, marginLeft: SPACING.md },
+
+  appearanceLabel: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary, padding: SPACING.md, paddingBottom: SPACING.sm },
+  themeRow: { flexDirection: 'row', gap: 4, paddingHorizontal: SPACING.md, paddingBottom: SPACING.md },
+  themeOption: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderRadius: RADIUS.md, paddingVertical: 10, backgroundColor: colors.borderSoft,
+  },
+  themeOptionActive: { backgroundColor: colors.primary },
+  themeOptionText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textMuted },
+  themeOptionTextActive: { color: '#fff' },
 
   statsGrid: {
     flexDirection: 'row',
@@ -344,42 +419,42 @@ const styles = StyleSheet.create({
   statCell: {
     flex:            1,
     minWidth:        '30%',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     ...CARD_SHADOW,
   },
   statValue: { fontSize: FONT.md, fontWeight: '700' },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
   section:      { marginBottom: SPACING.lg },
-  sectionTitle: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
 
-  behaviorCard: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, padding: SPACING.md, ...CARD_SHADOW },
+  behaviorCard: { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, padding: SPACING.md, ...CARD_SHADOW },
   behaviorRow: { flexDirection: 'row', gap: SPACING.md },
-  behaviorEmojiBox: { width: 52, height: 52, borderRadius: RADIUS.lg, backgroundColor: COLORS.primaryDim, alignItems: 'center', justifyContent: 'center' },
+  behaviorEmojiBox: { width: 52, height: 52, borderRadius: RADIUS.lg, backgroundColor: colors.primaryDim, alignItems: 'center', justifyContent: 'center' },
   behaviorEmoji: { fontSize: 26 },
-  behaviorLabel: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text },
-  behaviorDesc:  { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  behaviorPeak:  { fontSize: 11, color: COLORS.textMuted, marginTop: 4 },
+  behaviorLabel: { fontSize: FONT.base, fontWeight: '700', color: colors.text },
+  behaviorDesc:  { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  behaviorPeak:  { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING.sm },
-  tag: { backgroundColor: COLORS.borderSoft, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
-  tagText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
-  behaviorFooter: { fontSize: 10, color: COLORS.textMuted, marginTop: SPACING.sm },
+  tag: { backgroundColor: colors.borderSoft, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 3 },
+  tagText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
+  behaviorFooter: { fontSize: 10, color: colors.textMuted, marginTop: SPACING.sm },
 
   badgesRow: { gap: SPACING.md, paddingRight: SPACING.md },
 
-  card:     { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, overflow: 'hidden', ...CARD_SHADOW },
+  card:     { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, overflow: 'hidden', ...CARD_SHADOW },
   txRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.md },
-  txBorder: { borderBottomWidth: 1, borderColor: COLORS.border },
+  txBorder: { borderBottomWidth: 1, borderColor: colors.border },
   txLeft:   { flex: 1, gap: 2 },
-  txLabel:  { fontSize: FONT.base, color: COLORS.text, fontWeight: '500' },
-  txDate:   { fontSize: FONT.sm, color: COLORS.textMuted },
+  txLabel:  { fontSize: FONT.base, color: colors.text, fontWeight: '500' },
+  txDate:   { fontSize: FONT.sm, color: colors.textMuted },
   txAmount: { fontSize: FONT.base, fontWeight: '700' },
-  emptyText: { padding: SPACING.lg, color: COLORS.textMuted, textAlign: 'center' },
+  emptyText: { padding: SPACING.lg, color: colors.textMuted, textAlign: 'center' },
 
-  logoutBtn:  { backgroundColor: COLORS.redDim, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(248,113,113,0.3)', paddingVertical: 14, alignItems: 'center', marginTop: SPACING.sm },
-  logoutText: { color: COLORS.red, fontWeight: '700', fontSize: FONT.md },
-});
+  logoutBtn:  { backgroundColor: colors.redDim, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(248,113,113,0.3)', paddingVertical: 14, alignItems: 'center', marginTop: SPACING.sm },
+  logoutText: { color: colors.red, fontWeight: '700', fontSize: FONT.md },
+}));

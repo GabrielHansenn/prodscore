@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getTaskProofUrl } from '../services/proof.service';
-import { COLORS, RADIUS } from '../constants/theme';
+import { RADIUS } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface TaskProofViewerProps {
   /** UUID da tarefa cuja comprovação será exibida */
@@ -14,6 +16,8 @@ interface TaskProofViewerProps {
  * signed URL temporária. Toque abre em tamanho maior (lightbox).
  */
 export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [url,          setUrl]          = useState<string | null>(null);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(false);
@@ -43,7 +47,7 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
         accessibilityLabel="Ver foto de comprovação em tamanho maior"
       >
         {loading || !url
-          ? <ActivityIndicator size="small" color={COLORS.textMuted} />
+          ? <ActivityIndicator size="small" color={colors.textMuted} />
           : <Image source={{ uri: url }} style={styles.thumbImage} />
         }
       </TouchableOpacity>
@@ -64,11 +68,11 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   thumb: {
     width: 40, height: 40, borderRadius: RADIUS.md, overflow: 'hidden',
-    backgroundColor: COLORS.borderSoft, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: colors.borderSoft, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
   },
   thumbImage: { width: '100%', height: '100%' },
 
@@ -78,4 +82,4 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 48, right: 20, width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
-});
+}));

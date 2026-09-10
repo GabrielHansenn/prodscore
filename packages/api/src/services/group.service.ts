@@ -1,15 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import {
   MemberRole,
-  MAX_IMAGE_SIZE_BYTES,
-  MAX_IMAGE_SIZE_MB,
   type Group,
   type GroupMember,
   type RankingEntry,
 } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
-import { detectDisplayImageType, extensionForDisplayImageType } from '../lib/imageSniff.js';
+import { uploadImageToAvatarsBucket } from '../lib/avatarsBucket.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos (linhas do banco em snake_case)
@@ -794,33 +792,5 @@ export async function getGroupRanking(
  * @param buffer - Bytes do arquivo enviado
  */
 export async function uploadGroupImage(userId: string, buffer: Buffer): Promise<string> {
-  if (buffer.length === 0) {
-    throw new AppError('Arquivo vazio.', 400, 'ARQUIVO_INVALIDO');
-  }
-  if (buffer.length > MAX_IMAGE_SIZE_BYTES) {
-    throw new AppError(`A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB} MB.`, 400, 'ARQUIVO_MUITO_GRANDE');
-  }
-
-  const contentType = detectDisplayImageType(buffer);
-  if (!contentType) {
-    throw new AppError(
-      'Formato de imagem inválido. Envie um arquivo JPEG, PNG, WebP ou GIF.',
-      400,
-      'FORMATO_INVALIDO',
-    );
-  }
-
-  const path = `${userId}/group-${randomUUID()}.${extensionForDisplayImageType(contentType)}`;
-
-  const { error } = await supabase.storage
-    .from('avatars')
-    .upload(path, buffer, { contentType, upsert: true });
-
-  if (error) {
-    console.error('[group.service.uploadGroupImage] upload falhou:', error, { path, contentType, size: buffer.length });
-    throw new AppError('Erro ao enviar a imagem. Tente novamente.', 500, 'UPLOAD_FALHOU');
-  }
-
-  const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
-  return publicUrl;
+  return uploadImageToAvatarsBucket(buffer, (ext) => `${userId}/group-${randomUUID()}.${ext}`);
 }

@@ -1,11 +1,13 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, SPACING, RADIUS } from '../constants/theme';
+import { FONT, SPACING, RADIUS } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap; label: string }> = {
   Dashboard: { active: 'home',     inactive: 'home-outline',     label: 'Início'   },
@@ -33,6 +35,8 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const { isWide } = useResponsive();
   const { user, logout } = useAuthStore();
   const statsLevel = useUserStore((s) => s.stats?.level);
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   if (!isWide) {
     // ---- Modo celular: barra inferior (comportamento original) ----
@@ -53,9 +57,9 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
               <Ionicons
                 name={focused ? icons?.active ?? 'ellipse' : icons?.inactive ?? 'ellipse-outline'}
                 size={22}
-                color={focused ? COLORS.lime : COLORS.navText}
+                color={focused ? colors.lime : colors.navText}
               />
-              <Text style={[styles.bottomLabel, { color: focused ? COLORS.lime : COLORS.navText }]}>
+              <Text style={[styles.bottomLabel, { color: focused ? colors.lime : colors.navText }]}>
                 {String(options.title ?? route.name)}
               </Text>
             </TouchableOpacity>
@@ -94,7 +98,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                 <Ionicons
                   name={focused ? icons?.active ?? 'ellipse' : icons?.inactive ?? 'ellipse-outline'}
                   size={18}
-                  color={focused ? COLORS.lime : COLORS.navText}
+                  color={focused ? colors.lime : colors.navText}
                 />
                 <Text style={[styles.navLabel, focused && styles.navLabelActive]}>
                   {String(options.title ?? route.name)}
@@ -112,7 +116,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
               activeOpacity={0.7}
               onPress={() => navigation.getParent()?.navigate(item.screen)}
             >
-              <Ionicons name={item.icon} size={18} color={COLORS.navText} />
+              <Ionicons name={item.icon} size={18} color={colors.navText} />
               <Text style={styles.navLabel}>{item.label}</Text>
             </TouchableOpacity>
           ))}
@@ -123,7 +127,11 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
       <View style={styles.userSection}>
         <View style={styles.userRow}>
           <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>{user?.username?.charAt(0).toUpperCase() ?? 'U'}</Text>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.userAvatarImage} />
+            ) : (
+              <Text style={styles.userAvatarText}>{user?.username?.charAt(0).toUpperCase() ?? 'U'}</Text>
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.userName} numberOfLines={1}>{user?.username ?? 'Usuário'}</Text>
@@ -131,7 +139,7 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
           </View>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={16} color={COLORS.navMuted} />
+          <Ionicons name="log-out-outline" size={16} color={colors.navMuted} />
           <Text style={styles.logoutText}>Sair</Text>
         </TouchableOpacity>
       </View>
@@ -139,13 +147,13 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   // Celular
   bottomBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.navBg,
+    backgroundColor: colors.navBg,
     borderTopWidth: 1,
-    borderTopColor: COLORS.navBorder,
+    borderTopColor: colors.navBorder,
     paddingTop: 6,
   },
   bottomItem: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 2 },
@@ -158,7 +166,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: SIDEBAR_WIDTH,
-    backgroundColor: COLORS.navBg,
+    backgroundColor: colors.navBg,
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
   },
@@ -168,17 +176,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
     borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 10,
   },
-  navItemActive: { backgroundColor: COLORS.navActive },
-  navLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.navText },
+  navItemActive: { backgroundColor: colors.navActive },
+  navLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.navText },
   navLabelActive: { color: '#fff' },
-  navDivider: { height: 1, backgroundColor: COLORS.navBorder, marginVertical: SPACING.sm },
+  navDivider: { height: 1, backgroundColor: colors.navBorder, marginVertical: SPACING.sm },
 
-  userSection: { borderTopWidth: 1, borderTopColor: COLORS.navBorder, paddingTop: SPACING.sm, gap: 4 },
+  userSection: { borderTopWidth: 1, borderTopColor: colors.navBorder, paddingTop: SPACING.sm, gap: 4 },
   userRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.xs, paddingVertical: SPACING.xs },
-  userAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.navActive, alignItems: 'center', justifyContent: 'center' },
+  userAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.navActive, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  userAvatarImage: { width: '100%', height: '100%' },
   userAvatarText: { color: '#fff', fontWeight: '700', fontSize: FONT.sm },
   userName: { fontSize: FONT.sm, fontWeight: '600', color: '#fff' },
-  userLevel: { fontSize: 11, color: COLORS.navMuted },
+  userLevel: { fontSize: 11, color: colors.navMuted },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: SPACING.xs, paddingVertical: 8 },
-  logoutText: { fontSize: FONT.sm, color: COLORS.navMuted, fontWeight: '500' },
-});
+  logoutText: { fontSize: FONT.sm, color: colors.navMuted, fontWeight: '500' },
+}));

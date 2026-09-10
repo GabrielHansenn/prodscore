@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { levelThreshold } from '@prodscore/shared';
-import { COLORS, FONT, RADIUS, SPACING, LEVEL_BAR_GRADIENT } from '../constants/theme';
+import { FONT, RADIUS, SPACING, LEVEL_BAR_GRADIENT } from '../constants/theme';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface LevelBarProps {
   level:       number;
@@ -18,6 +19,7 @@ export default function LevelBar({ level, totalPoints }: LevelBarProps) {
   const xpNeeded  = next - current;
   const pct       = Math.round(progress * 100);
 
+  const styles = useStyles();
   const animWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function LevelBar({ level, totalPoints }: LevelBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     gap: SPACING.xs,
   },
@@ -74,17 +76,17 @@ const styles = StyleSheet.create({
   },
   levelText: {
     fontSize: FONT.sm,
-    color:    COLORS.primary400,
+    color:    colors.primary400,
     fontWeight: '600',
   },
   xpText: {
     fontSize: FONT.sm,
-    color:    COLORS.textMuted,
+    color:    colors.textMuted,
   },
   track: {
     height:          8,
     borderRadius:    RADIUS.sm,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     overflow:        'hidden',
   },
   fillWrap: {
@@ -94,6 +96,6 @@ const styles = StyleSheet.create({
     flex:         1,
     borderRadius: RADIUS.sm,
   },
-  pctText:  { fontSize: FONT.sm, color: COLORS.textMuted },
-  pctValue: { fontSize: FONT.sm, color: COLORS.limeText, fontWeight: '600' },
-});
+  pctText:  { fontSize: FONT.sm, color: colors.textMuted },
+  pctValue: { fontSize: FONT.sm, color: colors.limeText, fontWeight: '600' },
+}));

@@ -16,7 +16,9 @@ import TaskItem from '../components/TaskItem';
 import Dropdown from '../components/Dropdown';
 import InlineFeedback from '../components/InlineFeedback';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 type StatusFilter = TaskStatus | 'all';
 type DifficultyFilter = TaskDifficulty | 'all';
@@ -103,6 +105,8 @@ interface TaskModalProps {
 }
 
 function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [title,          setTitle]          = useState(task?.title ?? '');
   const [description,    setDescription]    = useState(task?.description ?? '');
   const [difficulty,     setDifficulty]     = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
@@ -167,13 +171,13 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
               <Text style={styles.fieldLabel}>Título</Text>
               <TextInput
                 style={styles.input} value={title} onChangeText={setTitle} editable={!isCompleted}
-                placeholder="Ex: Implementar login com OAuth" placeholderTextColor={COLORS.textMuted}
+                placeholder="Ex: Implementar login com OAuth" placeholderTextColor={colors.textMuted}
               />
 
               <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Descrição (opcional)</Text>
               <TextInput
                 style={[styles.input, { height: 72 }]} value={description} onChangeText={setDescription}
-                editable={!isCompleted} multiline placeholder="Descreva o que precisa ser feito..." placeholderTextColor={COLORS.textMuted}
+                editable={!isCompleted} multiline placeholder="Descreva o que precisa ser feito..." placeholderTextColor={colors.textMuted}
               />
 
               <View style={styles.rowFields}>
@@ -198,14 +202,14 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
                     style={styles.input} value={dueDateInput}
                     onChangeText={(t) => setDueDateInput(maskDateBR(t))}
                     editable={!isCompleted} keyboardType="number-pad" maxLength={10}
-                    placeholder="DD/MM/AAAA" placeholderTextColor={COLORS.textMuted}
+                    placeholder="DD/MM/AAAA" placeholderTextColor={colors.textMuted}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Tempo estimado (min)</Text>
                   <TextInput
                     style={styles.input} value={estMinutes} onChangeText={setEstMinutes} editable={!isCompleted}
-                    keyboardType="number-pad" placeholder="Ex: 60" placeholderTextColor={COLORS.textMuted}
+                    keyboardType="number-pad" placeholder="Ex: 60" placeholderTextColor={colors.textMuted}
                   />
                 </View>
               </View>
@@ -216,8 +220,8 @@ function TaskFormModal({ task, onClose, onSubmit }: TaskModalProps) {
                   value={requiresProof}
                   onValueChange={setRequiresProof}
                   disabled={isCompleted}
-                  trackColor={{ false: COLORS.border, true: COLORS.primary400 }}
-                  thumbColor={requiresProof ? COLORS.primary : '#fff'}
+                  trackColor={{ false: colors.border, true: colors.primary400 }}
+                  thumbColor={requiresProof ? colors.primary : '#fff'}
                 />
               </View>
 
@@ -261,6 +265,8 @@ export default function TasksScreen() {
   const insets = useSafeAreaInsets();
   const { isWide } = useResponsive();
   const { tasks, isLoading, fetchTasks, createTask, updateTask, deleteTask, completeTask } = useTaskStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [activeStatus,     setActiveStatus]     = useState<StatusFilter>('all');
   const [activeDifficulty, setActiveDifficulty] = useState<DifficultyFilter>('all');
@@ -331,7 +337,7 @@ export default function TasksScreen() {
               <View style={styles.suggestBox}>
                 <View style={styles.suggestHeader}>
                   <View style={styles.suggestHeaderLeft}>
-                    <Ionicons name="sparkles" size={14} color={COLORS.primary} />
+                    <Ionicons name="sparkles" size={14} color={colors.primary} />
                     <Text style={styles.suggestTitle}>Sugeridas para você</Text>
                   </View>
                   <TouchableOpacity onPress={() => setShowSuggestions(false)}>
@@ -378,7 +384,7 @@ export default function TasksScreen() {
             </View>
 
             {isLoading && (
-              <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+              <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
             )}
           </>
         }
@@ -393,7 +399,7 @@ export default function TasksScreen() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={styles.center}>
-              <Ionicons name="clipboard-outline" size={40} color={COLORS.textMuted} />
+              <Ionicons name="clipboard-outline" size={40} color={colors.textMuted} />
               <Text style={styles.emptyText}>Nenhuma tarefa encontrada</Text>
               <Text style={styles.emptyHint}>
                 {activeStatus !== 'all' ? 'Tente outro filtro ou crie' : 'Crie'} sua primeira tarefa!
@@ -421,62 +427,62 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: SPACING.md, paddingBottom: SPACING.sm, gap: SPACING.sm,
   },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerCount: { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
-  newBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerCount: { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
+  newBtn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10 },
   newBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT.sm },
 
   list: { paddingHorizontal: SPACING.md, paddingBottom: 40 },
 
   suggestBox: {
-    backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.primary100,
+    backgroundColor: colors.primaryDim, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.primary100,
     padding: SPACING.md, marginBottom: SPACING.md, gap: SPACING.sm,
   },
   suggestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   suggestHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  suggestTitle: { fontSize: FONT.sm, fontWeight: '700', color: COLORS.primary },
-  suggestClose: { fontSize: 11, color: COLORS.primary400 },
-  suggestRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: SPACING.sm },
-  suggestTaskTitle: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.text },
-  suggestReason: { fontSize: 11, color: COLORS.textMuted },
-  suggestViewBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 6 },
+  suggestTitle: { fontSize: FONT.sm, fontWeight: '700', color: colors.primary },
+  suggestClose: { fontSize: 11, color: colors.primary400 },
+  suggestRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, backgroundColor: colors.card, borderRadius: RADIUS.md, padding: SPACING.sm },
+  suggestTaskTitle: { fontSize: FONT.sm, fontWeight: '600', color: colors.text },
+  suggestReason: { fontSize: 11, color: colors.textMuted },
+  suggestViewBtn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 6 },
   suggestViewBtnText: { fontSize: 11, fontWeight: '600', color: '#fff' },
 
   tabsScroll: { gap: SPACING.xs, paddingBottom: SPACING.sm },
-  tab: { paddingHorizontal: SPACING.sm, paddingVertical: 7, borderRadius: RADIUS.md, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
-  tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabText: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
+  tab: { paddingHorizontal: SPACING.sm, paddingVertical: 7, borderRadius: RADIUS.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   tabTextActive: { color: '#fff' },
 
   filterRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
 
   center: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.xl, gap: SPACING.xs },
-  emptyText: { fontSize: FONT.md, fontWeight: '600', color: COLORS.textSecondary },
-  emptyHint: { fontSize: FONT.sm, color: COLORS.textMuted },
+  emptyText: { fontSize: FONT.md, fontWeight: '600', color: colors.textSecondary },
+  emptyHint: { fontSize: FONT.sm, color: colors.textMuted },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: SPACING.lg },
-  formSheet: { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: SPACING.lg, maxHeight: '85%', ...CARD_SHADOW },
-  modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
-  warnBox: { backgroundColor: COLORS.amberDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.md },
+  formSheet: { backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: SPACING.lg, maxHeight: '85%', ...CARD_SHADOW },
+  modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
+  warnBox: { backgroundColor: colors.amberDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.md },
   warnText: { fontSize: 12, color: '#b45309' },
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
+  input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
   rowFields: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
 
   proofRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md, gap: SPACING.sm },
   // flex:1 trava a largura do rótulo — sem isso o texto longo empurra o Switch pra fora da tela
   proofLabel: { flex: 1, marginBottom: 0 },
-  ptsPreview: { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md },
-  ptsText: { fontSize: 12, color: COLORS.primary },
+  ptsPreview: { backgroundColor: colors.primaryDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.md },
+  ptsText: { fontSize: 12, color: colors.primary },
   formBtnRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md },
-  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
-  secondaryBtnText: { fontSize: FONT.base, fontWeight: '600', color: COLORS.textSecondary },
-  btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
+  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
+  secondaryBtnText: { fontSize: FONT.base, fontWeight: '600', color: colors.textSecondary },
+  btn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
-});
+}));

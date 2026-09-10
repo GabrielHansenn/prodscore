@@ -9,7 +9,9 @@ import {
   type TOTPEnrollment,
 } from '../services/mfa.service';
 import InlineFeedback from './InlineFeedback';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 type Phase = 'checking' | 'active' | 'setup' | 'success' | 'error';
 
@@ -27,6 +29,8 @@ export default function EnrollMFA() {
   const [error,      setError]      = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [copied,     setCopied]     = useState(false);
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const startEnrollment = useCallback(async () => {
     setError('');
@@ -128,7 +132,7 @@ export default function EnrollMFA() {
   if (phase === 'checking') {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={COLORS.primary} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -137,7 +141,7 @@ export default function EnrollMFA() {
     return (
       <View>
         <View style={styles.activeBox}>
-          <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           <View style={{ flex: 1 }}>
             <Text style={styles.activeTitle}>Autenticação de dois fatores ativa</Text>
             <Text style={styles.activeSub}>Sua conta está protegida por um aplicativo autenticador.</Text>
@@ -167,7 +171,7 @@ export default function EnrollMFA() {
   if (phase === 'success') {
     return (
       <View style={styles.activeBox}>
-        <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
         <View style={{ flex: 1 }}>
           <Text style={styles.activeTitle}>2FA ativado com sucesso!</Text>
           <Text style={styles.activeSub}>
@@ -198,7 +202,7 @@ export default function EnrollMFA() {
           <View style={styles.secretRow}>
             <Text style={styles.secretText} numberOfLines={1}>{enrollment.secret}</Text>
             <TouchableOpacity onPress={() => void handleCopySecret()} hitSlop={8}>
-              <Ionicons name="copy-outline" size={16} color={COLORS.textMuted} />
+              <Ionicons name="copy-outline" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           {copied && <Text style={styles.copiedText}>Copiado!</Text>}
@@ -211,7 +215,7 @@ export default function EnrollMFA() {
         value={code}
         onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
         placeholder="000000"
-        placeholderTextColor={COLORS.textMuted}
+        placeholderTextColor={colors.textMuted}
         keyboardType="number-pad"
         maxLength={6}
       />
@@ -232,59 +236,59 @@ export default function EnrollMFA() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   center: { paddingVertical: SPACING.lg, alignItems: 'center' },
 
   activeBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
-    backgroundColor: COLORS.successDim, borderRadius: RADIUS.lg,
+    backgroundColor: colors.successDim, borderRadius: RADIUS.lg,
     borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', padding: SPACING.md,
   },
   activeTitle: { fontSize: FONT.sm, fontWeight: '600', color: '#047857' },
   activeSub:   { fontSize: 11, color: '#047857', opacity: 0.85, marginTop: 2 },
 
   disableBtn:  { marginTop: SPACING.md },
-  disableText: { color: COLORS.red, fontSize: FONT.sm, fontWeight: '600' },
+  disableText: { color: colors.red, fontSize: FONT.sm, fontWeight: '600' },
 
   retryBtn: {
     marginTop: SPACING.md, alignSelf: 'flex-start',
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
-  retryText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
+  retryText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
 
-  setupHint: { fontSize: FONT.sm, color: COLORS.textMuted, marginBottom: SPACING.md, lineHeight: 19 },
+  setupHint: { fontSize: FONT.sm, color: colors.textMuted, marginBottom: SPACING.md, lineHeight: 19 },
 
   qrBox: {
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: '#fff', borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1, borderColor: colors.border,
     padding: SPACING.md, marginBottom: SPACING.md,
   },
 
   secretBox: { marginBottom: SPACING.md },
-  secretHint: { fontSize: 11, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 6 },
+  secretHint: { fontSize: 11, fontWeight: '500', color: colors.textSecondary, marginBottom: 6 },
   secretRow: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    backgroundColor: COLORS.borderSoft, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: colors.borderSoft, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm,
   },
-  secretText: { flex: 1, fontSize: 11, color: COLORS.textSecondary },
-  copiedText: { fontSize: 11, color: COLORS.success, marginTop: 4 },
+  secretText: { flex: 1, fontSize: 11, color: colors.textSecondary },
+  copiedText: { fontSize: 11, color: colors.success, marginTop: 4 },
 
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 6 },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 6 },
   codeInput: {
-    backgroundColor: COLORS.input, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: colors.input, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingVertical: 12, fontSize: FONT.lg, letterSpacing: 8,
-    textAlign: 'center', color: COLORS.text, marginBottom: SPACING.sm,
+    textAlign: 'center', color: colors.text, marginBottom: SPACING.sm,
   },
 
 
   confirmBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
+    backgroundColor: colors.primary, borderRadius: RADIUS.md,
     paddingVertical: 13, alignItems: 'center',
   },
   confirmBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
-});
+}));

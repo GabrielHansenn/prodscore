@@ -8,7 +8,9 @@ import {
 } from '../services/achievement.service';
 import { useUserStore } from '../store/userStore';
 import { ACHIEVEMENT_ICONS, ACHIEVEMENT_ICON_FALLBACK } from '../constants/achievementIcons';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 type Filter = 'todas' | 'conquistadas' | 'bloqueadas';
 
@@ -21,6 +23,8 @@ const FILTERS: { key: Filter; label: string }[] = [
 function AchievementCard({ item, earned, earnedAt, progress }: {
   item: AchievementItem; earned: boolean; earnedAt?: string; progress?: number;
 }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const threshold = item.criteria?.threshold ?? 0;
   const hasProgress = !earned && progress !== undefined && threshold > 0;
   const pct = hasProgress ? Math.min((progress! / threshold) * 100, 100) : 0;
@@ -32,12 +36,12 @@ function AchievementCard({ item, earned, earnedAt, progress }: {
           <Ionicons
             name={ACHIEVEMENT_ICONS[item.icon] ?? ACHIEVEMENT_ICON_FALLBACK}
             size={22}
-            color={earned ? COLORS.amber : COLORS.textMuted}
+            color={earned ? colors.amber : colors.textMuted}
           />
         </View>
         {earned && (
           <View style={styles.earnedBadge}>
-            <Ionicons name="checkmark-circle" size={11} color={COLORS.amberText} />
+            <Ionicons name="checkmark-circle" size={11} color={colors.amberText} />
             <Text style={styles.earnedText}>Conquistada</Text>
           </View>
         )}
@@ -79,6 +83,8 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   const [filter,  setFilter]  = useState<Filter>('todas');
   const [loading, setLoading] = useState(true);
   const { stats, fetchStats } = useUserStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   useEffect(() => {
     void fetchStats();
@@ -119,7 +125,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Conquistas</Text>
@@ -128,7 +134,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : (
         <FlatList
           key={`cols-${numColumns}`}
@@ -146,7 +152,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
                     <Text style={styles.bannerTitle}>{earnedCount} de {catalog.length} desbloqueadas</Text>
                     <Text style={styles.bannerSub}>{pct}% concluído</Text>
                   </View>
-                  <Ionicons name="trophy" size={28} color={COLORS.amber} />
+                  <Ionicons name="trophy" size={28} color={colors.amber} />
                 </View>
                 <View style={styles.bannerTrack}>
                   <View style={[styles.bannerFill, { width: `${pct}%` }]} />
@@ -189,7 +195,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
           }}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Ionicons name="lock-closed-outline" size={40} color={COLORS.textMuted} />
+              <Ionicons name="lock-closed-outline" size={40} color={colors.textMuted} />
               <Text style={styles.emptyText}>
                 {filter === 'conquistadas' ? 'Nenhuma conquista desbloqueada ainda' : 'Nenhum resultado'}
               </Text>
@@ -201,17 +207,17 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
     padding: SPACING.md, paddingBottom: SPACING.sm,
   },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2, maxWidth: 260 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2, maxWidth: 260 },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, paddingVertical: SPACING.xl },
-  emptyText: { fontSize: FONT.base, color: COLORS.textMuted },
+  emptyText: { fontSize: FONT.base, color: colors.textMuted },
 
   list: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.sm },
 
@@ -224,20 +230,20 @@ const styles = StyleSheet.create({
     marginBottom:    SPACING.md,
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bannerTitle: { fontSize: FONT.base, fontWeight: '600', color: COLORS.amberText },
-  bannerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
+  bannerTitle: { fontSize: FONT.base, fontWeight: '600', color: colors.amberText },
+  bannerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
   bannerTrack: { height: 8, borderRadius: RADIUS.sm, backgroundColor: 'rgba(245,158,11,0.15)', overflow: 'hidden', marginTop: SPACING.sm },
-  bannerFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.amber },
+  bannerFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.amber },
 
-  filterRow: { flexDirection: 'row', gap: 4, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: 4, marginBottom: SPACING.md },
+  filterRow: { flexDirection: 'row', gap: 4, backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: SPACING.md },
   filterChip: { flex: 1, paddingVertical: 8, borderRadius: RADIUS.md, alignItems: 'center' },
-  filterChipActive: { backgroundColor: COLORS.primary },
-  filterText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  filterChipActive: { backgroundColor: colors.primary },
+  filterText: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
   filterTextActive: { color: '#fff' },
 
   card: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
     borderColor:     'rgba(245,158,11,0.3)',
@@ -245,26 +251,26 @@ const styles = StyleSheet.create({
     marginBottom:    SPACING.sm,
     ...CARD_SHADOW,
   },
-  cardLocked: { borderColor: COLORS.borderSoft },
+  cardLocked: { borderColor: colors.borderSoft },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   iconBox: {
     width: 44, height: 44, borderRadius: RADIUS.md,
     alignItems: 'center', justifyContent: 'center',
   },
   iconBoxEarned: { backgroundColor: 'rgba(245,158,11,0.15)' },
-  iconBoxLocked: { backgroundColor: COLORS.borderSoft },
-  name: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text, lineHeight: 18, marginTop: SPACING.sm },
-  desc: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, lineHeight: 15 },
-  descLocked: { color: COLORS.textMuted },
+  iconBoxLocked: { backgroundColor: colors.borderSoft },
+  name: { fontSize: FONT.base, fontWeight: '700', color: colors.text, lineHeight: 18, marginTop: SPACING.sm },
+  desc: { fontSize: 11, color: colors.textSecondary, marginTop: 2, lineHeight: 15 },
+  descLocked: { color: colors.textMuted },
   progressBox: { marginTop: SPACING.sm },
-  progressTrack: { height: 5, borderRadius: RADIUS.sm, backgroundColor: COLORS.borderSoft, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.amber },
-  progressText: { fontSize: 10, color: COLORS.textMuted, marginTop: 2, textAlign: 'right' },
+  progressTrack: { height: 5, borderRadius: RADIUS.sm, backgroundColor: colors.borderSoft, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.amber },
+  progressText: { fontSize: 10, color: colors.textMuted, marginTop: 2, textAlign: 'right' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
   pts: { fontSize: 11, fontWeight: '600' },
-  ptsEarned: { color: COLORS.amberText },
-  date: { fontSize: 10, color: COLORS.textMuted },
-  textMuted: { color: COLORS.textMuted },
-  earnedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.amberDim, borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 2 },
-  earnedText: { fontSize: 10, fontWeight: '600', color: COLORS.amberText },
-});
+  ptsEarned: { color: colors.amberText },
+  date: { fontSize: 10, color: colors.textMuted },
+  textMuted: { color: colors.textMuted },
+  earnedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.amberDim, borderRadius: RADIUS.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  earnedText: { fontSize: 10, fontWeight: '600', color: colors.amberText },
+}));

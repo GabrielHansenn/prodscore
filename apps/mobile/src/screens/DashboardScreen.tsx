@@ -18,7 +18,9 @@ import StreakBadge from '../components/StreakBadge';
 import PointTransactionFeed from '../components/PointTransactionFeed';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 const LEVEL_BADGE_EMOJI: Record<string, string> = {
   rocket: '🚀', star: '⭐', diamond: '💎', crown: '👑', legend: '🏆',
@@ -31,6 +33,8 @@ export default function DashboardScreen() {
   const { user }                      = useAuthStore();
   const { stats, fetchStats }         = useUserStore();
   const { tasks, fetchTasks, completeTask, deleteTask } = useTaskStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [celebrationStreak, setCelebrationStreak] = useState<number | null>(null);
   const [levelReward,       setLevelReward]       = useState<LevelReward | null>(null);
@@ -221,7 +225,7 @@ export default function DashboardScreen() {
       {/* Toast de pontos */}
       {toast ? (
         <View style={styles.toast}>
-          <Ionicons name="checkmark-circle" size={18} color={COLORS.lime} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.lime} />
           <Text style={styles.toastText}>{toast}</Text>
         </View>
       ) : null}
@@ -233,7 +237,7 @@ export default function DashboardScreen() {
             <Text style={styles.celebrationEmoji}>
               {LEVEL_BADGE_EMOJI[levelReward?.badgeKey ?? ''] ?? '🎁'}
             </Text>
-            <Text style={[styles.celebrationTitle, { color: COLORS.primary }]}>
+            <Text style={[styles.celebrationTitle, { color: colors.primary }]}>
               Nível {levelReward?.level} atingido!
             </Text>
             <Text style={styles.celebrationSub}>{levelReward?.description}</Text>
@@ -242,13 +246,13 @@ export default function DashboardScreen() {
                 <View style={styles.rewardPill}><Text style={styles.rewardPillText}>+{levelReward.bonusPoints} pts</Text></View>
               )}
               {!!levelReward?.bonusFreezes && (
-                <View style={[styles.rewardPill, { backgroundColor: COLORS.blueDim }]}>
+                <View style={[styles.rewardPill, { backgroundColor: colors.blueDim }]}>
                   <Text style={[styles.rewardPillText, { color: '#1d4ed8' }]}>+{levelReward.bonusFreezes} 🧊</Text>
                 </View>
               )}
             </View>
             <TouchableOpacity
-              style={[styles.celebrationBtn, { backgroundColor: COLORS.primary }]}
+              style={[styles.celebrationBtn, { backgroundColor: colors.primary }]}
               onPress={() => setLevelReward(null)}
             >
               <Text style={styles.celebrationBtnText}>Incrível!</Text>
@@ -278,12 +282,12 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root:   { flex: 1, backgroundColor: colors.background },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl },
   greeting: { marginBottom: SPACING.lg },
-  greetTitle: { fontSize: FONT.xxl, fontWeight: '800', color: COLORS.text },
-  greetSub:   { fontSize: FONT.base, color: COLORS.textMuted, marginTop: SPACING.xs },
+  greetTitle: { fontSize: FONT.xxl, fontWeight: '800', color: colors.text },
+  greetSub:   { fontSize: FONT.base, color: colors.textMuted, marginTop: SPACING.xs },
 
   statsRow:     { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   statsRowWrap: { flexWrap: 'wrap' },
@@ -292,32 +296,32 @@ const styles = StyleSheet.create({
   statPlaceholder: {
     flex:            1,
     height:          80,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     alignItems:      'center',
     justifyContent:  'center',
     ...CARD_SHADOW,
   },
-  placeholderText: { fontSize: FONT.sm, color: COLORS.textMuted },
+  placeholderText: { fontSize: FONT.sm, color: colors.textMuted },
 
   section:      { marginBottom: SPACING.lg },
-  sectionTitle: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
   levelCard: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     ...CARD_SHADOW,
   },
 
   taskCard: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     ...CARD_SHADOW,
   },
@@ -327,42 +331,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom:   SPACING.md,
   },
-  taskCardTitle: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text },
+  taskCardTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text },
   countPill: {
-    backgroundColor: COLORS.borderSoft,
+    backgroundColor: colors.borderSoft,
     borderRadius:    RADIUS.xl,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
   },
-  countPillText: { fontSize: FONT.sm, color: COLORS.textSecondary },
+  countPillText: { fontSize: FONT.sm, color: colors.textSecondary },
 
   empty:     { alignItems: 'center', paddingVertical: SPACING.xl },
-  emptyText: { fontSize: FONT.base, color: COLORS.textMuted },
-  emptyHint: { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
+  emptyText: { fontSize: FONT.base, color: colors.textMuted },
+  emptyHint: { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
 
   txCard: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, ...CARD_SHADOW,
   },
-  txCardTitle: { fontSize: FONT.sm, fontWeight: '700', color: COLORS.textSecondary, marginBottom: SPACING.sm },
+  txCardTitle: { fontSize: FONT.sm, fontWeight: '700', color: colors.textSecondary, marginBottom: SPACING.sm },
 
   missionCard: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.md,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     marginBottom:    SPACING.sm,
     gap:             SPACING.sm,
     ...CARD_SHADOW,
   },
   missionHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  missionTitle:  { flex: 1, fontSize: FONT.base, fontWeight: '600', color: COLORS.text },
-  missionPts:    { fontSize: FONT.sm, fontWeight: '700', color: COLORS.amber },
+  missionTitle:  { flex: 1, fontSize: FONT.base, fontWeight: '600', color: colors.text },
+  missionPts:    { fontSize: FONT.sm, fontWeight: '700', color: colors.amber },
   progressMeta:  { flexDirection: 'row', justifyContent: 'space-between' },
-  progressText:  { fontSize: FONT.sm, color: COLORS.textMuted },
-  progressTrack: { height: 6, borderRadius: RADIUS.sm, backgroundColor: COLORS.border, overflow: 'hidden' },
-  progressFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: COLORS.primary },
+  progressText:  { fontSize: FONT.sm, color: colors.textMuted },
+  progressTrack: { height: 6, borderRadius: RADIUS.sm, backgroundColor: colors.border, overflow: 'hidden' },
+  progressFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.primary },
 
   toast: {
     position:        'absolute',
@@ -370,16 +374,16 @@ const styles = StyleSheet.create({
     left:            SPACING.lg,
     right:           SPACING.lg,
     flexDirection:   'row',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.md,
     borderWidth:     1,
-    borderColor:     COLORS.primary100,
+    borderColor:     colors.primary100,
     padding:         SPACING.md,
     alignItems:      'center',
     gap:             SPACING.sm,
     ...CARD_SHADOW,
   },
-  toastText: { color: COLORS.text, fontWeight: '600', fontSize: FONT.base },
+  toastText: { color: colors.text, fontWeight: '600', fontSize: FONT.base },
 
   overlay: {
     flex:            1,
@@ -389,7 +393,7 @@ const styles = StyleSheet.create({
     padding:         SPACING.lg,
   },
   celebrationCard: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.xl,
     borderWidth:     1,
     borderColor:     'rgba(245,158,11,0.35)',
@@ -404,12 +408,12 @@ const styles = StyleSheet.create({
     elevation:       10,
   },
   celebrationEmoji: { fontSize: 56 },
-  celebrationTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.amber, textAlign: 'center' },
-  celebrationSub:   { fontSize: FONT.base, color: COLORS.textSecondary, textAlign: 'center' },
+  celebrationTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.amber, textAlign: 'center' },
+  celebrationSub:   { fontSize: FONT.base, color: colors.textSecondary, textAlign: 'center' },
   celebrationBonus: { fontSize: FONT.sm, fontWeight: '600', color: '#65a30d' },
   rewardPillsRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.xs },
-  rewardPill: { backgroundColor: COLORS.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 4 },
-  rewardPillText: { fontSize: FONT.sm, fontWeight: '700', color: COLORS.primary },
-  celebrationBtn:   { backgroundColor: COLORS.amber, borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: SPACING.xl, marginTop: SPACING.sm },
+  rewardPill: { backgroundColor: colors.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 4 },
+  rewardPillText: { fontSize: FONT.sm, fontWeight: '700', color: colors.primary },
+  celebrationBtn:   { backgroundColor: colors.amber, borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: SPACING.xl, marginTop: SPACING.sm },
   celebrationBtnText: { color: '#ffffff', fontWeight: '700', fontSize: FONT.md },
-});
+}));

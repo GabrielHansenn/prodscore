@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW, type ColorPalette } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import TaskProofUpload from './TaskProofUpload';
 import TaskProofViewer from './TaskProofViewer';
 
@@ -14,34 +16,40 @@ interface TaskItemProps {
 }
 
 // Mesma convenção de cores/labels do TaskCard.tsx no web
-const DIFF_COLORS: Record<TaskDifficulty, string> = {
-  [TaskDifficulty.Easy]:   COLORS.success,
-  [TaskDifficulty.Medium]: COLORS.blue,
-  [TaskDifficulty.Hard]:   COLORS.orange,
-  [TaskDifficulty.Epic]:   COLORS.primary400,
-};
+function getDiffColors(colors: ColorPalette): Record<TaskDifficulty, string> {
+  return {
+    [TaskDifficulty.Easy]:   colors.success,
+    [TaskDifficulty.Medium]: colors.blue,
+    [TaskDifficulty.Hard]:   colors.orange,
+    [TaskDifficulty.Epic]:   colors.primary400,
+  };
+}
 const DIFF_LABELS: Record<TaskDifficulty, string> = {
   [TaskDifficulty.Easy]: 'Fácil', [TaskDifficulty.Medium]: 'Médio',
   [TaskDifficulty.Hard]: 'Difícil', [TaskDifficulty.Epic]: 'Épico',
 };
 
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  [TaskStatus.Pending]:    COLORS.textMuted,
-  [TaskStatus.InProgress]: COLORS.blue,
-  [TaskStatus.Completed]:  COLORS.success,
-  [TaskStatus.Overdue]:    COLORS.red,
-  [TaskStatus.Abandoned]:  COLORS.textMuted,
-};
+function getStatusColors(colors: ColorPalette): Record<TaskStatus, string> {
+  return {
+    [TaskStatus.Pending]:    colors.textMuted,
+    [TaskStatus.InProgress]: colors.blue,
+    [TaskStatus.Completed]:  colors.success,
+    [TaskStatus.Overdue]:    colors.red,
+    [TaskStatus.Abandoned]:  colors.textMuted,
+  };
+}
 const STATUS_LABELS: Record<TaskStatus, string> = {
   [TaskStatus.Pending]: 'Pendente', [TaskStatus.InProgress]: 'Em Andamento',
   [TaskStatus.Completed]: 'Concluída', [TaskStatus.Overdue]: 'Atrasada', [TaskStatus.Abandoned]: 'Abandonada',
 };
 
-const PRIORITY_BADGE: Partial<Record<TaskPriority, { label: string; color: string }>> = {
-  [TaskPriority.Low]:    { label: 'Baixa',   color: COLORS.textMuted },
-  [TaskPriority.High]:   { label: 'Alta',    color: COLORS.amber },
-  [TaskPriority.Urgent]: { label: 'Urgente', color: COLORS.red },
-};
+function getPriorityBadge(colors: ColorPalette): Partial<Record<TaskPriority, { label: string; color: string }>> {
+  return {
+    [TaskPriority.Low]:    { label: 'Baixa',   color: colors.textMuted },
+    [TaskPriority.High]:   { label: 'Alta',    color: colors.amber },
+    [TaskPriority.Urgent]: { label: 'Urgente', color: colors.red },
+  };
+}
 
 const BASE_POINTS: Record<TaskDifficulty, number> = {
   [TaskDifficulty.Easy]: 10, [TaskDifficulty.Medium]: 25, [TaskDifficulty.Hard]: 50, [TaskDifficulty.Epic]: 100,
@@ -80,6 +88,11 @@ function getPointsPreview(task: Task): string {
 
 /** Card de tarefa — espelha TaskCard.tsx no web (badges, prazo, pontos, menu editar/excluir) */
 export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskItemProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
+  const DIFF_COLORS = getDiffColors(colors);
+  const STATUS_COLORS = getStatusColors(colors);
+  const PRIORITY_BADGE = getPriorityBadge(colors);
   const [menuOpen,        setMenuOpen]        = useState(false);
   const [showProofUpload, setShowProofUpload] = useState(false);
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
@@ -129,7 +142,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
 
         {onEdit && (
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
-            <Ionicons name="ellipsis-vertical" size={16} color={COLORS.textMuted} />
+            <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -140,9 +153,9 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
             <Ionicons
               name={dueInfo.isOverdue ? 'warning-outline' : 'calendar-outline'}
               size={12}
-              color={dueInfo.isOverdue ? COLORS.red : dueInfo.isToday ? COLORS.amber : COLORS.textMuted}
+              color={dueInfo.isOverdue ? colors.red : dueInfo.isToday ? colors.amber : colors.textMuted}
             />
-            <Text style={[styles.dueText, { color: dueInfo.isOverdue ? COLORS.red : dueInfo.isToday ? COLORS.amber : COLORS.textMuted }]}>
+            <Text style={[styles.dueText, { color: dueInfo.isOverdue ? colors.red : dueInfo.isToday ? colors.amber : colors.textMuted }]}>
               {dueInfo.label}
             </Text>
           </View>
@@ -181,15 +194,15 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
               disabled={isCompleted}
               onPress={() => { setMenuOpen(false); onEdit?.(task); }}
             >
-              <Ionicons name="pencil-outline" size={16} color={isCompleted ? COLORS.textMuted : COLORS.textSecondary} />
-              <Text style={[styles.menuItemText, isCompleted && { color: COLORS.textMuted }]}>Editar</Text>
+              <Ionicons name="pencil-outline" size={16} color={isCompleted ? colors.textMuted : colors.textSecondary} />
+              <Text style={[styles.menuItemText, isCompleted && { color: colors.textMuted }]}>Editar</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => { setMenuOpen(false); onDelete(task.id); }}
             >
-              <Ionicons name="trash-outline" size={16} color={COLORS.red} />
-              <Text style={[styles.menuItemText, { color: COLORS.red }]}>Excluir</Text>
+              <Ionicons name="trash-outline" size={16} color={colors.red} />
+              <Text style={[styles.menuItemText, { color: colors.red }]}>Excluir</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -198,12 +211,12 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   card: {
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     marginBottom:    SPACING.sm,
     gap:             SPACING.sm,
@@ -214,24 +227,24 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   badgePill: { borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
   badgeText: { fontSize: 11, fontWeight: '600' },
-  title: { fontSize: FONT.base, fontWeight: '600', color: COLORS.text, marginTop: SPACING.xs, lineHeight: 20 },
-  titleDone: { textDecorationLine: 'line-through', color: COLORS.textMuted },
-  description: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  title: { fontSize: FONT.base, fontWeight: '600', color: colors.text, marginTop: SPACING.xs, lineHeight: 20 },
+  titleDone: { textDecorationLine: 'line-through', color: colors.textMuted },
+  description: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   menuBtn: { padding: 4 },
 
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dueText: { fontSize: 11 },
   footerRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  proofBadge: { backgroundColor: `${COLORS.primary}1f`, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
-  proofBadgeText: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
-  points: { fontSize: 12, fontWeight: '700', color: COLORS.success },
+  proofBadge: { backgroundColor: `${colors.primary}1f`, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
+  proofBadgeText: { fontSize: 11, fontWeight: '600', color: colors.primary },
+  points: { fontSize: 12, fontWeight: '700', color: colors.success },
 
-  completeBtn: { backgroundColor: COLORS.successDim, borderRadius: RADIUS.md, paddingVertical: 9, alignItems: 'center' },
+  completeBtn: { backgroundColor: colors.successDim, borderRadius: RADIUS.md, paddingVertical: 9, alignItems: 'center' },
   completeBtnText: { fontSize: FONT.sm, fontWeight: '600', color: '#047857' },
 
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  menuSheet: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, overflow: 'hidden', width: 180, ...CARD_SHADOW },
-  menuItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: 13, borderBottomWidth: 1, borderColor: COLORS.borderSoft },
-  menuItemText: { fontSize: FONT.sm, color: COLORS.text },
-});
+  menuSheet: { backgroundColor: colors.card, borderRadius: RADIUS.lg, overflow: 'hidden', width: 180, ...CARD_SHADOW },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: 13, borderBottomWidth: 1, borderColor: colors.borderSoft },
+  menuItemText: { fontSize: FONT.sm, color: colors.text },
+}));
