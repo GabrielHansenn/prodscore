@@ -10,7 +10,9 @@ import {
   type TaskProof,
 } from '@prodscore/shared';
 import { uploadTaskProof } from '../services/proof.service';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface TaskProofUploadProps {
   /** UUID da tarefa que está sendo concluída */
@@ -50,6 +52,8 @@ function resolveMimeType(mimeType: string | undefined, fileName: string | null |
  * pré-visualizar → confirmar envio (com progresso).
  */
 export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskProofUploadProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [photo,      setPhoto]      = useState<SelectedPhoto | null>(null);
   const [uploading,  setUploading]  = useState(false);
   const [progress,   setProgress]   = useState(0);
@@ -124,11 +128,11 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
           {!photo ? (
             <View style={styles.pickerRow}>
               <TouchableOpacity style={styles.pickerBtn} onPress={() => void handleTakePhoto()}>
-                <Ionicons name="camera-outline" size={22} color={COLORS.primary} />
+                <Ionicons name="camera-outline" size={22} color={colors.primary} />
                 <Text style={styles.pickerBtnText}>Tirar foto</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.pickerBtn} onPress={() => void handlePickFromLibrary()}>
-                <Ionicons name="images-outline" size={22} color={COLORS.primary} />
+                <Ionicons name="images-outline" size={22} color={colors.primary} />
                 <Text style={styles.pickerBtnText}>Escolher da galeria</Text>
               </TouchableOpacity>
             </View>
@@ -183,35 +187,35 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: SPACING.lg },
-  sheet: { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: SPACING.lg, ...CARD_SHADOW },
-  title: { fontSize: FONT.lg, fontWeight: '700', color: COLORS.text },
-  subtitle: { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 4, marginBottom: SPACING.md },
+  sheet: { backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: SPACING.lg, ...CARD_SHADOW },
+  title: { fontSize: FONT.lg, fontWeight: '700', color: colors.text },
+  subtitle: { fontSize: FONT.sm, color: colors.textMuted, marginTop: 4, marginBottom: SPACING.md },
 
   pickerRow: { flexDirection: 'row', gap: SPACING.sm },
   pickerBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg,
+    borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.lg, paddingVertical: SPACING.lg,
   },
-  pickerBtnText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.primary, textAlign: 'center' },
+  pickerBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.primary, textAlign: 'center' },
 
   preview: { width: '100%', height: 220, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
-  changeText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.primary, marginBottom: SPACING.sm },
+  changeText: { fontSize: FONT.sm, fontWeight: '600', color: colors.primary, marginBottom: SPACING.sm },
 
   progressWrap: { marginBottom: SPACING.sm },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: COLORS.borderSoft, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: COLORS.primary },
-  progressText: { fontSize: 11, color: COLORS.textMuted, marginTop: 4 },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.borderSoft, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.primary },
+  progressText: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
 
-  errorBox: { backgroundColor: COLORS.redDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.sm },
-  errorText: { fontSize: 12, color: COLORS.red },
-  errorLink: { fontSize: 12, fontWeight: '700', color: COLORS.red, marginTop: 4, textDecorationLine: 'underline' },
+  errorBox: { backgroundColor: colors.redDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginTop: SPACING.sm },
+  errorText: { fontSize: 12, color: colors.red },
+  errorLink: { fontSize: 12, fontWeight: '700', color: colors.red, marginTop: 4, textDecorationLine: 'underline' },
 
   btnRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md },
-  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
-  secondaryBtnText: { fontSize: FONT.base, fontWeight: '600', color: COLORS.textSecondary },
-  primaryBtn: { flex: 1, backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
+  secondaryBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
+  secondaryBtnText: { fontSize: FONT.base, fontWeight: '600', color: colors.textSecondary },
+  primaryBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
   primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
   btnDisabled: { opacity: 0.6 },
-});
+}));

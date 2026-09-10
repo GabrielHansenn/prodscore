@@ -6,7 +6,9 @@ import { TaskStatus } from '@prodscore/shared';
 import { useUserStore } from '../store/userStore';
 import { useTaskStore } from '../store/taskStore';
 import LevelBar from '../components/LevelBar';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 /** Largura de cada tile por nº de colunas — espelha os breakpoints sm/lg do Tailwind na web */
 function basisFor(cols: number): { flexBasis: DimensionValue } {
@@ -22,6 +24,7 @@ function StatTile({ icon, iconBg, label, value, color, sub, basis }: {
   sub?:   string;
   basis:  { flexBasis: DimensionValue };
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.tile, basis]}>
       <View style={[styles.tileIcon, { backgroundColor: iconBg }]}>
@@ -37,9 +40,11 @@ function StatTile({ icon, iconBg, label, value, color, sub, basis }: {
 }
 
 function SectionTitle({ icon, children }: { icon: keyof typeof Ionicons.glyphMap; children: string }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.sectionTitleRow}>
-      <Ionicons name={icon} size={13} color={COLORS.textMuted} />
+      <Ionicons name={icon} size={13} color={colors.textMuted} />
       <Text style={styles.sectionTitle}>{children}</Text>
     </View>
   );
@@ -51,6 +56,8 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
   const { width } = useWindowDimensions();
   const { stats, fetchStats } = useUserStore();
   const { tasks, fetchTasks } = useTaskStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   useEffect(() => {
     void fetchStats();
@@ -70,7 +77,7 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Estatísticas</Text>
@@ -79,7 +86,7 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
       </View>
 
       {!stats ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
@@ -100,25 +107,25 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
           {/* Esta semana */}
           <SectionTitle icon="calendar-outline">ESTA SEMANA</SectionTitle>
           <View style={styles.grid3}>
-            <StatTile icon="flash"           iconBg={COLORS.primary} label="Pontos Ganhos"      value={stats.pointsThisWeek.toLocaleString('pt-BR')} color={COLORS.primary} basis={basisFor(cols3)} />
-            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompletedThisWeek} color={COLORS.success} basis={basisFor(cols3)} />
-            <StatTile icon="trending-up"      iconBg={COLORS.blue}    label="Consistência"       value={`${Math.round(stats.consistencyRate)}%`} color={COLORS.blue} sub="dos dias ativos" basis={basisFor(cols3)} />
+            <StatTile icon="flash"           iconBg={colors.primary} label="Pontos Ganhos"      value={stats.pointsThisWeek.toLocaleString('pt-BR')} color={colors.primary} basis={basisFor(cols3)} />
+            <StatTile icon="checkmark-circle" iconBg={colors.success} label="Tarefas Concluídas" value={stats.tasksCompletedThisWeek} color={colors.success} basis={basisFor(cols3)} />
+            <StatTile icon="trending-up"      iconBg={colors.blue}    label="Consistência"       value={`${Math.round(stats.consistencyRate)}%`} color={colors.blue} sub="dos dias ativos" basis={basisFor(cols3)} />
           </View>
 
           {/* Sequências */}
           <SectionTitle icon="flame-outline">SEQUÊNCIAS</SectionTitle>
           <View style={styles.grid2}>
-            <StatTile icon="flame" iconBg="rgba(245,158,11,0.2)" label="Sequência atual (dias)" value={stats.currentStreak} color={COLORS.amber} basis={basisFor(cols2)} />
-            <StatTile icon="flame" iconBg="rgba(249,115,22,0.2)" label="Maior sequência (dias)" value={stats.longestStreak} color={COLORS.orange} basis={basisFor(cols2)} />
+            <StatTile icon="flame" iconBg="rgba(245,158,11,0.2)" label="Sequência atual (dias)" value={stats.currentStreak} color={colors.amber} basis={basisFor(cols2)} />
+            <StatTile icon="flame" iconBg="rgba(249,115,22,0.2)" label="Maior sequência (dias)" value={stats.longestStreak} color={colors.orange} basis={basisFor(cols2)} />
           </View>
 
           {/* Geral */}
           <SectionTitle icon="trophy-outline">GERAL</SectionTitle>
           <View style={styles.grid2}>
-            <StatTile icon="checkmark-circle" iconBg={COLORS.success} label="Tarefas Concluídas" value={stats.tasksCompleted} color={COLORS.success} basis={basisFor(colsGeral)} />
-            <StatTile icon="clipboard"        iconBg={COLORS.textSecondary} label="Taxa de Conclusão" value={`${completePct}%`} color={COLORS.text} sub={`${completed} de ${total} tarefas`} basis={basisFor(colsGeral)} />
-            <StatTile icon="trophy"           iconBg={COLORS.amber} label="Conquistas"    value={stats.achievementsCount} color={COLORS.amber} basis={basisFor(colsGeral)} />
-            <StatTile icon="flash"            iconBg={COLORS.primary} label="Total de Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} color={COLORS.primary} basis={basisFor(colsGeral)} />
+            <StatTile icon="checkmark-circle" iconBg={colors.success} label="Tarefas Concluídas" value={stats.tasksCompleted} color={colors.success} basis={basisFor(colsGeral)} />
+            <StatTile icon="clipboard"        iconBg={colors.textSecondary} label="Taxa de Conclusão" value={`${completePct}%`} color={colors.text} sub={`${completed} de ${total} tarefas`} basis={basisFor(colsGeral)} />
+            <StatTile icon="trophy"           iconBg={colors.amber} label="Conquistas"    value={stats.achievementsCount} color={colors.amber} basis={basisFor(colsGeral)} />
+            <StatTile icon="flash"            iconBg={colors.primary} label="Total de Pontos" value={stats.totalPoints.toLocaleString('pt-BR')} color={colors.primary} basis={basisFor(colsGeral)} />
           </View>
 
         </ScrollView>
@@ -127,28 +134,28 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: SPACING.md,
     padding: SPACING.md, paddingBottom: SPACING.sm,
   },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.sm },
 
   levelCard: {
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, marginBottom: SPACING.md, ...CARD_SHADOW,
   },
   levelHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  levelIcon: { width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  levelTitle: { fontSize: FONT.base, fontWeight: '700', color: COLORS.text },
-  levelSub:   { fontSize: FONT.sm, color: COLORS.textMuted },
+  levelIcon: { width: 40, height: 40, borderRadius: RADIUS.md, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  levelTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text },
+  levelSub:   { fontSize: FONT.sm, color: colors.textMuted },
 
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: SPACING.sm, marginTop: SPACING.xs },
-  sectionTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5 },
 
   grid3: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
   grid2: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginBottom: SPACING.md },
@@ -156,11 +163,11 @@ const styles = StyleSheet.create({
   tile: {
     flexGrow: 1,
     flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
-    backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft,
+    backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, ...CARD_SHADOW,
   },
   tileIcon: { width: 36, height: 36, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
   tileValue: { fontSize: FONT.lg, fontWeight: '800' },
-  tileLabel: { fontSize: 11, color: COLORS.textMuted },
-  tileSub:   { fontSize: 10, color: COLORS.textMuted },
-});
+  tileLabel: { fontSize: 11, color: colors.textMuted },
+  tileSub:   { fontSize: 10, color: colors.textMuted },
+}));

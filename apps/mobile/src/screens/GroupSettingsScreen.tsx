@@ -18,7 +18,9 @@ import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
 import ImagePickerField from '../components/ImagePickerField';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -37,6 +39,8 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [group,   setGroup]   = useState<GroupDetails | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -218,7 +222,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Configurações</Text>
@@ -227,7 +231,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
       </View>
 
       {loading || !group ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
@@ -241,7 +245,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
                 <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Descrição</Text>
                 <TextInput
                   style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc}
-                  multiline maxLength={500} placeholder="Opcional" placeholderTextColor={COLORS.textMuted}
+                  multiline maxLength={500} placeholder="Opcional" placeholderTextColor={colors.textMuted}
                 />
                 <View style={{ marginTop: SPACING.md }}>
                   <ImagePickerField
@@ -351,47 +355,47 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, padding: SPACING.md },
-  headerTitle: { fontSize: FONT.lg, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted },
+  headerTitle: { fontSize: FONT.lg, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.md },
 
-  card: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderSoft, padding: SPACING.md, ...CARD_SHADOW },
-  sectionTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 0.5, marginBottom: SPACING.sm },
+  card: { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, padding: SPACING.md, ...CARD_SHADOW },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, marginBottom: SPACING.sm },
 
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: 4 },
-  input: { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: COLORS.text },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
+  input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm },
-  switchHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  btn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.md },
+  switchHint: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  btn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.md },
   btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
 
-  readRow: { fontSize: FONT.base, color: COLORS.text, marginBottom: 4 },
+  readRow: { fontSize: FONT.base, color: colors.text, marginBottom: 4 },
   readLabel: { fontWeight: '600' },
 
   codeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  codeBox: { flex: 1, backgroundColor: COLORS.background, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingVertical: SPACING.sm, alignItems: 'center' },
-  codeText: { fontSize: FONT.lg, fontWeight: '800', letterSpacing: 4, color: COLORS.primary },
-  secondaryBtn: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
-  secondaryBtnText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
-  regenBtn: { marginTop: SPACING.sm, borderWidth: 1, borderColor: COLORS.orangeDim, backgroundColor: COLORS.orangeDim, borderRadius: RADIUS.md, paddingVertical: SPACING.sm, alignItems: 'center' },
+  codeBox: { flex: 1, backgroundColor: colors.background, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.border, paddingVertical: SPACING.sm, alignItems: 'center' },
+  codeText: { fontSize: FONT.lg, fontWeight: '800', letterSpacing: 4, color: colors.primary },
+  secondaryBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+  secondaryBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
+  regenBtn: { marginTop: SPACING.sm, borderWidth: 1, borderColor: colors.orangeDim, backgroundColor: colors.orangeDim, borderRadius: RADIUS.md, paddingVertical: SPACING.sm, alignItems: 'center' },
   regenBtnText: { fontSize: FONT.sm, fontWeight: '600', color: '#c2410c' },
 
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: SPACING.sm, borderTopWidth: 1, borderColor: COLORS.borderSoft },
-  memberName: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.text },
-  memberRole: { fontSize: 11, color: COLORS.textMuted },
-  chipBtn: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 5 },
-  chipBtnText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: SPACING.sm, borderTopWidth: 1, borderColor: colors.borderSoft },
+  memberName: { fontSize: FONT.sm, fontWeight: '600', color: colors.text },
+  memberRole: { fontSize: 11, color: colors.textMuted },
+  chipBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: 5 },
+  chipBtnText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
   chipBtnDanger: { borderColor: 'rgba(239,68,68,0.4)' },
-  chipBtnDangerText: { color: COLORS.red },
+  chipBtnDangerText: { color: colors.red },
 
   dangerCard: { borderColor: 'rgba(239,68,68,0.3)' },
-  dangerTitle: { fontSize: 11, fontWeight: '700', color: COLORS.red, letterSpacing: 0.5, marginBottom: SPACING.sm },
+  dangerTitle: { fontSize: 11, fontWeight: '700', color: colors.red, letterSpacing: 0.5, marginBottom: SPACING.sm },
   dangerBtnOutline: { borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)', borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
-  dangerBtnOutlineText: { color: COLORS.red, fontWeight: '600', fontSize: FONT.base },
-  dangerBtnFill: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.red, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  dangerBtnOutlineText: { color: colors.red, fontWeight: '600', fontSize: FONT.base },
+  dangerBtnFill: { flexDirection: 'row', gap: 6, backgroundColor: colors.red, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   dangerBtnFillText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
-});
+}));

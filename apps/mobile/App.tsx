@@ -14,11 +14,13 @@ import {
 import AppNavigation from './src/navigation/index';
 import ToastHost from './src/components/ToastHost';
 import GamificationPopup from './src/components/GamificationPopup';
-import { COLORS } from './src/constants/theme';
+import { useThemeColors, useResolvedTheme } from './src/lib/useThemeColors';
 import './src/lib/globalFont';
 
 /** Ponto de entrada do aplicativo mobile ProdScore */
 export default function App() {
+  const colors = useThemeColors();
+  const resolvedTheme = useResolvedTheme();
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
@@ -28,13 +30,13 @@ export default function App() {
   });
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: COLORS.background }} />;
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
         <AppNavigation />
         <ToastHost />
         <GamificationPopup />

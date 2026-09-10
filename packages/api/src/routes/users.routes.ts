@@ -1,5 +1,7 @@
-import { Router } from 'express';
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
+import { MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { requireAAL2 } from '../middleware/aal.js';
 import { sendError, AppError } from '../lib/errors.js';
@@ -7,6 +9,7 @@ import { supabase, getUserById } from '../lib/supabase.js';
 import { getMissionsForUser } from '../services/mission.service.js';
 import { buyStreakFreeze } from '../services/gamification.service.js';
 import { purgeAllProofFilesForUser } from '../services/proof.service.js';
+import { uploadUserAvatar } from '../services/user.service.js';
 import {
   computeBehavioralProfile,
   getTaskSuggestions,
@@ -14,6 +17,27 @@ import {
 } from '../services/behavioral.service.js';
 
 const router = Router();
+
+/** Upload em memória — usado só pelo mobile (web faz upload direto pro Supabase Storage) */
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+});
+
+/** Mesma ideia do handler equivalente em groups.routes.ts — erros do multer não passam pelo try/catch normal */
+function handleAvatarUpload(req: Request, res: Response, next: NextFunction): void {
+  avatarUpload.single('avatar')(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ erro: `A imagem deve ter no máximo ${MAX_IMAGE_SIZE_MB} MB.`, codigo: 'ARQUIVO_MUITO_GRANDE' });
+      return;
+    }
+    if (err) {
+      res.status(400).json({ erro: 'Erro ao processar o arquivo enviado.', codigo: 'UPLOAD_INVALIDO' });
+      return;
+    }
+    next();
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Schemas de validação
@@ -121,6 +145,28 @@ router.patch('/me', authGuard, async (req, res) => {
     });
   } catch (err) {
     return sendError(res, err, '[usuarios/PATCH/me]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /users/me/avatar
+// ---------------------------------------------------------------------------
+
+/**
+ * Sobe a foto de perfil do usuário autenticado. Devolve só a URL — quem
+ * persiste no perfil é o PATCH /users/me (mesmo padrão do upload de imagem
+ * de grupo em POST /groups/image).
+ */
+router.post('/me/avatar', authGuard, handleAvatarUpload, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const file = req.file;
+    if (!file) throw new AppError('Nenhum arquivo enviado.', 400, 'ARQUIVO_AUSENTE');
+
+    const avatarUrl = await uploadUserAvatar(user.id, file.buffer);
+    return res.status(200).json({ avatarUrl });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/POST/me/avatar]');
   }
 });
 

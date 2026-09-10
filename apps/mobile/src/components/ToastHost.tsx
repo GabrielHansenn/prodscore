@@ -2,7 +2,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useToastStore } from '../store/toastStore';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 /**
  * Host global de toasts — montado uma única vez em `App.tsx`, acima da
@@ -15,6 +17,8 @@ import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 export default function ToastHost() {
   const toasts = useToastStore((s) => s.toasts);
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   if (toasts.length === 0) return null;
 
@@ -27,7 +31,7 @@ export default function ToastHost() {
             <Ionicons
               name={isError ? 'alert-circle' : 'checkmark-circle'}
               size={18}
-              color={isError ? COLORS.red : COLORS.success}
+              color={isError ? colors.red : colors.success}
             />
             <Text style={styles.text} numberOfLines={2}>{toast.message}</Text>
           </View>
@@ -37,7 +41,7 @@ export default function ToastHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   container: {
     position: 'absolute',
     left: SPACING.md,
@@ -51,12 +55,12 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     ...CARD_SHADOW,
   },
-  toastError:   { borderColor: COLORS.red },
-  toastSuccess: { borderColor: COLORS.success },
-  text: { flex: 1, fontSize: FONT.sm, fontWeight: '500', color: COLORS.text },
-});
+  toastError:   { borderColor: colors.red },
+  toastSuccess: { borderColor: colors.success },
+  text: { flex: 1, fontSize: FONT.sm, fontWeight: '500', color: colors.text },
+}));

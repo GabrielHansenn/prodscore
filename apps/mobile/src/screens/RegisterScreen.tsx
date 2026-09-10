@@ -8,7 +8,9 @@ import { validateUsername, validateEmail, validatePassword, validatePasswordConf
 import { useAuthStore } from '../store/authStore';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import InlineFeedback, { FieldError } from '../components/InlineFeedback';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AuthStackParamList } from '../navigation/index';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -23,6 +25,8 @@ interface FieldErrors {
 /** Tela de cadastro com nome de usuário, e-mail, senha e confirmação */
 export default function RegisterScreen({ navigation }: Props) {
   const register = useAuthStore((s) => s.register);
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [username,        setUsername]        = useState('');
   const [email,           setEmail]           = useState('');
@@ -102,7 +106,7 @@ export default function RegisterScreen({ navigation }: Props) {
               value={username}
               onChangeText={(v) => { setUsername(v); if (fieldErrors.username) setFieldErrors((p) => ({ ...p, username: undefined })); }}
               placeholder="meu_usuario"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -116,7 +120,7 @@ export default function RegisterScreen({ navigation }: Props) {
               value={email}
               onChangeText={(v) => { setEmail(v); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); }}
               placeholder="seu@email.com"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -131,7 +135,7 @@ export default function RegisterScreen({ navigation }: Props) {
               value={password}
               onChangeText={(v) => { setPassword(v); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
               placeholder="Mín. 8 caracteres, com letras e números"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoCorrect={false}
             />
@@ -145,7 +149,7 @@ export default function RegisterScreen({ navigation }: Props) {
               value={confirmPassword}
               onChangeText={(v) => { setConfirmPassword(v); if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: undefined })); }}
               placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoCorrect={false}
             />
@@ -178,35 +182,35 @@ export default function RegisterScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root:  { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.lg },
   logo:   { alignItems: 'center', marginBottom: SPACING.xl },
-  logoText: { fontSize: 36, fontWeight: '800', color: COLORS.primary, letterSpacing: -0.5 },
-  logoSub:  { fontSize: FONT.base, color: COLORS.textMuted, marginTop: SPACING.xs },
+  logoText: { fontSize: 36, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 },
+  logoSub:  { fontSize: FONT.base, color: colors.textMuted, marginTop: SPACING.xs },
   card: {
     gap: SPACING.md,
   },
-  title: { fontSize: FONT.xxl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
+  title: { fontSize: FONT.xxl, fontWeight: '700', color: colors.text, marginBottom: SPACING.xs },
   field: { gap: SPACING.xs },
-  label: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary },
+  label: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary },
   input: {
-    backgroundColor:   COLORS.input,
+    backgroundColor:   colors.input,
     borderRadius:      RADIUS.md,
     borderWidth:       1,
-    borderColor:       COLORS.border,
+    borderColor:       colors.border,
     paddingHorizontal: SPACING.md,
     paddingVertical:   12,
     fontSize:          FONT.base,
-    color:             COLORS.text,
+    color:             colors.text,
   },
-  btn:       { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
+  btn:       { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnDisabled: { opacity: 0.6 },
   btnText:   { color: '#fff', fontWeight: '700', fontSize: FONT.md },
   footer:    { flexDirection: 'row', justifyContent: 'center', marginTop: SPACING.lg },
-  footerText: { color: COLORS.textMuted, fontSize: FONT.base },
-  link:      { color: COLORS.primary, fontWeight: '600', fontSize: FONT.base },
-  confirmTitle: { fontSize: FONT.xl, fontWeight: '700', color: COLORS.text, marginTop: SPACING.md, textAlign: 'center' },
-  confirmDesc:  { fontSize: FONT.base, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, lineHeight: 22 },
-});
+  footerText: { color: colors.textMuted, fontSize: FONT.base },
+  link:      { color: colors.primary, fontWeight: '600', fontSize: FONT.base },
+  confirmTitle: { fontSize: FONT.xl, fontWeight: '700', color: colors.text, marginTop: SPACING.md, textAlign: 'center' },
+  confirmDesc:  { fontSize: FONT.base, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.sm, lineHeight: 22 },
+}));

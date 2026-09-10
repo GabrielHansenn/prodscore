@@ -16,7 +16,9 @@ import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
 
 // ---------------------------------------------------------------------------
@@ -58,6 +60,8 @@ function CreateModal({ visible, onClose, onCreate }: {
   onClose: () => void;
   onCreate: (g: MobileGroup) => void;
 }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [name,    setName]    = useState('');
   const [desc,    setDesc]    = useState('');
   const [error,   setError]   = useState('');
@@ -94,9 +98,9 @@ function CreateModal({ visible, onClose, onCreate }: {
           <View style={styles.handle} />
           <Text style={styles.modalTitle}>Criar Grupo</Text>
           <Text style={styles.fieldLabel}>Nome do grupo</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Devs Produtivos" placeholderTextColor={COLORS.textMuted} autoFocus />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Devs Produtivos" placeholderTextColor={colors.textMuted} autoFocus />
           <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Descrição (opcional)</Text>
-          <TextInput style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" placeholderTextColor={COLORS.textMuted} multiline />
+          <TextInput style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" placeholderTextColor={colors.textMuted} multiline />
           <View style={{ marginTop: SPACING.md }}>
             <ImagePickerField
               label="Imagem do grupo (opcional)"
@@ -128,6 +132,8 @@ function JoinModal({ visible, onClose, onJoin }: {
   onClose: () => void;
   onJoin: (g: MobileGroup) => void;
 }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [code,    setCode]    = useState('');
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
@@ -162,7 +168,7 @@ function JoinModal({ visible, onClose, onJoin }: {
             value={code}
             onChangeText={(t) => setCode(t.toUpperCase())}
             placeholder="EX: AB12CD"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             autoCapitalize="characters"
             autoFocus
             maxLength={8}
@@ -187,6 +193,8 @@ export default function GroupsScreen() {
   const insets = useSafeAreaInsets();
   const { isWide } = useResponsive();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const colors = useThemeColors();
+  const styles = useStyles();
   const [groups,      setGroups]      = useState<MobileGroup[]>([]);
   const [isLoading,   setIsLoading]   = useState(true);
   const [showCreate,  setShowCreate]  = useState(false);
@@ -232,7 +240,7 @@ export default function GroupsScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={COLORS.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : groups.length === 0 ? (
         <View style={styles.center}>
@@ -269,38 +277,38 @@ export default function GroupsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
     gap: SPACING.sm, padding: SPACING.md, paddingBottom: SPACING.sm,
   },
-  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: COLORS.text },
-  headerSub:   { fontSize: FONT.sm, color: COLORS.textMuted, marginTop: 2 },
+  headerTitle: { fontSize: FONT.xl, fontWeight: '800', color: colors.text },
+  headerSub:   { fontSize: FONT.sm, color: colors.textMuted, marginTop: 2 },
   list:        { padding: SPACING.md, paddingBottom: SPACING.xl },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm, padding: SPACING.xl },
-  emptyText:   { fontSize: FONT.lg, fontWeight: '600', color: COLORS.textSecondary },
-  emptyHint:   { fontSize: FONT.base, color: COLORS.textMuted, textAlign: 'center' },
+  emptyText:   { fontSize: FONT.lg, fontWeight: '600', color: colors.textSecondary },
+  emptyHint:   { fontSize: FONT.base, color: colors.textMuted, textAlign: 'center' },
 
   headerActions: { flexDirection: 'row', gap: SPACING.sm },
   btnSecondary: {
-    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.card,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
     borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10,
   },
-  btnSecondaryText: { fontSize: FONT.sm, fontWeight: '600', color: COLORS.textSecondary },
+  btnSecondaryText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
   btnPrimary: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10,
   },
   btnPrimaryText: { fontSize: FONT.sm, fontWeight: '600', color: '#fff' },
 
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  sheet:   { backgroundColor: COLORS.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.sm },
-  handle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: SPACING.sm },
-  modalTitle: { fontSize: FONT.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary },
-  input:      { backgroundColor: COLORS.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: COLORS.text },
+  sheet:   { backgroundColor: colors.card, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.sm },
+  handle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: SPACING.sm },
+  modalTitle: { fontSize: FONT.xl, fontWeight: '700', color: colors.text, marginBottom: SPACING.xs },
+  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary },
+  input:      { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: SPACING.md, paddingVertical: 12, fontSize: FONT.base, color: colors.text },
   codeInput:  { textAlign: 'center', fontSize: FONT.xl, letterSpacing: 8, fontWeight: '700' },
-  btn:        { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
+  btn:        { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnText:    { color: '#fff', fontWeight: '700', fontSize: FONT.md },
-});
+}));

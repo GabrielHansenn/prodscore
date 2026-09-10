@@ -6,7 +6,9 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { translateMFAErrorMessage } from '../services/mfa.service';
 import InlineFeedback from '../components/InlineFeedback';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 /**
  * Tela de verificação em duas etapas exibida após o login com e-mail e senha
@@ -15,6 +17,8 @@ import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
  */
 export default function MfaVerifyScreen() {
   const { verifyMfaChallenge, logout, isLoading } = useAuthStore();
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [code,   setCode]   = useState('');
   const [error,  setError]  = useState('');
@@ -50,7 +54,7 @@ export default function MfaVerifyScreen() {
             value={code}
             onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
             placeholder="000000"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={colors.textMuted}
             keyboardType="number-pad"
             maxLength={6}
             autoFocus
@@ -79,32 +83,32 @@ export default function MfaVerifyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: COLORS.background },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  root:   { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: SPACING.lg },
   logo:   { alignItems: 'center', marginBottom: SPACING.xl },
-  logoText: { fontSize: 36, fontWeight: '800', color: COLORS.primary, letterSpacing: -0.5 },
+  logoText: { fontSize: 36, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 },
 
   card: { gap: SPACING.md, alignItems: 'center' },
-  title:    { fontSize: FONT.xxl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
-  subtitle: { fontSize: FONT.base, color: COLORS.textMuted, textAlign: 'center', marginBottom: SPACING.sm },
+  title:    { fontSize: FONT.xxl, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  subtitle: { fontSize: FONT.base, color: colors.textMuted, textAlign: 'center', marginBottom: SPACING.sm },
 
   codeInput: {
     width: '100%',
-    backgroundColor: COLORS.input,
+    backgroundColor: colors.input,
     borderRadius:    RADIUS.md,
     borderWidth:     1,
-    borderColor:     COLORS.border,
+    borderColor:     colors.border,
     paddingVertical: 14,
     fontSize:        FONT.xxl,
     letterSpacing:   12,
     textAlign:       'center',
-    color:           COLORS.text,
+    color:           colors.text,
   },
 
   btn: {
     width: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius:    RADIUS.md,
     paddingVertical: 14,
     alignItems:      'center',
@@ -113,5 +117,5 @@ const styles = StyleSheet.create({
   btnText:     { color: '#fff', fontWeight: '700', fontSize: FONT.md },
 
   cancelBtn:  { marginTop: SPACING.xs },
-  cancelText: { color: COLORS.textMuted, fontSize: FONT.sm, fontWeight: '500' },
-});
+  cancelText: { color: colors.textMuted, fontSize: FONT.sm, fontWeight: '500' },
+}));

@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 /**
  * Bloco de feedback de formulário (erro ou sucesso) — visual único reusado em
@@ -8,25 +10,28 @@ import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
  */
 export default function InlineFeedback({ variant, message }: { variant: 'error' | 'success'; message: string }) {
   const isError = variant === 'error';
+  const colors = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={[styles.box, isError ? styles.boxError : styles.boxSuccess]}>
       <Ionicons
         name={isError ? 'alert-circle-outline' : 'checkmark-circle-outline'}
         size={16}
-        color={isError ? COLORS.red : COLORS.success}
+        color={isError ? colors.red : colors.success}
       />
-      <Text style={[styles.text, { color: isError ? COLORS.red : COLORS.success }]}>{message}</Text>
+      <Text style={[styles.text, { color: isError ? colors.red : colors.success }]}>{message}</Text>
     </View>
   );
 }
 
 /** Erro de um campo específico, exibido logo abaixo do input. */
 export function FieldError({ msg }: { msg?: string }) {
+  const styles = useStyles();
   if (!msg) return null;
   return <Text style={styles.fieldError}>{msg}</Text>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -36,8 +41,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
   },
-  boxError:   { borderColor: COLORS.red,     backgroundColor: COLORS.redDim },
-  boxSuccess: { borderColor: COLORS.success, backgroundColor: COLORS.successDim },
+  boxError:   { borderColor: colors.red,     backgroundColor: colors.redDim },
+  boxSuccess: { borderColor: colors.success, backgroundColor: colors.successDim },
   text:       { flex: 1, fontSize: FONT.sm },
-  fieldError: { marginTop: 4, fontSize: 11, color: COLORS.red },
-});
+  fieldError: { marginTop: 4, fontSize: 11, color: colors.red },
+}));

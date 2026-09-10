@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW, type ColorPalette } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface StatCardProps {
   label:    string;
@@ -11,18 +13,23 @@ interface StatCardProps {
   icon?:    string;
 }
 
-const ACCENT_COLOR = {
-  lime:    COLORS.limeText,
-  amber:   COLORS.amber,
-  primary: COLORS.primary,
-  blue:    COLORS.blue,
-};
+function getAccentColor(colors: ColorPalette) {
+  return {
+    lime:    colors.limeText,
+    amber:   colors.amber,
+    primary: colors.primary,
+    blue:    colors.blue,
+  };
+}
 
 /**
  * Mini card de estatística — espelha o StatCard do DashboardPage web:
  * card branco liso (sem fundo colorido no tema claro), valor grande colorido.
  */
 export default function StatCard({ label, value, sub, accent, icon }: StatCardProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
+  const ACCENT_COLOR = getAccentColor(colors);
   return (
     <View style={styles.card}>
       <View style={styles.top}>
@@ -35,13 +42,13 @@ export default function StatCard({ label, value, sub, accent, icon }: StatCardPr
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   card: {
     flex:            1,
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     minWidth:        70,
     ...CARD_SHADOW,
@@ -56,7 +63,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize:   FONT.sm,
-    color:      COLORS.textSecondary,
+    color:      colors.textSecondary,
     fontWeight: '500',
   },
   value: {
@@ -66,7 +73,7 @@ const styles = StyleSheet.create({
   },
   sub: {
     fontSize:  11,
-    color:     COLORS.textMuted,
+    color:     colors.textMuted,
     marginTop: 2,
   },
-});
+}));

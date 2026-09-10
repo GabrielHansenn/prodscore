@@ -1,7 +1,9 @@
 import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MemberRole } from '@prodscore/shared';
-import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import { FONT, RADIUS, SPACING, CARD_SHADOW, type ColorPalette } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 export interface GroupCardData {
   id:          string;
@@ -24,21 +26,26 @@ const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Member]: 'Membro',
 };
 
-const ROLE_COLORS: Record<MemberRole, string> = {
-  [MemberRole.Owner]:  COLORS.amber,
-  [MemberRole.Admin]:  COLORS.primary400,
-  [MemberRole.Member]: COLORS.textSecondary,
-};
+function getRoleColors(colors: ColorPalette): Record<MemberRole, string> {
+  return {
+    [MemberRole.Owner]:  colors.amber,
+    [MemberRole.Admin]:  colors.primary400,
+    [MemberRole.Member]: colors.textSecondary,
+  };
+}
 
 /** Card de preview de grupo com nome, membros e posição do usuário */
 export default function GroupCard({ group, onPress }: GroupCardProps) {
+  const colors = useThemeColors();
+  const styles = useStyles();
+  const ROLE_COLORS = getRoleColors(colors);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.iconCircle}>
         {group.imageUrl ? (
           <Image source={{ uri: group.imageUrl }} style={styles.iconImage} />
         ) : (
-          <Ionicons name="people" size={20} color={COLORS.primary} />
+          <Ionicons name="people" size={20} color={colors.primary} />
         )}
       </View>
       <View style={styles.info}>
@@ -62,14 +69,14 @@ export default function GroupCard({ group, onPress }: GroupCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   card: {
     flexDirection:   'row',
     alignItems:      'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,
     borderWidth:     1,
-    borderColor:     COLORS.borderSoft,
+    borderColor:     colors.borderSoft,
     padding:         SPACING.md,
     marginBottom:    SPACING.sm,
     gap:             SPACING.md,
@@ -79,7 +86,7 @@ const styles = StyleSheet.create({
     width:           44,
     height:          44,
     borderRadius:    RADIUS.md,
-    backgroundColor: COLORS.primaryDim,
+    backgroundColor: colors.primaryDim,
     alignItems:      'center',
     justifyContent:  'center',
     overflow:        'hidden',
@@ -95,11 +102,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize:   FONT.base,
     fontWeight: '700',
-    color:      COLORS.text,
+    color:      colors.text,
   },
   desc: {
     fontSize: FONT.sm,
-    color:    COLORS.textMuted,
+    color:    colors.textMuted,
   },
   meta: {
     flexDirection: 'row',
@@ -107,15 +114,15 @@ const styles = StyleSheet.create({
   },
   members: {
     fontSize: FONT.sm,
-    color:    COLORS.textMuted,
+    color:    colors.textMuted,
   },
   pos: {
     fontSize: FONT.sm,
-    color:    COLORS.primary,
+    color:    colors.primary,
     fontWeight: '600',
   },
   roleBadge: {
     fontSize:   FONT.sm,
     fontWeight: '600',
   },
-});
+}));

@@ -7,7 +7,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import InlineFeedback from '../components/InlineFeedback';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AuthStackParamList } from '../navigation/index';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -15,6 +17,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 /** Tela de login com e-mail e senha */
 export default function LoginScreen({ navigation }: Props) {
   const login = useAuthStore((s) => s.login);
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -60,7 +64,7 @@ export default function LoginScreen({ navigation }: Props) {
               value={email}
               onChangeText={setEmail}
               placeholder="seu@email.com"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -74,7 +78,7 @@ export default function LoginScreen({ navigation }: Props) {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               secureTextEntry
             />
           </View>
@@ -106,10 +110,10 @@ export default function LoginScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
   root: {
     flex:            1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scroll: {
     flexGrow:       1,
@@ -123,12 +127,12 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize:   36,
     fontWeight: '800',
-    color:      COLORS.primary,
+    color:      colors.primary,
     letterSpacing: -0.5,
   },
   logoSub: {
     fontSize:  FONT.base,
-    color:     COLORS.textMuted,
+    color:     colors.textMuted,
     marginTop: SPACING.xs,
   },
   card: {
@@ -137,12 +141,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize:     FONT.xxl,
     fontWeight:   '700',
-    color:        COLORS.text,
+    color:        colors.text,
     marginBottom: 2,
   },
   subtitle: {
     fontSize:     FONT.base,
-    color:        COLORS.textMuted,
+    color:        colors.textMuted,
     marginBottom: SPACING.md,
   },
   field: {
@@ -151,20 +155,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize:   FONT.sm,
     fontWeight: '500',
-    color:      COLORS.textSecondary,
+    color:      colors.textSecondary,
   },
   input: {
-    backgroundColor: COLORS.input,
+    backgroundColor: colors.input,
     borderRadius:    RADIUS.md,
     borderWidth:     1,
-    borderColor:     COLORS.border,
+    borderColor:     colors.border,
     paddingHorizontal: SPACING.md,
     paddingVertical:   12,
     fontSize:        FONT.base,
-    color:           COLORS.text,
+    color:           colors.text,
   },
   btn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius:    RADIUS.md,
     paddingVertical: 14,
     alignItems:      'center',
@@ -184,12 +188,12 @@ const styles = StyleSheet.create({
     marginTop:      SPACING.lg,
   },
   footerText: {
-    color:    COLORS.textMuted,
+    color:    colors.textMuted,
     fontSize: FONT.base,
   },
   link: {
-    color:      COLORS.primary,
+    color:      colors.primary,
     fontWeight: '600',
     fontSize:   FONT.base,
   },
-});
+}));

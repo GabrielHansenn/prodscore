@@ -2,7 +2,9 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import type { PickedImage } from '../lib/useImageUpload';
-import { COLORS, FONT, RADIUS, SPACING } from '../constants/theme';
+import { FONT, RADIUS, SPACING } from '../constants/theme';
+import { useThemeColors } from '../lib/useThemeColors';
+import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface ImagePickerFieldProps {
   label:             string;
@@ -23,6 +25,8 @@ export default function ImagePickerField({
   label, image, currentUrl, fallbackIcon, onTakePhoto, onPickFromLibrary, onClear,
 }: ImagePickerFieldProps) {
   const imageSrc = image?.uri ?? currentUrl;
+  const colors = useThemeColors();
+  const styles = useStyles();
 
   return (
     <View>
@@ -32,18 +36,18 @@ export default function ImagePickerField({
           {imageSrc ? (
             <Image source={{ uri: imageSrc }} style={styles.previewImage} />
           ) : (
-            <Ionicons name={fallbackIcon} size={26} color={COLORS.primary} />
+            <Ionicons name={fallbackIcon} size={26} color={colors.primary} />
           )}
         </View>
 
         <View style={styles.actions}>
           <View style={styles.btnRow}>
             <TouchableOpacity style={styles.smallBtn} onPress={onTakePhoto}>
-              <Ionicons name="camera-outline" size={14} color={COLORS.primary} />
+              <Ionicons name="camera-outline" size={14} color={colors.primary} />
               <Text style={styles.smallBtnText}>Câmera</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.smallBtn} onPress={onPickFromLibrary}>
-              <Ionicons name="image-outline" size={14} color={COLORS.primary} />
+              <Ionicons name="image-outline" size={14} color={colors.primary} />
               <Text style={styles.smallBtnText}>Galeria</Text>
             </TouchableOpacity>
           </View>
@@ -59,12 +63,12 @@ export default function ImagePickerField({
   );
 }
 
-const styles = StyleSheet.create({
-  label: { fontSize: FONT.sm, fontWeight: '500', color: COLORS.textSecondary, marginBottom: SPACING.sm },
+const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  label: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   preview: {
     width: 64, height: 64, borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.primaryDim,
+    backgroundColor: colors.primaryDim,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
@@ -73,10 +77,10 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: 'row', gap: SPACING.xs },
   smallBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.sm, paddingVertical: 6,
   },
-  smallBtnText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
-  cancelText: { fontSize: 12, color: COLORS.textMuted },
-  helpText: { fontSize: 11, color: COLORS.textMuted, marginTop: SPACING.xs },
-});
+  smallBtnText: { fontSize: 12, fontWeight: '600', color: colors.primary },
+  cancelText: { fontSize: 12, color: colors.textMuted },
+  helpText: { fontSize: 11, color: colors.textMuted, marginTop: SPACING.xs },
+}));
