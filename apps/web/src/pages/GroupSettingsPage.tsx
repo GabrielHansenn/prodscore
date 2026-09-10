@@ -15,8 +15,10 @@ import {
 } from '../services/group.service.js';
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
+import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
 import FormFeedback from '../components/FormFeedback.js';
-import { FlameIcon, CogIcon, TrashIcon } from '../components/icons.js';
+import ImagePickerField from '../components/ImagePickerField.js';
+import { FlameIcon, CogIcon, TrashIcon, UsersIcon } from '../components/icons.js';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -97,17 +99,18 @@ function GroupInfoSection({
   onSaved: (updated: GroupDetails) => void;
 }) {
   const { id } = useParams<{ id: string }>();
+  const userId = useAuthStore((s) => s.user?.id);
   const [name,        setName]        = useState(group.name);
   const [description, setDescription] = useState(group.description ?? '');
-  const [imageUrl,    setImageUrl]    = useState(group.imageUrl ?? '');
   const [countExternal, setCountExternal] = useState(group.countExternalTasksInMissions);
   const [saving,      setSaving]      = useState(false);
   const [feedback,    setFeedback]    = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
+  const imageUpload = useImageUpload();
 
   const dirty =
     name !== group.name ||
     description !== (group.description ?? '') ||
-    imageUrl !== (group.imageUrl ?? '') ||
+    imageUpload.file !== null ||
     countExternal !== group.countExternalTasksInMissions;
 
   const handleSubmit = async (e: FormEvent) => {
@@ -123,13 +126,19 @@ function GroupInfoSection({
     setSaving(true);
     setFeedback(null);
     try {
+      let imageUrl: string | undefined;
+      if (imageUpload.file && userId) {
+        imageUrl = await uploadToAvatarsBucket(userId, imageUpload.file, `group-${id}`);
+      }
+
       const updated = await updateGroupInfo(id, {
         name: trimmedName,
         description: description.trim() || null,
-        imageUrl:    imageUrl.trim() || null,
         countExternalTasksInMissions: countExternal,
+        ...(imageUrl !== undefined ? { imageUrl } : {}),
       });
       onSaved({ ...group, ...updated });
+      imageUpload.clear();
       setFeedback({ type: 'ok', msg: 'Informações salvas com sucesso.' });
     } catch (err) {
       setFeedback({ type: 'err', msg: err instanceof Error ? err.message : 'Erro ao salvar.' });
@@ -167,16 +176,17 @@ function GroupInfoSection({
               className="input w-full resize-none"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">URL da imagem</label>
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://..."
-              className="input w-full"
-            />
-          </div>
+          <ImagePickerField
+            label="Imagem do grupo"
+            previewUrl={imageUpload.previewUrl}
+            currentUrl={group.imageUrl}
+            fallback={<UsersIcon className="h-6 w-6 text-brand-600 dark:text-brand-400" />}
+            file={imageUpload.file}
+            inputRef={imageUpload.inputRef}
+            onFileChange={imageUpload.handleFileChange}
+            onClear={imageUpload.clear}
+          />
+          {imageUpload.error && <FormFeedback variant="error" message={imageUpload.error} />}
           <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"

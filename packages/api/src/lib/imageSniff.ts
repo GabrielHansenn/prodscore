@@ -1,4 +1,4 @@
-import type { ProofMimeType } from '@prodscore/shared';
+import type { ProofMimeType, ImageMimeType } from '@prodscore/shared';
 
 /**
  * Detecta o tipo real de uma imagem a partir dos primeiros bytes do arquivo
@@ -41,5 +41,35 @@ export function extensionForImageType(type: ProofMimeType): string {
     case 'image/jpeg': return 'jpg';
     case 'image/png':  return 'png';
     case 'image/webp': return 'webp';
+  }
+}
+
+/**
+ * Mesma ideia de `detectImageType`, mas para o critério de imagem de
+ * exibição (avatar de perfil, capa de grupo) — que também aceita GIF,
+ * diferente da comprovação de tarefa.
+ *
+ * Assinatura adicional:
+ * - GIF: "GIF87a" ou "GIF89a" nos primeiros 6 bytes
+ */
+export function detectDisplayImageType(buffer: Buffer): ImageMimeType | null {
+  if (buffer.length < 12) return null;
+
+  const header6 = buffer.subarray(0, 6).toString('ascii');
+  if (header6 === 'GIF87a' || header6 === 'GIF89a') {
+    return 'image/gif';
+  }
+
+  // JPEG/PNG/WebP têm a mesma assinatura do critério de comprovação
+  return detectImageType(buffer);
+}
+
+/** Extensão de arquivo convencional para cada tipo de imagem de exibição aceito */
+export function extensionForDisplayImageType(type: ImageMimeType): string {
+  switch (type) {
+    case 'image/jpeg': return 'jpg';
+    case 'image/png':  return 'png';
+    case 'image/webp': return 'webp';
+    case 'image/gif':  return 'gif';
   }
 }

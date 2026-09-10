@@ -50,6 +50,21 @@ export async function createGroup(input: {
   return data.grupo;
 }
 
+/**
+ * Sobe uma imagem de capa de grupo e devolve a URL pública — usada tanto na
+ * criação quanto na edição do grupo. O mobile não fala com o Supabase
+ * Storage diretamente (diferente do web), então o upload passa pela API.
+ */
+export async function uploadGroupImage(image: { uri: string; name: string; type: string }): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
+
+  const { data } = await api.post<{ imageUrl: string }>('/groups/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.imageUrl;
+}
+
 /** Entra em um grupo usando o código de convite. */
 export async function joinGroup(inviteCode: string): Promise<Group> {
   const { data } = await api.post<{ grupo: Group }>('/groups/join', {

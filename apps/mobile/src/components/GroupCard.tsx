@@ -1,4 +1,5 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { MemberRole } from '@prodscore/shared';
 import { COLORS, FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 
@@ -6,6 +7,7 @@ export interface GroupCardData {
   id:          string;
   name:        string;
   description: string | null;
+  imageUrl:    string | null;
   memberCount: number;
   role:        MemberRole;
   myPosition?: number;
@@ -33,7 +35,11 @@ export default function GroupCard({ group, onPress }: GroupCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.iconCircle}>
-        <Text style={styles.iconEmoji}>👥</Text>
+        {group.imageUrl ? (
+          <Image source={{ uri: group.imageUrl }} style={styles.iconImage} />
+        ) : (
+          <Ionicons name="people" size={20} color={COLORS.primary} />
+        )}
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
@@ -76,9 +82,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryDim,
     alignItems:      'center',
     justifyContent:  'center',
+    overflow:        'hidden',
   },
-  iconEmoji: {
-    fontSize: 20,
+  iconImage: {
+    width:  '100%',
+    height: '100%',
   },
   info: {
     flex: 1,
