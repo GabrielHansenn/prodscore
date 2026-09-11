@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { levelThreshold } from '@prodscore/shared';
+import { pointsAtLevelStart } from '@prodscore/shared';
 import {
   useGamificationPopupStore,
   type XpGainPayload,
@@ -16,8 +16,8 @@ const LEVEL_UP_GAP = 550;  // pausa entre a barra bater 100% e resetar pro novo 
 
 /** Progresso (0-100) dentro de um nível, dado o total de pontos */
 function progressWithinLevel(level: number, totalPoints: number): number {
-  const from  = levelThreshold(level);
-  const to    = levelThreshold(level + 1);
+  const from  = pointsAtLevelStart(level);
+  const to    = pointsAtLevelStart(level + 1);
   const range = to - from;
   if (range <= 0) return 100;
   return Math.max(0, Math.min(((totalPoints - from) / range) * 100, 100));

@@ -1,5 +1,5 @@
 import { PointReason, type PointTransaction } from '@prodscore/shared';
-import { CheckCircleIcon, FlameIcon, ExclamationTriangleIcon, FlagIcon, TrophyIcon } from './icons.js';
+import { CheckCircleIcon, FlameIcon, ExclamationTriangleIcon, FlagIcon, TrophyIcon, SnowflakeIcon, RocketIcon } from './icons.js';
 
 interface PointTransactionFeedProps {
   transactions: PointTransaction[];
@@ -11,6 +11,8 @@ const REASON_LABELS: Record<PointReason, string> = {
   [PointReason.LatePenalty]:      'Penalidade por atraso',
   [PointReason.MissionReward]:    'Recompensa de missão',
   [PointReason.AchievementBonus]: 'Conquista desbloqueada',
+  [PointReason.FreezeShop]:       'Compra de freeze',
+  [PointReason.LevelReward]:      'Recompensa de nível',
 };
 
 type IconComponent = React.FC<{ className?: string }>;
@@ -21,6 +23,8 @@ const REASON_ICONS: Record<PointReason, IconComponent> = {
   [PointReason.LatePenalty]:      ExclamationTriangleIcon,
   [PointReason.MissionReward]:    FlagIcon,
   [PointReason.AchievementBonus]: TrophyIcon,
+  [PointReason.FreezeShop]:       SnowflakeIcon,
+  [PointReason.LevelReward]:      RocketIcon,
 };
 
 const REASON_ICON_COLORS: Record<PointReason, string> = {
@@ -29,6 +33,8 @@ const REASON_ICON_COLORS: Record<PointReason, string> = {
   [PointReason.LatePenalty]:      'text-red-500 dark:text-red-400',
   [PointReason.MissionReward]:    'text-brand-500 dark:text-brand-400',
   [PointReason.AchievementBonus]: 'text-amber-500 dark:text-amber-400',
+  [PointReason.FreezeShop]:       'text-blue-500 dark:text-blue-400',
+  [PointReason.LevelReward]:      'text-brand-500 dark:text-brand-400',
 };
 
 export default function PointTransactionFeed({ transactions }: PointTransactionFeedProps) {

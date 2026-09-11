@@ -44,6 +44,8 @@ const REASON_LABELS: Record<string, string> = {
   late_penalty:      'Penalidade por atraso',
   mission_reward:    'Recompensa de missão',
   achievement_bonus: 'Bônus de conquista',
+  freeze_shop:       'Compra de freeze',
+  level_reward:      'Recompensa de nível',
 };
 
 const PROFILE_META: Record<BehavioralProfileType, { emoji: string; label: string; description: string }> = {

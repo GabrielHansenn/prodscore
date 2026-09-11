@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
-import { levelThreshold, BehavioralProfileType, validateUsername, type BehavioralProfile } from '@prodscore/shared';
+import { pointsAtLevelStart, BehavioralProfileType, validateUsername, type BehavioralProfile } from '@prodscore/shared';
 import { api } from '../services/api.js';
 import { getFriendlyErrorMessage } from '../lib/errors.js';
 import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
@@ -25,18 +25,21 @@ const REASON_LABELS: Record<string, string> = {
   late_penalty:      'Penalidade por atraso',
   mission_reward:    'Recompensa de missão',
   achievement_bonus: 'Bônus de conquista',
+  freeze_shop:       'Compra de freeze',
+  level_reward:      'Recompensa de nível',
 };
 
 function LevelProgressBar({ level, totalPoints }: { level: number; totalPoints: number }) {
-  const current = levelThreshold(level);
-  const next    = levelThreshold(level + 1);
-  const pct     = Math.min(((totalPoints - current) / (next - current)) * 100, 100);
+  const current = pointsAtLevelStart(level);
+  const next    = pointsAtLevelStart(level + 1);
+  const xp      = Math.max(0, totalPoints - current);
+  const pct     = Math.min((xp / (next - current)) * 100, 100);
 
   return (
     <div>
       <div className="mb-1 flex justify-between text-xs text-gray-500">
         <span>Nível {level}</span>
-        <span className="text-brand-600">{totalPoints - current} / {next - current} XP</span>
+        <span className="text-brand-600">{xp} / {next - current} XP</span>
         <span>Nível {level + 1}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-gray-100">
