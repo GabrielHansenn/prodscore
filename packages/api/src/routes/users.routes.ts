@@ -6,10 +6,11 @@ import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { requireAAL2 } from '../middleware/aal.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { supabase, getUserById } from '../lib/supabase.js';
-import { getMissionsForUser } from '../services/mission.service.js';
 import { buyStreakFreeze } from '../services/gamification.service.js';
 import { purgeAllProofFilesForUser } from '../services/proof.service.js';
 import { uploadUserAvatar } from '../services/user.service.js';
+import { searchUsers, assertAreFriends } from '../services/friend.service.js';
+import { computeUserStats } from '../services/stats.service.js';
 import {
   computeBehavioralProfile,
   getTaskSuggestions,
@@ -214,153 +215,14 @@ router.delete('/me', authGuard, requireAAL2, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Retorna todas as estatísticas de desempenho do usuário autenticado.
- *
- * Campos calculados:
- * - tasks_completed:          total de tarefas concluídas (all-time)
- * - tasks_completed_this_week: concluídas na semana atual (seg–dom)
- * - consistency_rate:          (concluídas / criadas nos últimos 30 dias) × 100
- * - points_this_week:          pontos ganhos na semana atual
- * - rank_position:             posição no ranking global por total_points
- * - achievements_count:        número de conquistas desbloqueadas
- * - active_missions:           missões em andamento (não expiradas, não concluídas)
+ * Retorna todas as estatísticas de desempenho do usuário autenticado
+ * (cálculo em stats.service.ts → computeUserStats, compartilhado com /:id/stats).
  */
 router.get('/me/stats', authGuard, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
-
-    // Início da semana atual (segunda-feira 00:00:00 UTC)
-    const now         = new Date();
-    const dayOfWeek   = now.getUTCDay();
-    const daysToMon   = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const weekStart   = new Date(now);
-    weekStart.setUTCDate(now.getUTCDate() - daysToMon);
-    weekStart.setUTCHours(0, 0, 0, 0);
-    const weekStartISO = weekStart.toISOString();
-
-    // Início do período de 30 dias para consistency_rate
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setUTCDate(now.getUTCDate() - 30);
-    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-
-    // Executa todas as queries em paralelo para minimizar latência
-    const [
-      tasksCompletedResult,
-      tasksThisWeekResult,
-      tasksLast30Result,
-      tasksCompletedLast30Result,
-      pointsThisWeekResult,
-      rankResult,
-      achievementsResult,
-    ] = await Promise.all([
-      // Total de tarefas concluídas (all-time)
-      supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'completed'),
-
-      // Tarefas concluídas esta semana
-      supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .gte('completed_at', weekStartISO),
-
-      // Total de tarefas criadas nos últimos 30 dias (denominador do consistency_rate)
-      supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgoISO),
-
-      // Tarefas concluídas nos últimos 30 dias (numerador do consistency_rate)
-      supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .gte('completed_at', thirtyDaysAgoISO),
-
-      // Pontos ganhos esta semana (apenas transações positivas)
-      supabase
-        .from('point_transactions')
-        .select('amount')
-        .eq('user_id', user.id)
-        .gte('created_at', weekStartISO)
-        .gt('amount', 0),
-
-      // Posição global: conta usuários com mais pontos + 1
-      supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gt('total_points', user.totalPoints),
-
-      // Total de conquistas desbloqueadas
-      supabase
-        .from('user_achievements')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id),
-    ]);
-
-    // Calcula consistency_rate com proteção contra divisão por zero
-    const total30    = tasksLast30Result.count ?? 0;
-    const complete30 = tasksCompletedLast30Result.count ?? 0;
-    const consistencyRate = total30 > 0
-      ? Math.round((complete30 / total30) * 1000) / 10   // 1 casa decimal
-      : 0;
-
-    // Soma pontos da semana
-    const pointsThisWeek = (pointsThisWeekResult.data ?? []).reduce(
-      (sum, tx) => sum + ((tx as { amount: number }).amount),
-      0,
-    );
-
-    // Posição global = usuários com mais pontos + 1
-    const rankPosition = (rankResult.count ?? 0) + 1;
-
-    // Busca missões ativas em andamento
-    const allMissions  = await getMissionsForUser(user.id);
-    const activeMissions = allMissions.filter(
-      (m) => m.isParticipating && !m.isCompleted,
-    );
-
-    return res.status(200).json({
-      estatisticas: {
-        // Dados do perfil (do authGuard)
-        totalPoints:    user.totalPoints,
-        level:          user.level,
-        currentStreak:  user.currentStreak,
-        longestStreak:  user.longestStreak,
-        streakFreezes:  user.streakFreezes,
-
-        // Tarefas
-        tasksCompleted:        tasksCompletedResult.count   ?? 0,
-        tasksCompletedThisWeek: tasksThisWeekResult.count   ?? 0,
-        consistencyRate,
-
-        // Pontos
-        pointsThisWeek,
-
-        // Ranking
-        rankPosition,
-
-        // Social
-        achievementsCount: achievementsResult.count ?? 0,
-
-        // Missões ativas (sem o campo leaderboard para manter a resposta leve)
-        activeMissions: activeMissions.map((m) => ({
-          id:           m.id,
-          title:        m.title,
-          type:         m.type,
-          currentValue: m.currentValue,
-          targetValue:  m.targetValue,
-          rewardPoints: m.rewardPoints,
-          expiresAt:    m.expiresAt,
-        })),
-      },
-    });
+    const estatisticas = await computeUserStats(user, { includeMissions: true });
+    return res.status(200).json({ estatisticas });
   } catch (err) {
     return sendError(res, err, '[usuarios/GET/me/stats]');
   }
@@ -486,47 +348,59 @@ router.get('/me/procrastination-alerts', authGuard, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /users/search?q= — deve ficar ANTES de /:id
+// ---------------------------------------------------------------------------
+
+/**
+ * Busca usuários por prefixo de username (mín. 2 caracteres), excluindo o
+ * próprio usuário, com a relação de amizade atual com cada resultado.
+ */
+router.get('/search', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const q = typeof req.query['q'] === 'string' ? req.query['q'] : '';
+    const usuarios = await searchUsers(user.id, q);
+    return res.status(200).json({ usuarios, total: usuarios.length });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/GET/search]');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /users/:id/stats — deve ficar APÓS /me e /me/stats
 // ---------------------------------------------------------------------------
 
 /**
- * Retorna estatísticas públicas de um usuário pelo UUID.
- * Exclui informações privadas como missões e posição de ranking.
+ * Estatísticas completas de OUTRO usuário — exclusivo para amigos.
+ *
+ * A autorização acontece aqui (a API usa service_role e contorna RLS): sem
+ * amizade aceita, 403. Missões ativas ficam de fora (podem envolver grupos
+ * privados do outro usuário); o resto é o mesmo conjunto de /me/stats.
  */
 router.get('/:id/stats', authGuard, async (req, res) => {
   try {
+    const { user } = req as AuthenticatedRequest;
     const targetId = req.params['id'];
     if (!targetId) throw new AppError('ID do usuário é obrigatório.', 400);
+    if (targetId === user.id) throw new AppError('Use /users/me/stats para as próprias estatísticas.', 400);
 
-    const [profile, achievementsResult, completedResult] = await Promise.all([
-      getUserById(targetId),
-      supabase
-        .from('user_achievements')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', targetId),
-      supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', targetId)
-        .eq('status', 'completed'),
-    ]);
+    await assertAreFriends(user.id, targetId);
 
-    if (!profile) {
-      throw new AppError('Usuário não encontrado.', 404, 'USUARIO_NAO_ENCONTRADO');
-    }
+    const profile = await getUserById(targetId);
+    if (!profile) throw new AppError('Usuário não encontrado.', 404, 'USUARIO_NAO_ENCONTRADO');
+
+    const estatisticas = await computeUserStats(profile, { includeMissions: false });
 
     return res.status(200).json({
-      estatisticas: {
-        id:               profile.id,
-        username:         profile.username,
-        avatarUrl:        profile.avatarUrl,
-        level:            profile.level,
-        totalPoints:      profile.totalPoints,
-        currentStreak:    profile.currentStreak,
-        longestStreak:    profile.longestStreak,
-        tasksCompleted:   completedResult.count    ?? 0,
-        achievementsCount: achievementsResult.count ?? 0,
+      usuario: {
+        id:            profile.id,
+        username:      profile.username,
+        avatarUrl:     profile.avatarUrl,
+        level:         profile.level,
+        totalPoints:   profile.totalPoints,
+        currentStreak: profile.currentStreak,
       },
+      estatisticas,
     });
   } catch (err) {
     return sendError(res, err, '[usuarios/GET/:id/stats]');

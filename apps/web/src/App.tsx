@@ -27,6 +27,9 @@ import AchievementsPage from './pages/AchievementsPage.js';
 import StatisticsPage   from './pages/StatisticsPage.js';
 import ProfilePage      from './pages/ProfilePage.js';
 import SecurityPage     from './pages/SecurityPage.js';
+import FriendsPage      from './pages/FriendsPage.js';
+import FriendProfilePage from './pages/FriendProfilePage.js';
+import ChatPage         from './pages/ChatPage.js';
 
 // ---------------------------------------------------------------------------
 // Layout privado — protege + fornece sidebar
@@ -131,6 +134,9 @@ export default function App() {
           <Route path="/grupos/:id"                element={<GroupDetailPage />} />
           <Route path="/grupos/:id/configuracoes" element={<GroupSettingsPage />} />
           <Route path="/ranking"        element={<RankingPage />} />
+          <Route path="/amigos"         element={<FriendsPage />} />
+          <Route path="/amigos/:id"     element={<FriendProfilePage />} />
+          <Route path="/amigos/:id/chat" element={<ChatPage />} />
           <Route path="/conquistas"     element={<AchievementsPage />} />
           <Route path="/estatisticas"   element={<StatisticsPage />} />
           <Route path="/perfil"         element={<ProfilePage />} />
