@@ -203,6 +203,14 @@ export function ShieldIcon({ className }: P) {
   );
 }
 
+export function SnowflakeIcon({ className }: P) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25v19.5M4.393 6.375l15.214 11.25M19.607 6.375L4.393 17.625M7.5 4.5L12 8.25l4.5-3.75M7.5 19.5L12 15.75l4.5 3.75M4.5 9.75l3 2.25-3 2.25M19.5 9.75l-3 2.25 3 2.25" />
+    </svg>
+  );
+}
+
 export function CoinsIcon({ className }: P) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>

@@ -1,4 +1,4 @@
-import { LEVEL_REWARD_MILESTONES } from '@prodscore/shared';
+import { LEVEL_REWARD_MILESTONES, pointsAtLevelStart } from '@prodscore/shared';
 
 interface LevelProgressProps {
   level:       number;
@@ -13,15 +13,10 @@ const BADGE_EMOJI: Record<string, string> = {
   legend:  '🏆',
 };
 
-/** Calcula os pontos necessários para cada nível: N² × 100 */
-function levelThreshold(n: number): number {
-  return n * n * 100;
-}
-
 export default function LevelProgress({ level, totalPoints }: LevelProgressProps) {
-  const currentThreshold = levelThreshold(level);
-  const nextThreshold    = levelThreshold(level + 1);
-  const progress         = totalPoints - currentThreshold;
+  const currentThreshold = pointsAtLevelStart(level);
+  const nextThreshold    = pointsAtLevelStart(level + 1);
+  const progress         = Math.max(0, totalPoints - currentThreshold);
   const range            = nextThreshold - currentThreshold;
   const percentage       = Math.min((progress / range) * 100, 100);
 

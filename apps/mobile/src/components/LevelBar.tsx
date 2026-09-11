@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { levelThreshold } from '@prodscore/shared';
+import { pointsAtLevelStart } from '@prodscore/shared';
 import { FONT, RADIUS, SPACING, LEVEL_BAR_GRADIENT } from '../constants/theme';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
@@ -12,8 +12,8 @@ interface LevelBarProps {
 
 /** Barra de progresso animada mostrando XP para o próximo nível */
 export default function LevelBar({ level, totalPoints }: LevelBarProps) {
-  const current   = levelThreshold(level);
-  const next      = levelThreshold(level + 1);
+  const current   = pointsAtLevelStart(level);
+  const next      = pointsAtLevelStart(level + 1);
   const progress  = Math.max(0, Math.min((totalPoints - current) / (next - current), 1));
   const xpCurrent = Math.max(0, totalPoints - current);
   const xpNeeded  = next - current;

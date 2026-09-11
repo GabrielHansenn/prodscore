@@ -99,6 +99,22 @@ export function levelThreshold(level: number): number {
 }
 
 /**
+ * Pontos acumulados a partir dos quais o usuário está efetivamente NUM nível
+ * — não confundir com `levelThreshold`. O nível 1 é o piso inicial (todo
+ * mundo começa nele, com 0 pontos); `checkLevelUp` (gamification.service.ts)
+ * nunca testa `levelThreshold(1)`, só incrementa a partir da checagem do
+ * próximo nível — então o piso real do nível 1 é 0, não `levelThreshold(1)`
+ * (100). Usar `levelThreshold(level)` diretamente como "piso do nível atual"
+ * gera progresso negativo pra quem está no nível 1 com menos de 100 pontos.
+ *
+ * @param level - Nível atual do usuário (>= 1)
+ * @returns Pontos acumulados no início desse nível
+ */
+export function pointsAtLevelStart(level: number): number {
+  return level <= 1 ? 0 : levelThreshold(level);
+}
+
+/**
  * Recompensas nos níveis marco — espelha os dados da tabela level_rewards.
  * Usado pela UI para exibir preview de recompensas futuras sem chamar a API.
  */
