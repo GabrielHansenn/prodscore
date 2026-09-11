@@ -25,6 +25,9 @@ import StatisticsScreen     from '../screens/StatisticsScreen';
 import GroupDetailScreen    from '../screens/GroupDetailScreen';
 import GroupSettingsScreen  from '../screens/GroupSettingsScreen';
 import SecurityScreen       from '../screens/SecurityScreen';
+import FriendsScreen        from '../screens/FriendsScreen';
+import FriendProfileScreen  from '../screens/FriendProfileScreen';
+import ChatScreen           from '../screens/ChatScreen';
 
 import { useThemeColors } from '../lib/useThemeColors';
 
@@ -52,6 +55,9 @@ export type AppStackParamList = {
   GroupDetail:    { groupId: string; groupName: string };
   GroupSettings:  { groupId: string };
   Security:       undefined;
+  Friends:        undefined;
+  FriendProfile:  { userId: string; username: string };
+  Chat:           { userId: string; username: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -91,6 +97,9 @@ function AppStackNavigator() {
       <AppStack.Screen name="GroupDetail"   component={GroupDetailScreen} />
       <AppStack.Screen name="GroupSettings" component={GroupSettingsScreen} />
       <AppStack.Screen name="Security"      component={SecurityScreen} />
+      <AppStack.Screen name="Friends"       component={FriendsScreen} />
+      <AppStack.Screen name="FriendProfile" component={FriendProfileScreen} />
+      <AppStack.Screen name="Chat"          component={ChatScreen} />
     </AppStack.Navigator>
   );
 }

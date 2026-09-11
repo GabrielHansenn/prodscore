@@ -56,6 +56,25 @@ export enum MemberRole {
   Member = 'member',
 }
 
+/** Estado de um vínculo de amizade (espelha o enum friendship_status do banco) */
+export enum FriendshipStatus {
+  Pending  = 'pending',
+  Accepted = 'accepted',
+  Declined = 'declined',
+}
+
+/**
+ * Relação entre o usuário autenticado e OUTRO usuário, do ponto de vista de
+ * quem consulta — usado na busca de usuários para decidir qual ação exibir.
+ */
+export type FriendRelation =
+  | 'none'              // sem vínculo — pode enviar pedido
+  | 'friends'           // amizade aceita
+  | 'request_sent'      // eu pedi, aguardando o outro
+  | 'request_received'  // o outro pediu, aguardando eu
+  | 'declined_by_them'  // eu pedi e fui recusado — posso reenviar
+  | 'declined_by_me';   // recusei o pedido do outro
+
 // ---------------------------------------------------------------------------
 // Entidades
 // ---------------------------------------------------------------------------
@@ -168,6 +187,53 @@ export interface GroupMember {
   joinedAt: string;
   /** Dados do usuário (populado em joins) */
   user?: Pick<User, 'id' | 'username' | 'avatarUrl' | 'level' | 'totalPoints'>;
+}
+
+/** Dados públicos de um usuário exibidos em listas de amigos/pedidos/busca */
+export type FriendUser = Pick<User, 'id' | 'username' | 'avatarUrl' | 'level' | 'totalPoints' | 'currentStreak'>;
+
+/** Amizade aceita, já resolvida para "o outro lado" a partir de quem consulta */
+export interface Friend {
+  /** UUID da linha em friendships (usado para remover a amizade) */
+  friendshipId: string;
+  /** O amigo (o outro participante do vínculo) */
+  user: FriendUser;
+  /** Quando a amizade foi aceita */
+  since: string;
+}
+
+/** Pedido de amizade pendente (recebido ou enviado) */
+export interface FriendRequest {
+  /** UUID da linha em friendships */
+  id: string;
+  /** Quem pediu */
+  requester: FriendUser;
+  /** Quem recebeu */
+  addressee: FriendUser;
+  status: FriendshipStatus;
+  createdAt: string;
+}
+
+/** Resultado da busca de usuários por username */
+export interface UserSearchResult {
+  user: FriendUser;
+  relation: FriendRelation;
+  /** UUID do vínculo existente (se houver) — para aceitar/cancelar direto da busca */
+  friendshipId: string | null;
+}
+
+/** Tamanho máximo de uma mensagem de chat (espelha o CHECK da tabela messages) */
+export const MAX_MESSAGE_LENGTH = 2000;
+
+/** Mensagem de chat 1:1 entre amigos */
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  createdAt: string;
+  /** null enquanto o destinatário não abriu a conversa */
+  readAt: string | null;
 }
 
 /**
