@@ -227,6 +227,45 @@ export interface UserSearchResult {
 /** Tamanho máximo de uma mensagem de chat (espelha o CHECK da tabela messages) */
 export const MAX_MESSAGE_LENGTH = 2000;
 
+/** Origem/uso de um freeze de streak (espelha o enum freeze_event_type do banco) */
+export enum FreezeEventType {
+  EarnedStreak = 'earned_streak',
+  EarnedLevel  = 'earned_level',
+  Purchased    = 'purchased',
+  Armed        = 'armed',
+  Disarmed     = 'disarmed',
+  Consumed     = 'consumed',
+  /** Ganho descartado porque o saldo já estava no teto */
+  Capped       = 'capped',
+}
+
+/** Evento do histórico de freezes */
+export interface StreakFreezeEvent {
+  id: string;
+  type: FreezeEventType;
+  /** Saldo depois do evento */
+  balanceAfter: number;
+  /** Dia do streak que originou o ganho (só em earned_streak/capped) */
+  streakDay: number | null;
+  createdAt: string;
+}
+
+/** Estado consolidado do freeze exibido na dashboard */
+export interface FreezeState {
+  /** Freezes disponíveis */
+  balance: number;
+  /** Teto do saldo (FREEZE_MAX_BALANCE) */
+  maxBalance: number;
+  /** Freeze armado aguardando uso — null se não há */
+  armedAt: string | null;
+  /** Streak atual, base do progresso para o próximo freeze */
+  currentStreak: number;
+  /** Dias até o próximo freeze por streak; null se o streak é 0 */
+  daysUntilNextFreeze: number | null;
+  /** Saldo no teto — não acumula mais até usar um */
+  atMaxBalance: boolean;
+}
+
 /** Tipo de evento que gera uma notificação (espelha o enum notification_type do banco) */
 export enum NotificationType {
   FriendMessage = 'friend_message',

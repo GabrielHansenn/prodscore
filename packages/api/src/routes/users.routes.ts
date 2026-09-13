@@ -7,6 +7,7 @@ import { requireAAL2 } from '../middleware/aal.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { supabase, getUserById } from '../lib/supabase.js';
 import { buyStreakFreeze } from '../services/gamification.service.js';
+import { armFreeze, disarmFreeze, getFreezeState, listFreezeEvents } from '../services/freeze.service.js';
 import { purgeAllProofFilesForUser } from '../services/proof.service.js';
 import { uploadUserAvatar } from '../services/user.service.js';
 import { searchUsers, assertAreFriends } from '../services/friend.service.js';
@@ -344,6 +345,49 @@ router.get('/me/procrastination-alerts', authGuard, async (req, res) => {
     return res.status(200).json({ alertas: alerts });
   } catch (err) {
     return sendError(res, err, '[usuarios/GET/me/procrastination-alerts]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Freeze de streak — /users/me/streak/freeze (antes de /:id)
+// ---------------------------------------------------------------------------
+
+/** Estado consolidado do freeze (saldo, teto, armado, progresso) + histórico. */
+router.get('/me/streak/freeze', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const [estado, historico] = await Promise.all([
+      getFreezeState(user.id),
+      listFreezeEvents(user.id),
+    ]);
+    return res.status(200).json({ estado, historico });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/GET/streak/freeze]');
+  }
+});
+
+/**
+ * Arma um freeze: a partir daqui, um dia perdido é protegido.
+ * Não debita nada — o consumo acontece quando o dia é efetivamente perdido.
+ */
+router.post('/me/streak/freeze/arm', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const estado = await armFreeze(user.id);
+    return res.status(200).json({ mensagem: 'Freeze armado. Seu streak está protegido.', estado });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/POST/streak/freeze/arm]');
+  }
+});
+
+/** Desarma o freeze antes de usar — o saldo não muda. */
+router.post('/me/streak/freeze/disarm', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const estado = await disarmFreeze(user.id);
+    return res.status(200).json({ mensagem: 'Freeze desarmado.', estado });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/POST/streak/freeze/disarm]');
   }
 });
 

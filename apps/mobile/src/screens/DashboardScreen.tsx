@@ -251,7 +251,8 @@ export default function DashboardScreen() {
               )}
               {!!levelReward?.bonusFreezes && (
                 <View style={[styles.rewardPill, { backgroundColor: colors.blueDim }]}>
-                  <Text style={[styles.rewardPillText, { color: '#1d4ed8' }]}>+{levelReward.bonusFreezes} 🧊</Text>
+                  <Ionicons name="snow" size={12} color="#1d4ed8" />
+                  <Text style={[styles.rewardPillText, { color: '#1d4ed8' }]}>+{levelReward.bonusFreezes}</Text>
                 </View>
               )}
             </View>
@@ -416,7 +417,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   celebrationSub:   { fontSize: FONT.base, color: colors.textSecondary, textAlign: 'center' },
   celebrationBonus: { fontSize: FONT.sm, fontWeight: '600', color: '#65a30d' },
   rewardPillsRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.xs },
-  rewardPill: { backgroundColor: colors.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 4 },
+  rewardPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 4 },
   rewardPillText: { fontSize: FONT.sm, fontWeight: '700', color: colors.primary },
   celebrationBtn:   { backgroundColor: colors.amber, borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: SPACING.xl, marginTop: SPACING.sm },
   celebrationBtnText: { color: '#ffffff', fontWeight: '700', fontSize: FONT.md },

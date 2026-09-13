@@ -11,7 +11,7 @@ import LevelProgress from '../components/LevelProgress.js';
 import StreakBadge from '../components/StreakBadge.js';
 import MissionCard from '../components/MissionCard.js';
 import PointTransactionFeed from '../components/PointTransactionFeed.js';
-import { SparklesIcon, FlameIcon, ExclamationTriangleIcon } from '../components/icons.js';
+import { SparklesIcon, FlameIcon, ExclamationTriangleIcon, SnowflakeIcon } from '../components/icons.js';
 import { getProcrastinationAlerts } from '../services/behavioral.service.js';
 
 interface Celebration {
@@ -312,8 +312,9 @@ export default function DashboardPage() {
                 </span>
               )}
               {levelRewardPop.bonusFreezes > 0 && (
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
-                  +{levelRewardPop.bonusFreezes} 🧊 freeze{levelRewardPop.bonusFreezes > 1 ? 's' : ''}
+                <span className="flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                  <SnowflakeIcon className="h-3.5 w-3.5" />
+                  +{levelRewardPop.bonusFreezes} freeze{levelRewardPop.bonusFreezes > 1 ? 's' : ''}
                 </span>
               )}
             </div>

@@ -60,6 +60,29 @@ export const FREEZE_PER_MILESTONE = 1;
 export const FREEZE_COST_POINTS = 100;
 
 /**
+ * A cada quantos dias consecutivos de streak o usuário ganha 1 freeze.
+ * O crédito é vinculado ao progresso real do streak (múltiplos de 7 dias
+ * efetivamente cumpridos), não à passagem do tempo.
+ */
+export const FREEZE_STREAK_INTERVAL = 7;
+
+/**
+ * Teto do saldo de freezes. Vale para TODAS as fontes (streak, recompensa de
+ * nível e compra): ao atingir o teto, o usuário não acumula mais até usar um.
+ */
+export const FREEZE_MAX_BALANCE = 3;
+
+/**
+ * Dias que faltam para o próximo freeze por streak, a partir do streak atual.
+ * Retorna null quando o streak é 0 (ainda não há progresso a contar).
+ */
+export function daysUntilNextFreeze(currentStreak: number): number | null {
+  if (currentStreak <= 0) return null;
+  const remainder = currentStreak % FREEZE_STREAK_INTERVAL;
+  return remainder === 0 ? FREEZE_STREAK_INTERVAL : FREEZE_STREAK_INTERVAL - remainder;
+}
+
+/**
  * Faixas de penalidade progressiva por atraso.
  * Quanto mais tempo a tarefa fica overdue, maior o desconto sobre os pontos.
  * Faixas: 0–12h → -10% | 12–24h → -20% | 24–48h → -35% | 48–72h → -50% | 72h+ → -60%

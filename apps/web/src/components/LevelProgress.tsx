@@ -1,4 +1,5 @@
 import { LEVEL_REWARD_MILESTONES, pointsAtLevelStart } from '@prodscore/shared';
+import { SnowflakeIcon } from './icons.js';
 
 interface LevelProgressProps {
   level:       number;
@@ -52,7 +53,13 @@ export default function LevelProgress({ level, totalPoints }: LevelProgressProps
             <span className="text-amber-700 dark:text-amber-400">
               {BADGE_EMOJI[nextReward.badgeKey] ?? '🎁'}
               {' '}+{nextReward.bonusPoints} pts
-              {nextReward.bonusFreezes > 0 && ` · ${nextReward.bonusFreezes}🧊`}
+              {nextReward.bonusFreezes > 0 && (
+                <>
+                  {' · '}
+                  <SnowflakeIcon className="inline h-3 w-3 align-text-bottom" />
+                  {nextReward.bonusFreezes}
+                </>
+              )}
             </span>
           </p>
         )}

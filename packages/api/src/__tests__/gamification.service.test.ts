@@ -251,24 +251,92 @@ describe('updateStreak', () => {
     expect(result.newStreak).toBe(1);
   });
 
-  it('deve consumir um freeze e preservar o streak quando perdeu exatamente 1 dia', async () => {
-    // twoDaysAgo → daysSinceActive === 2, com 1 freeze disponível
+  // Freeze deixou de ser automático (migration 023): só protege se tiver sido
+  // ARMADO antes do fim do dia perdido — ver freeze.service.ts.
+  it('deve consumir um freeze e preservar o streak quando armado antes do dia perdido', async () => {
+    // Armado ainda no último dia ativo → cobre o dia perdido seguinte
     const profileData = {
-      current_streak:   7,
-      longest_streak:  10,
-      last_active_date: twoDaysAgo,
-      streak_freezes:   1,
+      current_streak:         7,
+      longest_streak:         10,
+      last_active_date:       twoDaysAgo,
+      streak_freezes:         1,
+      freeze_armed_at:        `${twoDaysAgo}T20:00:00.000Z`,
+      freeze_streak_credited: 7,
     };
 
     mockFrom
-      .mockReturnValueOnce(mockSelectSingle(profileData))  // select
+      .mockReturnValueOnce(mockSelectSingle(profileData))  // select perfil
       .mockReturnValueOnce(mockUpdate());                   // update (consome freeze)
 
     const result = await updateStreak(userId);
 
     expect(result.freezeUsed).toBe(true);
+    expect(result.freezesUsed).toBe(1);
     expect(result.newStreak).toBe(7);      // streak preservado
     expect(result.milestoneReached).toBeNull();
+  });
+
+  it('NÃO deve consumir freeze se o usuário não tinha armado (sem resgate retroativo)', async () => {
+    const profileData = {
+      current_streak:         7,
+      longest_streak:         10,
+      last_active_date:       twoDaysAgo,
+      streak_freezes:         3,      // tem saldo, mas não armou
+      freeze_armed_at:        null,
+      freeze_streak_credited: 7,
+    };
+
+    mockFrom
+      .mockReturnValueOnce(mockSelectSingle(profileData))
+      .mockReturnValueOnce(mockUpdate());
+
+    const result = await updateStreak(userId);
+
+    expect(result.freezeUsed).toBe(false);
+    expect(result.newStreak).toBe(1);      // streak zerou normalmente
+  });
+
+  it('NÃO deve proteger se armou só depois do dia perdido ter terminado', async () => {
+    const profileData = {
+      current_streak:         7,
+      longest_streak:         10,
+      last_active_date:       twoDaysAgo,
+      streak_freezes:         2,
+      // Armado hoje, quando o dia perdido (ontem) já tinha acabado
+      freeze_armed_at:        new Date().toISOString(),
+      freeze_streak_credited: 7,
+    };
+
+    mockFrom
+      .mockReturnValueOnce(mockSelectSingle(profileData))
+      .mockReturnValueOnce(mockUpdate());
+
+    const result = await updateStreak(userId);
+
+    expect(result.freezeUsed).toBe(false);
+    expect(result.newStreak).toBe(1);
+  });
+
+  it('deve zerar o streak quando o saldo não cobre todos os dias perdidos', async () => {
+    // 3 dias parado = 2 dias perdidos, mas só 1 freeze disponível
+    const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000).toISOString().split('T')[0]!;
+    const profileData = {
+      current_streak:         20,
+      longest_streak:         20,
+      last_active_date:       threeDaysAgo,
+      streak_freezes:         1,
+      freeze_armed_at:        `${threeDaysAgo}T20:00:00.000Z`,
+      freeze_streak_credited: 14,
+    };
+
+    mockFrom
+      .mockReturnValueOnce(mockSelectSingle(profileData))
+      .mockReturnValueOnce(mockUpdate());
+
+    const result = await updateStreak(userId);
+
+    expect(result.freezeUsed).toBe(false);
+    expect(result.newStreak).toBe(1);
   });
 
   it('deve resetar o streak quando perdeu 2+ dias sem freeze disponível', async () => {

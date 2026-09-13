@@ -3,6 +3,7 @@ import {
   TaskPriority,
   PointReason,
   NotificationType,
+  FreezeEventType,
   type Achievement,
   type LevelReward,
   type PointTransaction,
@@ -17,11 +18,13 @@ import {
   STREAK_MILESTONE_BONUS,
   FREEZE_PER_MILESTONE,
   FREEZE_COST_POINTS,
+  FREEZE_MAX_BALANCE,
   levelThreshold,
 } from '@prodscore/shared/constants';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
 import { createNotification } from './notification.service.js';
+import { creditStreakFreeze, grantFreezes, recordFreezeEvent } from './freeze.service.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos para linhas do banco (snake_case → sem depender de tipos gerados)
@@ -173,14 +176,20 @@ export async function recordTransaction(
  * Atualiza a sequência de produtividade (streak) do usuário após concluir uma tarefa.
  *
  * Lógica de atualização:
- * - last_active_date = hoje          → já registrou hoje, sem alteração
- * - daysSinceActive = 1 (ontem)      → dia consecutivo, incrementa
- * - daysSinceActive = 2 + tem freeze → consome 1 freeze e protege o streak atual
- * - daysSinceActive > 2 ou sem freeze → reset para 1
- * - last_active_date = null          → primeira atividade (inicia em 1)
+ * - last_active_date = hoje   → já registrou hoje, sem alteração
+ * - daysSinceActive = 1       → dia consecutivo, incrementa
+ * - dias perdidos + freeze ARMADO e saldo suficiente → consome 1 freeze por dia
+ *                               perdido e preserva o streak
+ * - dias perdidos sem armar / saldo insuficiente → reset para 1
+ * - last_active_date = null   → primeira atividade (inicia em 1)
  *
- * Marco de streak: ao atingir um valor em STREAK_MILESTONES,
- * concede STREAK_MILESTONE_BONUS pontos + FREEZE_PER_MILESTONE freeze extras.
+ * Freeze só protege se tiver sido ARMADO antes do fim do primeiro dia perdido
+ * (profiles.freeze_armed_at) — é o que impede resgatar retroativamente um dia
+ * já perdido. Ver freeze.service.ts.
+ *
+ * Ganho de freeze: 1 a cada FREEZE_STREAK_INTERVAL (7) dias consecutivos,
+ * limitado a FREEZE_MAX_BALANCE. Os marcos de STREAK_MILESTONES continuam
+ * dando STREAK_MILESTONE_BONUS pontos + FREEZE_PER_MILESTONE freeze.
  *
  * Nota: sem lock distribuído, duas requisições paralelas no mesmo dia podem
  * causar duplo incremento. Aceitável para o escopo deste TCC.
@@ -192,10 +201,14 @@ export async function updateStreak(userId: string): Promise<{
   newStreak:        number;
   milestoneReached: number | null;
   freezeUsed:       boolean;
+  /** Quantos freezes foram consumidos (1 por dia perdido protegido) */
+  freezesUsed:      number;
+  /** Quantos freezes foram ganhos nesta atualização */
+  freezesEarned:    number;
 }> {
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('current_streak, longest_streak, last_active_date, streak_freezes')
+    .select('current_streak, longest_streak, last_active_date, streak_freezes, freeze_armed_at, freeze_streak_credited')
     .eq('id', userId)
     .single();
 
@@ -206,14 +219,14 @@ export async function updateStreak(userId: string): Promise<{
   const profile = profileData as Pick<
     ProfileRow,
     'current_streak' | 'longest_streak' | 'last_active_date' | 'streak_freezes'
-  >;
+  > & { freeze_armed_at: string | null; freeze_streak_credited: number };
 
   const today    = new Date().toISOString().split('T')[0]!;
   const lastActive = profile.last_active_date;
 
   // Já registrou atividade hoje — nada a fazer
   if (lastActive === today) {
-    return { newStreak: profile.current_streak, milestoneReached: null, freezeUsed: false };
+    return { newStreak: profile.current_streak, milestoneReached: null, freezeUsed: false, freezesUsed: 0, freezesEarned: 0 };
   }
 
   // Calcula quantos dias se passaram desde a última atividade
@@ -221,23 +234,53 @@ export async function updateStreak(userId: string): Promise<{
     ? Math.round((new Date(today).getTime() - new Date(lastActive).getTime()) / 86_400_000)
     : Infinity;
 
-  // ── Freeze automático: perdeu exatamente 1 dia e tem freeze disponível ─────
-  if (daysSinceActive === 2 && profile.streak_freezes > 0) {
-    const { error: freezeError } = await supabase
-      .from('profiles')
-      .update({
-        streak_freezes:  profile.streak_freezes - 1,
-        last_active_date: today,
-      })
-      .eq('id', userId);
+  // ── Freeze armado: protege os dias perdidos (1 freeze por dia) ────────────
+  //
+  // Só protege se o usuário tinha ARMADO antes do primeiro dia perdido
+  // terminar — armar depois não recupera streak já perdido. E cada dia
+  // consome 1 freeze: se o saldo não cobre todos os dias, o streak zera.
+  const missedDays = Number.isFinite(daysSinceActive) ? daysSinceActive - 1 : 0;
 
-    if (freezeError) {
-      console.error('[gamificação] Erro ao consumir freeze de streak:', freezeError.message);
-    } else {
-      console.log(`[gamificação] Freeze de streak consumido para usuário ${userId} (streak preservado: ${profile.current_streak} dias)`);
+  if (missedDays > 0 && profile.freeze_armed_at && lastActive) {
+    // Fim do primeiro dia perdido = last_active_date + 2 dias, 00:00 UTC
+    const firstMissedDayEnd = new Date(lastActive);
+    firstMissedDayEnd.setUTCDate(firstMissedDayEnd.getUTCDate() + 2);
+    firstMissedDayEnd.setUTCHours(0, 0, 0, 0);
+
+    const armedInTime = new Date(profile.freeze_armed_at) < firstMissedDayEnd;
+    const covered     = armedInTime && profile.streak_freezes >= missedDays;
+
+    if (covered) {
+      const remaining = profile.streak_freezes - missedDays;
+
+      const { error: freezeError } = await supabase
+        .from('profiles')
+        .update({
+          streak_freezes:   remaining,
+          last_active_date: today,
+          // O armamento foi usado: o usuário precisa armar de novo
+          freeze_armed_at:  null,
+        })
+        .eq('id', userId);
+
+      if (freezeError) {
+        console.error('[gamificação] Erro ao consumir freeze de streak:', freezeError.message);
+      } else {
+        // 1 evento por dia coberto, para o histórico refletir o consumo real
+        for (let i = 0; i < missedDays; i++) {
+          await recordFreezeEvent(userId, FreezeEventType.Consumed, profile.streak_freezes - (i + 1));
+        }
+        console.log(`[gamificação] ${missedDays} freeze(s) consumido(s) para usuário ${userId} (streak preservado: ${profile.current_streak} dias)`);
+      }
+
+      return {
+        newStreak:        profile.current_streak,
+        milestoneReached: null,
+        freezeUsed:       true,
+        freezesUsed:      missedDays,
+        freezesEarned:    0,
+      };
     }
-
-    return { newStreak: profile.current_streak, milestoneReached: null, freezeUsed: true };
   }
 
   // ── Cálculo do novo streak ────────────────────────────────────────────────
@@ -248,21 +291,51 @@ export async function updateStreak(userId: string): Promise<{
     ? newStreak
     : null;
 
-  // Persiste streak + concede freeze extra se atingiu marco
+  // O streak recomeçou: o progresso rumo ao próximo freeze recomeça junto
+  const creditedSoFar = newStreak === 1 ? 0 : profile.freeze_streak_credited;
+
+  // Persiste streak + freeze do marco (regra antiga, mantida) respeitando o teto
+  const milestoneBalance = milestoneReached !== null
+    ? Math.min(profile.streak_freezes + FREEZE_PER_MILESTONE, FREEZE_MAX_BALANCE)
+    : profile.streak_freezes;
+  const milestoneGranted = milestoneBalance - profile.streak_freezes;
+
   const { error: updateError } = await supabase
     .from('profiles')
     .update({
-      current_streak:   newStreak,
-      longest_streak:   newLongest,
-      last_active_date: today,
-      ...(milestoneReached !== null
-        ? { streak_freezes: profile.streak_freezes + FREEZE_PER_MILESTONE }
-        : {}),
+      current_streak:         newStreak,
+      longest_streak:         newLongest,
+      last_active_date:       today,
+      freeze_streak_credited: creditedSoFar,
+      ...(milestoneGranted > 0 ? { streak_freezes: milestoneBalance } : {}),
     })
     .eq('id', userId);
 
   if (updateError) {
     console.error('[gamificação] Erro ao atualizar streak:', updateError.message);
+  }
+
+  if (milestoneReached !== null) {
+    await recordFreezeEvent(
+      userId,
+      milestoneGranted > 0 ? FreezeEventType.EarnedStreak : FreezeEventType.Capped,
+      milestoneBalance,
+      milestoneReached,
+    );
+  }
+
+  // Freeze por progresso de streak: 1 a cada 7 dias consecutivos
+  const streakCredit = await creditStreakFreeze(userId, newStreak, creditedSoFar, milestoneBalance);
+
+  if (streakCredit.newCredited !== creditedSoFar) {
+    const { error: creditError } = await supabase
+      .from('profiles')
+      .update({ freeze_streak_credited: streakCredit.newCredited })
+      .eq('id', userId);
+
+    if (creditError) {
+      console.error('[gamificação] Erro ao registrar crédito de freeze por streak:', creditError.message);
+    }
   }
 
   // Bônus de pontos para marcos de streak
@@ -275,7 +348,13 @@ export async function updateStreak(userId: string): Promise<{
     }
   }
 
-  return { newStreak, milestoneReached, freezeUsed: false };
+  return {
+    newStreak,
+    milestoneReached,
+    freezeUsed:    false,
+    freezesUsed:   0,
+    freezesEarned: milestoneGranted + streakCredit.granted,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -301,6 +380,15 @@ export async function buyStreakFreeze(userId: string): Promise<void> {
 
   const profile = profileData as Pick<ProfileRow, 'total_points' | 'streak_freezes'>;
 
+  // Teto conferido ANTES de debitar — senão o usuário pagaria por um freeze descartado
+  if (profile.streak_freezes >= FREEZE_MAX_BALANCE) {
+    throw new AppError(
+      `Você já tem o máximo de ${FREEZE_MAX_BALANCE} freezes. Use um antes de comprar outro.`,
+      400,
+      'SALDO_NO_TETO',
+    );
+  }
+
   if (profile.total_points < FREEZE_COST_POINTS) {
     throw new AppError(
       `Pontos insuficientes. Necessário: ${FREEZE_COST_POINTS} pts. Você tem: ${profile.total_points} pts.`,
@@ -312,14 +400,12 @@ export async function buyStreakFreeze(userId: string): Promise<void> {
   // Debita os pontos (recordTransaction atualiza total_points via RPC)
   await recordTransaction(userId, -FREEZE_COST_POINTS, PointReason.FreezeShop);
 
-  // Concede o freeze
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ streak_freezes: profile.streak_freezes + 1 })
-    .eq('id', userId);
+  const { granted } = await grantFreezes(userId, 1, FreezeEventType.Purchased, {
+    currentBalance: profile.streak_freezes,
+  });
 
-  if (updateError) {
-    console.error('[gamificação] Erro ao conceder freeze de streak:', updateError.message);
+  if (granted === 0) {
+    console.error('[gamificação] Erro ao conceder freeze comprado ao usuário', userId);
     throw new AppError('Erro ao registrar o freeze. Tente novamente.', 500, 'FREEZE_FALHOU');
   }
 
@@ -407,17 +493,12 @@ export async function checkLevelUp(
   }
 
   // Concede freezes bônus da recompensa de nível
+  // Respeita o teto como qualquer outra fonte: no teto, o freeze do nível é descartado
   if (reward.bonus_freezes > 0) {
-    const { error: freezeError } = await supabase
-      .from('profiles')
-      .update({ streak_freezes: profile.streak_freezes + reward.bonus_freezes })
-      .eq('id', userId);
-
-    if (freezeError) {
-      console.error('[gamificação] Erro ao conceder freezes de recompensa de nível:', freezeError.message);
-    } else {
-      console.log(`[gamificação] Recompensa nível ${calculatedLevel}: +${reward.bonus_points} pts, +${reward.bonus_freezes} freezes`);
-    }
+    const { granted } = await grantFreezes(userId, reward.bonus_freezes, FreezeEventType.EarnedLevel, {
+      currentBalance: profile.streak_freezes,
+    });
+    console.log(`[gamificação] Recompensa nível ${calculatedLevel}: +${reward.bonus_points} pts, +${granted} freeze(s) (de ${reward.bonus_freezes} — teto ${FREEZE_MAX_BALANCE})`);
   }
 
   await notifyLevelUp(userId, calculatedLevel, levelReward);
