@@ -28,6 +28,7 @@ import SecurityScreen       from '../screens/SecurityScreen';
 import FriendsScreen        from '../screens/FriendsScreen';
 import FriendProfileScreen  from '../screens/FriendProfileScreen';
 import ChatScreen           from '../screens/ChatScreen';
+import NotificationsScreen  from '../screens/NotificationsScreen';
 
 import { useThemeColors } from '../lib/useThemeColors';
 
@@ -58,6 +59,7 @@ export type AppStackParamList = {
   Friends:        undefined;
   FriendProfile:  { userId: string; username: string };
   Chat:           { userId: string; username: string };
+  Notifications:  undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -100,6 +102,7 @@ function AppStackNavigator() {
       <AppStack.Screen name="Friends"       component={FriendsScreen} />
       <AppStack.Screen name="FriendProfile" component={FriendProfileScreen} />
       <AppStack.Screen name="Chat"          component={ChatScreen} />
+      <AppStack.Screen name="Notifications" component={NotificationsScreen} />
     </AppStack.Navigator>
   );
 }

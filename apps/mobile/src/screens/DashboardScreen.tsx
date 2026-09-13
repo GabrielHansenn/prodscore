@@ -19,6 +19,7 @@ import PointTransactionFeed from '../components/PointTransactionFeed';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
+import NotificationBell from '../components/NotificationBell';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
@@ -92,12 +93,15 @@ export default function DashboardScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
       <ResponsiveContainer>
 
-        {/* Saudação */}
+        {/* Saudação + sino de notificações */}
         <View style={styles.greeting}>
-          <Text style={styles.greetTitle}>Olá, {firstName}!</Text>
-          <Text style={styles.greetSub}>
-            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greetTitle}>Olá, {firstName}!</Text>
+            <Text style={styles.greetSub}>
+              {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+            </Text>
+          </View>
+          <NotificationBell />
         </View>
 
         {/* Linha de stat cards — 2x2 em telas estreitas, 1x4 em telas largas
@@ -285,7 +289,7 @@ export default function DashboardScreen() {
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
   root:   { flex: 1, backgroundColor: colors.background },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl },
-  greeting: { marginBottom: SPACING.lg },
+  greeting: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
   greetTitle: { fontSize: FONT.xxl, fontWeight: '800', color: colors.text },
   greetSub:   { fontSize: FONT.base, color: colors.textMuted, marginTop: SPACING.xs },
 

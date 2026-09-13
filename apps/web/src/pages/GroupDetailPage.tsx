@@ -12,6 +12,7 @@ import {
 } from '../services/group.service.js';
 import { createGroupMission, type MissionWithParticipation } from '../services/mission.service.js';
 import { getTasks, createTask } from '../services/task.service.js';
+import GroupChat from '../components/GroupChat.js';
 import { validateRequired, validatePositiveNumber } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
@@ -21,7 +22,7 @@ import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
 import { UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon } from '../components/icons.js';
 
-type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas';
+type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'chat';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -659,6 +660,7 @@ export default function GroupDetailPage() {
     { key: 'ranking',  label: 'Ranking' },
     { key: 'missoes',  label: 'Missões',  count: missions.length },
     { key: 'tarefas',  label: 'Tarefas',  count: tasks.length },
+    { key: 'chat',     label: 'Chat' },
   ];
 
   return (
@@ -843,6 +845,8 @@ export default function GroupDetailPage() {
             onTaskUpdated={(updated) => setTasks((prev) => prev.map((t) => t.id === updated.id ? updated : t))}
           />
         )}
+
+        {tab === 'chat' && id && <GroupChat groupId={id} />}
 
       </div>
     </main>

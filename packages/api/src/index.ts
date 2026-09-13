@@ -11,6 +11,7 @@ import achievementsRoutes from './routes/achievements.routes.js';
 import missionsRoutes    from './routes/missions.routes.js';
 import consentRoutes     from './routes/consent.routes.js';
 import friendsRoutes     from './routes/friends.routes.js';
+import notificationsRoutes from './routes/notifications.routes.js';
 
 const app = express();
 const PORT = process.env['PORT'] ?? 3333;
@@ -34,6 +35,7 @@ app.use('/achievements', achievementsRoutes);
 app.use('/missions',     missionsRoutes);
 app.use('/consent',      consentRoutes);
 app.use('/friends',      friendsRoutes);
+app.use('/notifications', notificationsRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 ProdScore API rodando na porta ${PORT}`);

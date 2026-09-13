@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './store/authStore.js';
+import { useRealtimeNotifications } from './lib/useRealtimeNotifications.js';
 
 // Layout
 import AppLayout from './components/AppLayout.js';
@@ -91,6 +92,9 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   const loadSession = useAuthStore((s) => s.loadSession);
   const location    = useLocation();
+
+  // Sino: contador inicial + INSERT/UPDATE em notifications via Realtime
+  useRealtimeNotifications();
 
   useEffect(() => {
     void loadSession();

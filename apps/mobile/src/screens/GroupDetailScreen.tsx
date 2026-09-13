@@ -22,12 +22,13 @@ import { useTaskStore } from '../store/taskStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
 import TaskFormModal from '../components/TaskFormModal';
+import GroupChat from '../components/GroupChat';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
 
-type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas';
+type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'chat';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -99,6 +100,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     { key: 'ranking', label: 'Ranking' },
     { key: 'missoes', label: 'Missões', count: missions.length },
     { key: 'tarefas', label: 'Tarefas', count: tasks.length },
+    { key: 'chat',    label: 'Chat' },
   ];
 
   return (
@@ -172,7 +174,11 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             })}
           </View>
 
-          {/* Conteúdo */}
+          {/* Conteúdo — o chat tem FlatList própria, então fica fora do ScrollView
+              (lista virtualizada dentro de ScrollView quebra o scroll) */}
+          {tab === 'chat' ? (
+            <GroupChat groupId={groupId} />
+          ) : (
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             {tab === 'membros' && (
               members.length === 0
@@ -284,6 +290,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               </>
             )}
           </ScrollView>
+          )}
         </>
       )}
 

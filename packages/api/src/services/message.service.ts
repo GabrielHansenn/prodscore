@@ -1,7 +1,8 @@
-import { MAX_MESSAGE_LENGTH, type Message } from '@prodscore/shared';
+import { MAX_MESSAGE_LENGTH, NotificationType, type Message } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
 import { assertAreFriends } from './friend.service.js';
+import { notifyChatMessage } from './notification.service.js';
 
 interface MessageRow {
   id:          string;
@@ -78,6 +79,23 @@ export async function sendMessage(senderId: string, receiverId: string, rawConte
     console.error('[message.service.sendMessage] insert falhou:', error);
     throw new AppError('Erro ao enviar mensagem.', 500, 'ENVIO_FALHOU');
   }
+
+  // Notificação para o destinatário (agrupada por remetente enquanto não lida)
+  const { data: senderProfile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', senderId)
+    .maybeSingle();
+
+  await notifyChatMessage({
+    userId:      receiverId,
+    type:        NotificationType.FriendMessage,
+    actorId:     senderId,
+    entityId:    null,
+    title:       (senderProfile as { username: string } | null)?.username ?? 'Nova mensagem',
+    messageText: content,
+  });
+
   return mapMessage(data as MessageRow);
 }
 

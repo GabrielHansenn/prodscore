@@ -11,6 +11,7 @@ import { BehavioralProfileType, validateUsername, type BehavioralProfile, type B
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import { useThemeStore, type Theme } from '../store/themeStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { getBehavioralProfile } from '../services/behavioral.service';
 import { uploadAvatar } from '../services/user.service';
 import { useImageUpload } from '../lib/useImageUpload';
@@ -82,6 +83,7 @@ export default function ProfileScreen() {
   const { user, logout, loadSession } = useAuthStore();
   const { stats, fetchStats }    = useUserStore();
   const { theme, setTheme }      = useThemeStore();
+  const unreadNotifications      = useNotificationStore((s) => s.unreadCount);
   const avatarUpload = useImageUpload();
   const colors = useThemeColors();
   const styles = useStyles();
@@ -231,6 +233,15 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Statistics')}>
             <Ionicons name="stats-chart-outline" size={18} color={colors.blue} />
             <Text style={styles.menuRowText}>Estatísticas</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.menuDivider} />
+          <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Notifications')}>
+            <Ionicons name="notifications-outline" size={18} color={colors.amber} />
+            <Text style={styles.menuRowText}>Notificações</Text>
+            {unreadNotifications > 0 && (
+              <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{unreadNotifications}</Text></View>
+            )}
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.menuDivider} />
@@ -407,6 +418,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
   menuRowText: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: colors.text },
   menuDivider: { height: 1, backgroundColor: colors.borderSoft, marginLeft: SPACING.md },
+  menuBadge: { minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 5, backgroundColor: colors.red, alignItems: 'center', justifyContent: 'center' },
+  menuBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
 
   appearanceLabel: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary, padding: SPACING.md, paddingBottom: SPACING.sm },
   themeRow: { flexDirection: 'row', gap: 4, paddingHorizontal: SPACING.md, paddingBottom: SPACING.md },

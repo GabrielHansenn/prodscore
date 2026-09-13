@@ -96,7 +96,7 @@ export function computeGroupScore(
  * Verifica se um usuário é membro de um grupo e retorna seu papel.
  * Lança AppError 403 se não for membro.
  */
-async function requireMembership(
+export async function requireMembership(
   groupId: string,
   userId: string,
 ): Promise<{ role: MemberRole }> {

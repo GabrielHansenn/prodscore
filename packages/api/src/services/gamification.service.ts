@@ -2,6 +2,7 @@ import {
   TaskDifficulty,
   TaskPriority,
   PointReason,
+  NotificationType,
   type Achievement,
   type LevelReward,
   type PointTransaction,
@@ -20,6 +21,7 @@ import {
 } from '@prodscore/shared/constants';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
+import { createNotification } from './notification.service.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos para linhas do banco (snake_case → sem depender de tipos gerados)
@@ -382,6 +384,7 @@ export async function checkLevelUp(
     .maybeSingle();
 
   if (!rewardData) {
+    await notifyLevelUp(userId, calculatedLevel, null);
     return { leveledUp: true, newLevel: calculatedLevel, levelReward: null };
   }
 
@@ -417,7 +420,23 @@ export async function checkLevelUp(
     }
   }
 
+  await notifyLevelUp(userId, calculatedLevel, levelReward);
+
   return { leveledUp: true, newLevel: calculatedLevel, levelReward };
+}
+
+/** Notificação de subida de nível, com a recompensa do marco quando houver. */
+async function notifyLevelUp(userId: string, level: number, reward: LevelReward | null): Promise<void> {
+  const extras: string[] = [];
+  if (reward && reward.bonusPoints  > 0) extras.push(`+${reward.bonusPoints} pts`);
+  if (reward && reward.bonusFreezes > 0) extras.push(`+${reward.bonusFreezes} freeze${reward.bonusFreezes > 1 ? 's' : ''}`);
+
+  await createNotification({
+    userId,
+    type:  NotificationType.LevelUp,
+    title: `Você alcançou o nível ${level}!`,
+    body:  extras.length > 0 ? `Recompensa de nível: ${extras.join(' · ')}` : null,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -646,6 +665,17 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
       icon:         achievement.icon,
       rewardPoints: achievement.reward_points,
       createdAt:    achievement.created_at,
+    });
+
+    // Central de notificações (o popup imediato vem pela resposta HTTP)
+    await createNotification({
+      userId,
+      type:     NotificationType.Achievement,
+      title:    'Conquista desbloqueada!',
+      body:     achievement.reward_points > 0
+        ? `${achievement.name} · +${achievement.reward_points} pts`
+        : achievement.name,
+      entityId: achievement.id,
     });
   }
 

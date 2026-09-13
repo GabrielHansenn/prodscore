@@ -15,12 +15,16 @@ import AppNavigation from './src/navigation/index';
 import ToastHost from './src/components/ToastHost';
 import GamificationPopup from './src/components/GamificationPopup';
 import { useThemeColors, useResolvedTheme } from './src/lib/useThemeColors';
+import { useRealtimeNotifications } from './src/lib/useRealtimeNotifications';
 import './src/lib/globalFont';
 
 /** Ponto de entrada do aplicativo mobile ProdScore */
 export default function App() {
   const colors = useThemeColors();
   const resolvedTheme = useResolvedTheme();
+
+  // Sino: contador inicial + INSERT/UPDATE em notifications via Realtime
+  useRealtimeNotifications();
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,

@@ -20,6 +20,13 @@ import {
   uploadGroupImage,
 } from '../services/group.service.js';
 import { getMissionsForGroup, createGroupMission } from '../services/mission.service.js';
+import {
+  listGroupMessages,
+  sendGroupMessage,
+  uploadGroupChatImage,
+  markGroupChatRead,
+  getGroupUnreadCount,
+} from '../services/groupMessage.service.js';
 
 const router = Router();
 
@@ -498,6 +505,84 @@ router.delete('/:id', authGuard, async (req, res) => {
     return res.status(200).json({ mensagem: 'Grupo excluído com sucesso.' });
   } catch (err) {
     return sendError(res, err, '[grupos/DELETE/:id]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Chat do grupo — /groups/:id/chat (só membros; a checagem é do service)
+// ---------------------------------------------------------------------------
+
+/** Histórico do chat (mais antigas → mais novas). `?before=<ISO>` pagina para trás. */
+router.get('/:id/chat/messages', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+    const before = typeof req.query['before'] === 'string' ? req.query['before'] : undefined;
+    const { messages, hasMore } = await listGroupMessages(groupId, user.id, before);
+    return res.status(200).json({ mensagens: messages, temMais: hasMore });
+  } catch (err) {
+    return sendError(res, err, '[grupos/GET/chat/messages]');
+  }
+});
+
+/** Envia mensagem (texto rico e/ou imagem já enviada via /chat/image). */
+router.post('/:id/chat/messages', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+
+    const body = req.body as { content?: unknown; imagePath?: string | null };
+    const mensagem = await sendGroupMessage(groupId, user.id, {
+      content:   body.content,
+      imagePath: typeof body.imagePath === 'string' ? body.imagePath : null,
+    });
+    return res.status(201).json({ mensagem });
+  } catch (err) {
+    return sendError(res, err, '[grupos/POST/chat/messages]');
+  }
+});
+
+/** Upload da imagem da mensagem — devolve o path para enviar junto da mensagem. */
+router.post('/:id/chat/image', authGuard, handleImageUpload, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+    const file = req.file;
+    if (!file) throw new AppError('Nenhum arquivo enviado.', 400, 'ARQUIVO_AUSENTE');
+
+    const result = await uploadGroupChatImage(groupId, user.id, file.buffer);
+    return res.status(200).json(result);
+  } catch (err) {
+    return sendError(res, err, '[grupos/POST/chat/image]');
+  }
+});
+
+/** Marca o chat do grupo como lido. */
+router.post('/:id/chat/read', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+    await markGroupChatRead(groupId, user.id);
+    return res.status(200).json({ mensagem: 'Chat marcado como lido.' });
+  } catch (err) {
+    return sendError(res, err, '[grupos/POST/chat/read]');
+  }
+});
+
+/** Quantidade de mensagens não lidas no chat do grupo. */
+router.get('/:id/chat/unread-count', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+    const naoLidas = await getGroupUnreadCount(groupId, user.id);
+    return res.status(200).json({ naoLidas });
+  } catch (err) {
+    return sendError(res, err, '[grupos/GET/chat/unread-count]');
   }
 });
 

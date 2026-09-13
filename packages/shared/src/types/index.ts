@@ -1,3 +1,5 @@
+import type { RichTextDoc } from '../richText.js';
+
 /**
  * Tipos e interfaces compartilhados entre web, mobile e API.
  * Todos os enums utilizam valores em inglês (padrão técnico do banco de dados).
@@ -224,6 +226,42 @@ export interface UserSearchResult {
 
 /** Tamanho máximo de uma mensagem de chat (espelha o CHECK da tabela messages) */
 export const MAX_MESSAGE_LENGTH = 2000;
+
+/** Tipo de evento que gera uma notificação (espelha o enum notification_type do banco) */
+export enum NotificationType {
+  FriendMessage = 'friend_message',
+  GroupMessage  = 'group_message',
+  Achievement   = 'achievement',
+  LevelUp       = 'level_up',
+}
+
+/** Notificação exibida na central (sino) */
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  /** Quem causou o evento (remetente da mensagem) — null em conquista/nível */
+  actorId: string | null;
+  /** Destino do clique: groupId, achievementId, … conforme o tipo */
+  entityId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** Mensagem do chat de um grupo (texto rico + imagem opcional) */
+export interface GroupMessage {
+  id: string;
+  groupId: string;
+  sender: Pick<User, 'id' | 'username' | 'avatarUrl'>;
+  /** Documento de texto rico normalizado (ver richText.ts) — null se a mensagem é só imagem */
+  content: RichTextDoc | null;
+  /** Texto puro do conteúdo — prévia em notificação e acessibilidade */
+  contentText: string;
+  /** URL assinada de curta duração da imagem anexada (bucket privado group-chat) */
+  imageUrl: string | null;
+  createdAt: string;
+}
 
 /** Mensagem de chat 1:1 entre amigos */
 export interface Message {

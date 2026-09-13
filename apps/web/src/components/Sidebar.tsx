@@ -4,6 +4,7 @@ import { useUserStore } from '../store/userStore.js';
 import { useThemeStore, type Theme } from '../store/themeStore.js';
 import { useConsentStore } from '../store/consentStore.js';
 import { LogoWordmark } from './Logo.js';
+import NotificationBell from './NotificationBell.js';
 
 const THEME_OPTIONS: ReadonlyArray<{
   value: Theme;
@@ -48,6 +49,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* Logo + botão fechar (móvel) */}
       <div className="flex items-center gap-2.5 px-6 py-6">
         <LogoWordmark variant="dark" className="h-7 w-auto flex-1" />
+        <NotificationBell onNavigate={onClose} />
         {onClose && (
           <button
             onClick={onClose}
