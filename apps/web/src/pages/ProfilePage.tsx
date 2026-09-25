@@ -183,7 +183,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Meu Perfil</h1>
 
       {/* Card de identidade */}
@@ -228,7 +228,7 @@ export default function ProfilePage() {
       {editing && (
         <div className="card mb-6 p-6">
           <h3 className="mb-4 font-semibold text-gray-900">Editar Informações</h3>
-          <form onSubmit={(e) => void handleSave(e)} className="space-y-4">
+          <form onSubmit={(e) => void handleSave(e)} className="max-w-3xl space-y-4">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Nome de usuário</label>
               <input
@@ -335,6 +335,6 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

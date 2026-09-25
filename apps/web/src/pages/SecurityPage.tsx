@@ -136,7 +136,7 @@ export default function SecurityPage() {
   };
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <h1 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Segurança</h1>
       <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
         Gerencie a autenticação de dois fatores e outras configurações sensíveis da sua conta.
@@ -145,7 +145,9 @@ export default function SecurityPage() {
       {/* Autenticação de dois fatores */}
       <div className="card mb-6 p-6">
         <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Autenticação de dois fatores (2FA)</h3>
-        <EnrollMFA />
+        <div className="max-w-3xl">
+          <EnrollMFA />
+        </div>
       </div>
 
       {/* Alterar senha — exige aal2 */}
@@ -155,7 +157,9 @@ export default function SecurityPage() {
           Por segurança, esta ação exige verificação em duas etapas confirmada nesta sessão.
         </p>
         <RequireAAL2>
-          <ChangePasswordForm />
+          <div className="max-w-3xl">
+            <ChangePasswordForm />
+          </div>
         </RequireAAL2>
       </div>
 
@@ -188,6 +192,6 @@ export default function SecurityPage() {
         O Supabase não gera automaticamente códigos de recuperação para TOTP —
         seria necessário implementar geração, hash e armazenamento próprios.
       */}
-    </main>
+    </div>
   );
 }

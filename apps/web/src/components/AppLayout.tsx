@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useMatch } from 'react-router-dom';
 import Sidebar from './Sidebar.js';
 import { LogoWordmark } from './Logo.js';
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
+  // Chat tem altura calculada e coluna estreita próprias — fica fora do container padrão
+  const isChat = useMatch('/amigos/:id/chat') !== null;
 
   // P2/P9: fechar sidebar com Escape (teclado)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -58,7 +60,9 @@ export default function AppLayout() {
 
         {/* Conteúdo — P5: role="main" para skip-link e a11y */}
         <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
-          <Outlet />
+          <div className={isChat ? undefined : 'mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10'}>
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

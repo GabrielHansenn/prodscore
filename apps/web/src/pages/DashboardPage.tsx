@@ -132,7 +132,7 @@ export default function DashboardPage() {
   const activeMissions = (stats?.activeMissions ?? []).slice(0, 3);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
 
       {/* Saudação */}
       <div className="mb-8">
@@ -349,6 +349,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

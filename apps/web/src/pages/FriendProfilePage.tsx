@@ -23,7 +23,7 @@ export default function FriendProfilePage() {
   }, [id]);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <button
         onClick={() => navigate('/amigos')}
         className="mb-5 flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
@@ -70,6 +70,6 @@ export default function FriendProfilePage() {
           <StatisticsContent stats={data.estatisticas} />
         </>
       )}
-    </main>
+    </div>
   );
 }

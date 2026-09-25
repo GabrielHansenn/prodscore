@@ -54,7 +54,7 @@ export default function AchievementsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Conquistas</h1>
         <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Complete objetivos e desbloqueie recompensas especiais</p>
@@ -135,6 +135,6 @@ export default function AchievementsPage() {
           })}
         </div>
       )}
-    </main>
+    </div>
   );
 }

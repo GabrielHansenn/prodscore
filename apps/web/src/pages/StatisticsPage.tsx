@@ -11,7 +11,7 @@ export default function StatisticsPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Estatísticas</h1>
         <p className="mt-1 text-sm text-gray-500">Visão geral do seu desempenho</p>
@@ -24,6 +24,6 @@ export default function StatisticsPage() {
       ) : (
         <StatisticsContent stats={stats} />
       )}
-    </main>
+    </div>
   );
 }

@@ -271,7 +271,7 @@ export default function TasksPage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       {/* Cabeçalho */}
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -412,6 +412,6 @@ export default function TasksPage() {
           onSubmit={async (data) => { if (editingTask) await updateTask(editingTask.id, data); }}
         />
       )}
-    </main>
+    </div>
   );
 }

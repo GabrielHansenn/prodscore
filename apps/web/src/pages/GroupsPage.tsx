@@ -223,7 +223,7 @@ export default function GroupsPage() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meus Grupos</h1>
@@ -270,6 +270,6 @@ export default function GroupsPage() {
           onJoined={(g) => { setGroups((prev) => [g, ...prev]); navigate(`/grupos/${g.id}`); }}
         />
       )}
-    </main>
+    </div>
   );
 }

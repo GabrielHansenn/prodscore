@@ -670,7 +670,7 @@ export default function GroupSettingsPage() {
 
   if (error || !group) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <div className="py-4">
         <button onClick={() => navigate(`/grupos/${id ?? ''}`)} className="mb-4 text-xs text-gray-400 hover:text-gray-700">
           ← Voltar ao grupo
         </button>
@@ -678,12 +678,12 @@ export default function GroupSettingsPage() {
           <p className="font-medium text-red-600 dark:text-red-400">{error || 'Grupo não encontrado.'}</p>
           <button onClick={() => navigate('/grupos')} className="btn-secondary mt-4">Voltar para grupos</button>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
 
       {/* Voltar */}
       <button
@@ -745,6 +745,6 @@ export default function GroupSettingsPage() {
           />
         )}
       </div>
-    </main>
+    </div>
   );
 }

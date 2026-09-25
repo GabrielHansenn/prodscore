@@ -176,7 +176,7 @@ export default function FriendsPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Amigos</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -329,7 +329,7 @@ export default function FriendsPage() {
           )
         )}
       </div>
-    </main>
+    </div>
   );
 }
 

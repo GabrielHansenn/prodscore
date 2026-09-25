@@ -140,7 +140,7 @@ export default function ChatPage() {
   };
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-2rem)] max-w-3xl flex-col px-4 py-4 sm:px-6">
+    <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-3xl flex-col px-4 py-4 sm:px-6">
       {/* Cabeçalho */}
       <div className="mb-3 flex items-center gap-3">
         <button
@@ -262,6 +262,6 @@ export default function ChatPage() {
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

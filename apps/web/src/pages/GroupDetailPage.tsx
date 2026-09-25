@@ -637,7 +637,7 @@ export default function GroupDetailPage() {
 
   if (error || !group) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <div className="py-4">
         <button onClick={() => navigate('/grupos')} className="mb-4 text-xs text-gray-400 hover:text-gray-700">
           ← Voltar para grupos
         </button>
@@ -647,7 +647,7 @@ export default function GroupDetailPage() {
             Voltar para grupos
           </button>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -664,7 +664,7 @@ export default function GroupDetailPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+    <div>
 
       {/* Voltar */}
       <button
@@ -849,6 +849,6 @@ export default function GroupDetailPage() {
         {tab === 'chat' && id && <GroupChat groupId={id} />}
 
       </div>
-    </main>
+    </div>
   );
 }
