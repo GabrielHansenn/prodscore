@@ -4,7 +4,10 @@ import {
   TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import type { AppStackParamList } from '../navigation/index';
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
@@ -14,7 +17,9 @@ import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
-type Tab = 'global' | 'semanal';
+type Tab = 'global' | 'semanal' | 'amigos';
+
+const TAB_LABELS: Record<Tab, string> = { global: 'Global', semanal: 'Semanal', amigos: 'Amigos' };
 
 // ---------------------------------------------------------------------------
 // Funções de busca de ranking (inline, sem reutilizar o serviço do web)
@@ -58,13 +63,47 @@ async function fetchWeeklyRanking(): Promise<RankingRow[]> {
   }));
 }
 
+/** Empates dividem a posição; quem ainda não entrou na view vem no fim com pending. */
+async function fetchFriendsRanking(): Promise<{ rows: RankingRow[]; totalAmigos: number }> {
+  const { data } = await api.get<{
+    ranking: Array<{
+      position:      number | null;
+      usuario:       { id: string; username: string; avatarUrl: string | null; level: number };
+      score:         number | null;
+      currentStreak: number;
+    }>;
+    totalAmigos: number;
+  }>('/ranking/friends');
+
+  return {
+    totalAmigos: data.totalAmigos,
+    rows: data.ranking.map((r) => ({
+      position:      r.position ?? 0,
+      userId:        r.usuario.id,
+      username:      r.usuario.username,
+      avatarUrl:     r.usuario.avatarUrl,
+      level:         r.usuario.level,
+      score:         r.score ?? 0,
+      currentStreak: r.currentStreak,
+      pending:       r.position === null,
+    })),
+  };
+}
+
+async function fetchTab(tab: Tab): Promise<{ rows: RankingRow[]; totalAmigos: number | null }> {
+  if (tab === 'amigos') return fetchFriendsRanking();
+  const rows = tab === 'global' ? await fetchGlobalRanking() : await fetchWeeklyRanking();
+  return { rows, totalAmigos: null };
+}
+
 // ---------------------------------------------------------------------------
 // Tela de ranking
 // ---------------------------------------------------------------------------
 
-/** Tela de placar de líderes com abas Global e Semanal */
+/** Tela de placar de líderes com abas Global, Semanal e Amigos */
 export default function RankingScreen() {
   const insets   = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { isWide } = useResponsive();
   const { user }              = useAuthStore();
   const { stats, fetchStats } = useUserStore();
@@ -73,6 +112,7 @@ export default function RankingScreen() {
 
   const [tab,      setTab]      = useState<Tab>('global');
   const [rows,     setRows]     = useState<RankingRow[]>([]);
+  const [totalAmigos, setTotalAmigos] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error,    setError]    = useState('');
@@ -82,12 +122,12 @@ export default function RankingScreen() {
   useEffect(() => {
     setIsLoading(true);
     setError('');
+    setRows([]);
     void (async () => {
       try {
-        const data = tab === 'global'
-          ? await fetchGlobalRanking()
-          : await fetchWeeklyRanking();
-        setRows(data);
+        const data = await fetchTab(tab);
+        setRows(data.rows);
+        setTotalAmigos(data.totalAmigos);
       } catch {
         setError('Não foi possível carregar o ranking.');
       } finally {
@@ -97,12 +137,16 @@ export default function RankingScreen() {
   }, [tab]);
 
   const myRow = rows.find((r) => r.userId === user?.id);
+  const isFriendsTab = tab === 'amigos';
+  const hasNoFriends = isFriendsTab && totalAmigos === 0;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await api.post('/ranking/refresh');
-      setRows(await fetchGlobalRanking());
+      const data = await fetchTab(tab);
+      setRows(data.rows);
+      setTotalAmigos(data.totalAmigos);
     } catch {
       setError('Não foi possível atualizar o ranking.');
     } finally {
@@ -127,7 +171,7 @@ export default function RankingScreen() {
           <Text style={styles.headerTitle}>Ranking</Text>
           <Text style={styles.headerSub}>Compare sua produtividade com outros jogadores</Text>
         </View>
-        {tab === 'global' && (
+        {tab !== 'semanal' && (
           <TouchableOpacity style={styles.refreshBtn} onPress={() => void handleRefresh()} disabled={isRefreshing}>
             {isRefreshing
               ? <ActivityIndicator size="small" color={colors.textSecondary} />
@@ -140,12 +184,23 @@ export default function RankingScreen() {
       {/* Posição do usuário — espelha o card "Sua posição no ranking global" da RankingPage web */}
       {summary && (
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Sua posição no ranking global</Text>
+          <Text style={styles.summaryLabel}>
+            {isFriendsTab ? 'Sua posição entre amigos' : 'Sua posição no ranking global'}
+          </Text>
           <View style={styles.summaryRow}>
-            <View>
-              <Text style={styles.summaryPosition}>#{summary.position > 0 ? summary.position : '—'}</Text>
-              <Text style={styles.summarySub}>Posição geral</Text>
-            </View>
+            {isFriendsTab ? (
+              <View>
+                <Text style={styles.summaryPosition}>#{myRow && !myRow.pending ? myRow.position : '—'}</Text>
+                <Text style={styles.summarySub}>
+                  {isLoading ? 'Entre amigos' : `de ${rows.length} ${rows.length === 1 ? 'jogador' : 'jogadores'}`}
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.summaryPosition}>#{summary.position > 0 ? summary.position : '—'}</Text>
+                <Text style={styles.summarySub}>Posição geral</Text>
+              </View>
+            )}
             <View style={styles.summaryDivider} />
             <View>
               <Text style={styles.summaryValue}>{summary.points.toLocaleString('pt-BR')}</Text>
@@ -166,16 +221,16 @@ export default function RankingScreen() {
         </View>
       )}
 
-      {/* Segmento Global / Semanal */}
+      {/* Segmento Global / Semanal / Amigos */}
       <View style={styles.segmentRow}>
-        {(['global', 'semanal'] as const).map((t) => (
+        {(['global', 'semanal', 'amigos'] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.segment, tab === t && styles.segmentActive]}
             onPress={() => setTab(t)}
           >
             <Text style={[styles.segmentText, tab === t && styles.segmentTextActive]}>
-              {t === 'global' ? 'Global' : 'Semanal'}
+              {TAB_LABELS[t]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -189,6 +244,19 @@ export default function RankingScreen() {
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : hasNoFriends ? (
+        <View style={styles.center}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="people" size={24} color={colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>Você ainda não tem amigos para competir</Text>
+          <Text style={styles.emptyBody}>
+            Adicione amigos para ver quem está mais produtivo e disputar as primeiras posições.
+          </Text>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Friends')}>
+            <Text style={styles.emptyBtnText}>Adicionar amigos</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -271,4 +339,16 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   errorText: { color: colors.red, fontSize: FONT.base, textAlign: 'center' },
   emptyText: { color: colors.textMuted, fontSize: FONT.base },
+  emptyIcon: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primaryDim, marginBottom: SPACING.sm,
+  },
+  emptyTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text, textAlign: 'center' },
+  emptyBody:  { fontSize: FONT.sm, color: colors.textMuted, textAlign: 'center', marginTop: 4, maxWidth: 320 },
+  emptyBtn: {
+    marginTop: SPACING.md, backgroundColor: colors.primary,
+    borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10,
+  },
+  emptyBtnText: { color: '#ffffff', fontWeight: '600', fontSize: FONT.base },
 }));

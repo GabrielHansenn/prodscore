@@ -11,6 +11,8 @@ export interface RankingRow {
   level:         number;
   score:         number;
   currentStreak: number;
+  /** Conta criada após o último refresh da view — ainda sem posição/score */
+  pending?:      boolean;
 }
 
 interface RankingItemProps {
@@ -24,14 +26,14 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 export default function RankingItem({ row, isCurrentUser }: RankingItemProps) {
   const colors = useThemeColors();
   const styles = useStyles();
-  const medal = row.position <= 3 ? MEDALS[row.position - 1] : undefined;
+  const medal = !row.pending && row.position <= 3 ? MEDALS[row.position - 1] : undefined;
 
   return (
     <View style={[styles.row, isCurrentUser && styles.rowHighlight]}>
       {/* Posição */}
       <View style={styles.posCell}>
         <Text style={[styles.pos, row.position === 1 && { color: colors.amber }]}>
-          {medal ?? `#${row.position}`}
+          {row.pending ? '—' : (medal ?? `#${row.position}`)}
         </Text>
       </View>
 
@@ -53,9 +55,13 @@ export default function RankingItem({ row, isCurrentUser }: RankingItemProps) {
         {row.currentStreak > 0 && (
           <Text style={styles.streak}>🔥 {row.currentStreak}</Text>
         )}
-        <Text style={[styles.score, isCurrentUser && { color: colors.primary }]}>
-          {row.score.toLocaleString('pt-BR')}
-        </Text>
+        {row.pending ? (
+          <Text style={styles.pending}>Aguardando atualização</Text>
+        ) : (
+          <Text style={[styles.score, isCurrentUser && { color: colors.primary }]}>
+            {row.score.toLocaleString('pt-BR')}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -120,5 +126,10 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     fontSize:   FONT.base,
     fontWeight: '700',
     color:      colors.text,
+  },
+  pending: {
+    fontSize:  FONT.sm,
+    fontStyle: 'italic',
+    color:     colors.textMuted,
   },
 }));

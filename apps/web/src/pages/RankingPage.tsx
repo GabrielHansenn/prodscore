@@ -1,18 +1,27 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
-import { getGlobalRanking, getWeeklyRanking, refreshRanking, type RankingRow } from '../services/ranking.service.js';
+import { getFriendsRanking, getGlobalRanking, getWeeklyRanking, refreshRanking, type RankingRow } from '../services/ranking.service.js';
 import RankingTable from '../components/RankingTable.js';
-import { FlameIcon } from '../components/icons.js';
+import { FlameIcon, UsersIcon } from '../components/icons.js';
 
-type Tab = 'global' | 'semanal';
+type Tab = 'global' | 'semanal' | 'amigos';
+
+async function fetchTab(tab: Tab): Promise<{ rows: RankingRow[]; totalAmigos: number | null }> {
+  if (tab === 'amigos') return getFriendsRanking();
+  const rows = tab === 'global' ? await getGlobalRanking(50) : await getWeeklyRanking(50);
+  return { rows, totalAmigos: null };
+}
 
 export default function RankingPage() {
+  const navigate              = useNavigate();
   const { user }              = useAuthStore();
   const { stats, fetchStats } = useUserStore();
 
   const [tab,         setTab]         = useState<Tab>('global');
   const [rows,        setRows]        = useState<RankingRow[]>([]);
+  const [totalAmigos, setTotalAmigos] = useState<number | null>(null);
   const [isLoading,   setIsLoading]   = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error,       setError]       = useState('');
@@ -22,10 +31,12 @@ export default function RankingPage() {
   useEffect(() => {
     setIsLoading(true);
     setError('');
+    setRows([]);
     void (async () => {
       try {
-        const data = tab === 'global' ? await getGlobalRanking(50) : await getWeeklyRanking(50);
-        setRows(data);
+        const data = await fetchTab(tab);
+        setRows(data.rows);
+        setTotalAmigos(data.totalAmigos);
       } catch {
         setError('Não foi possível carregar o ranking. Tente novamente.');
       } finally {
@@ -35,13 +46,16 @@ export default function RankingPage() {
   }, [tab]);
 
   const myRow = rows.find((r) => r.userId === user?.id);
+  const isFriendsTab = tab === 'amigos';
+  const hasNoFriends = isFriendsTab && totalAmigos === 0;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await refreshRanking();
-      const data = await getGlobalRanking(50);
-      setRows(data);
+      const data = await fetchTab(tab);
+      setRows(data.rows);
+      setTotalAmigos(data.totalAmigos);
     } catch {
       setError('Não foi possível atualizar o ranking.');
     } finally {
@@ -57,7 +71,7 @@ export default function RankingPage() {
           <h1 className="text-2xl font-bold text-gray-900">Ranking</h1>
           <p className="mt-0.5 text-sm text-gray-500">Compare sua produtividade com outros jogadores</p>
         </div>
-        {tab === 'global' && (
+        {tab !== 'semanal' && (
           <button
             onClick={() => void handleRefresh()}
             disabled={isRefreshing}
@@ -77,14 +91,27 @@ export default function RankingPage() {
       {/* Posição do usuário */}
       {stats && (
         <div className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800/60 dark:bg-brand-900/20">
-          <p className="text-xs font-medium text-brand-700 dark:text-brand-300">Sua posição no ranking global</p>
+          <p className="text-xs font-medium text-brand-700 dark:text-brand-300">
+            {isFriendsTab ? 'Sua posição entre amigos' : 'Sua posição no ranking global'}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-6">
-            <div>
-              <p className="text-3xl font-bold text-brand-700 dark:text-brand-300">
-                #{stats.rankPosition > 0 ? stats.rankPosition : '—'}
-              </p>
-              <p className="text-xs text-gray-500">Posição geral</p>
-            </div>
+            {isFriendsTab ? (
+              <div>
+                <p className="text-3xl font-bold text-brand-700 dark:text-brand-300">
+                  #{myRow && !myRow.pending ? myRow.position : '—'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {isLoading ? 'Entre amigos' : `de ${rows.length} ${rows.length === 1 ? 'jogador' : 'jogadores'}`}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-3xl font-bold text-brand-700 dark:text-brand-300">
+                  #{stats.rankPosition > 0 ? stats.rankPosition : '—'}
+                </p>
+                <p className="text-xs text-gray-500">Posição geral</p>
+              </div>
+            )}
             <div className="h-10 w-px bg-gray-200" />
             <div>
               <p className="text-xl font-bold text-gray-800">
@@ -112,6 +139,7 @@ export default function RankingPage() {
         {([
           { key: 'global',  label: 'Global',  desc: 'Pontuação total acumulada' },
           { key: 'semanal', label: 'Semanal', desc: 'Pontos ganhos nesta semana' },
+          { key: 'amigos',  label: 'Amigos',  desc: 'Você e seus amigos' },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -121,7 +149,7 @@ export default function RankingPage() {
             }`}
           >
             <span>{t.label}</span>
-            <span className={`ml-1 hidden text-xs sm:inline ${tab === t.key ? 'text-brand-200' : 'text-gray-400'}`}>
+            <span className={`ml-1 hidden text-xs md:inline ${tab === t.key ? 'text-brand-200' : 'text-gray-400'}`}>
               — {t.desc}
             </span>
           </button>
@@ -137,10 +165,26 @@ export default function RankingPage() {
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
           {error}
         </div>
+      ) : hasNoFriends ? (
+        <div className="flex flex-col items-center rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
+            <UsersIcon className="h-6 w-6" />
+          </div>
+          <p className="font-semibold text-gray-800">Você ainda não tem amigos para competir</p>
+          <p className="mt-1 max-w-sm text-sm text-gray-500">
+            Adicione amigos para ver quem está mais produtivo e disputar as primeiras posições.
+          </p>
+          <button
+            onClick={() => navigate('/amigos')}
+            className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+          >
+            Adicionar amigos
+          </button>
+        </div>
       ) : (
         <>
           <RankingTable rows={rows} scoreLabel={tab === 'semanal' ? 'Pts na Semana' : 'Pontuação'} {...(user?.id ? { currentUserId: user.id } : {})} />
-          {myRow === undefined && user && rows.length > 0 && (
+          {!isFriendsTab && myRow === undefined && user && rows.length > 0 && (
             <p className="mt-3 text-center text-xs text-gray-400">
               Você não está no top 50 ainda — continue completando tarefas!
             </p>

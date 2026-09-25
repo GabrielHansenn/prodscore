@@ -4,6 +4,7 @@ import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { supabase } from '../lib/supabase.js';
 import { getGroupRanking } from '../services/group.service.js';
+import { listFriendIds } from '../services/friend.service.js';
 
 const router = Router();
 
@@ -131,6 +132,115 @@ router.get('/weekly', authGuard, async (req, res) => {
     });
   } catch (err) {
     return sendError(res, err, '[ranking/weekly]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /ranking/friends
+// ---------------------------------------------------------------------------
+
+/**
+ * Ranking entre o usuário logado e seus amigos, com o mesmo score multi-fator
+ * de ranking_global_mv. Os amigos vêm do JWT (nunca do client), reaplicando a
+ * regra de are_friends(). Empate (mesmo score e total_points) divide a posição
+ * (1, 2, 2, 4). Quem ainda não está na view (conta criada após o último
+ * refresh) vai para o fim com position/score null.
+ */
+router.get('/friends', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+
+    const friendIds = await listFriendIds(user.id);
+    const ids = [user.id, ...friendIds];
+
+    const { data, error } = await supabase
+      .from('ranking_global_mv')
+      .select('position, id, username, avatar_url, level, total_points, current_streak, score')
+      .in('id', ids);
+
+    if (error) throw new AppError('Erro ao buscar ranking de amigos.', 500);
+
+    const ranked = ((data ?? []) as Array<{
+      position:       number;
+      id:             string;
+      username:       string;
+      avatar_url:     string | null;
+      level:          number;
+      total_points:   number;
+      current_streak: number;
+      score:          number;
+    }>).sort((a, b) =>
+      b.score - a.score ||
+      b.total_points - a.total_points ||
+      a.username.localeCompare(b.username, 'pt-BR'),
+    );
+
+    const ranking: Array<{
+      position:       number | null;
+      posicaoGlobal:  number | null;
+      usuario:        { id: string; username: string; avatarUrl: string | null; level: number };
+      totalPoints:    number;
+      currentStreak:  number;
+      score:          number | null;
+    }> = [];
+
+    ranked.forEach((row, i) => {
+      const prev = ranked[i - 1];
+      const tied = prev !== undefined && prev.score === row.score && prev.total_points === row.total_points;
+      ranking.push({
+        position:      tied ? ranking[i - 1]!.position : i + 1,
+        posicaoGlobal: row.position,
+        usuario: {
+          id:        row.id,
+          username:  row.username,
+          avatarUrl: row.avatar_url,
+          level:     row.level,
+        },
+        totalPoints:   row.total_points,
+        currentStreak: row.current_streak,
+        score:         row.score,
+      });
+    });
+
+    const inView = new Set(ranked.map((r) => r.id));
+    const missingIds = ids.filter((id) => !inView.has(id));
+
+    if (missingIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, level, total_points, current_streak')
+        .in('id', missingIds)
+        .order('username');
+
+      if (profilesError) throw new AppError('Erro ao buscar ranking de amigos.', 500);
+
+      for (const p of (profiles ?? []) as Array<{
+        id:             string;
+        username:       string;
+        avatar_url:     string | null;
+        level:          number;
+        total_points:   number;
+        current_streak: number;
+      }>) {
+        ranking.push({
+          position:      null,
+          posicaoGlobal: null,
+          usuario: {
+            id:        p.id,
+            username:  p.username,
+            avatarUrl: p.avatar_url,
+            level:     p.level,
+          },
+          totalPoints:   p.total_points,
+          currentStreak: p.current_streak,
+          score:         null,
+        });
+      }
+    }
+
+    return res.status(200).json({ ranking, total: ranking.length, totalAmigos: friendIds.length });
+  } catch (err) {
+    return sendError(res, err, '[ranking/friends]');
   }
 });
 

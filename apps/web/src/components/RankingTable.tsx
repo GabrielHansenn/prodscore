@@ -52,7 +52,9 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                 }`}
               >
                 <td className="px-4 py-3">
-                  {row.position <= 3
+                  {row.pending
+                    ? <span className="text-xs font-medium text-gray-400">—</span>
+                    : row.position <= 3
                     ? <MedalBadge position={row.position} />
                     : <span className="text-xs font-medium text-gray-400">#{row.position}</span>
                   }
@@ -91,9 +93,13 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                 </td>
 
                 <td className="px-4 py-3 text-right">
-                  <span className={`font-bold ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800'}`}>
-                    {row.score.toLocaleString('pt-BR')}
-                  </span>
+                  {row.pending ? (
+                    <span className="text-xs italic text-gray-400">Aguardando atualização</span>
+                  ) : (
+                    <span className={`font-bold ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800'}`}>
+                      {row.score.toLocaleString('pt-BR')}
+                    </span>
+                  )}
                 </td>
               </tr>
             );

@@ -302,6 +302,20 @@ export async function listFriends(userId: string): Promise<Friend[]> {
     .sort((a, b) => a.user.username.localeCompare(b.user.username, 'pt-BR'));
 }
 
+/** IDs dos amigos (amizades aceitas), sem carregar perfis. */
+export async function listFriendIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('status', FriendshipStatus.Accepted)
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+
+  if (error) throw new AppError('Erro ao buscar amigos.', 500, 'BUSCA_FALHOU');
+
+  return (data as Pick<FriendshipRow, 'requester_id' | 'addressee_id'>[])
+    .map((r) => (r.requester_id === userId ? r.addressee_id : r.requester_id));
+}
+
 /**
  * Remove o vínculo com outro usuário — desfaz amizade aceita ou cancela um
  * pedido pendente enviado por mim. Qualquer um dos dois lados pode remover.
