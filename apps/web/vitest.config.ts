@@ -18,6 +18,21 @@ export default mergeConfig(
       setupFiles: ['./src/test/setup.ts'],
       // Inclui somente arquivos de teste nos diretórios corretos
       include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+      // Dependências hoisted na raiz do monorepo que importam React. Por padrão
+      // o Vitest as carrega direto pelo Node, que ignora o alias de
+      // react/react-dom do vite.config.ts — elas acabavam pegando o React 19 da
+      // raiz (do apps/mobile) em vez do React 18 do apps/web, gerando duas
+      // instâncias e o erro "reading 'useRef'" nos hooks. Pré-empacotá-las com
+      // o optimizer (como o Vite já faz no dev) aplica o alias, inclusive nos
+      // require() CommonJS do use-sync-external-store usado pelo zustand.
+      deps: {
+        optimizer: {
+          web: {
+            enabled: true,
+            include: ['zustand', 'use-sync-external-store', 'react-router', 'react-router-dom'],
+          },
+        },
+      },
       // Cobertura gerada pela engine V8 nativa
       coverage: {
         provider:   'v8',

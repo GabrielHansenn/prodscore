@@ -4,7 +4,7 @@
  */
 
 jest.mock('../lib/supabase');
-jest.mock('../services/mission.service'); // fire-and-forget, não afeta o resultado
+jest.mock('../services/mission.service'); // aguardado no completeTask — mock simula "nenhuma missão concluída"
 
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { completeTask } from '../services/task.service';
@@ -154,9 +154,13 @@ describe('completeTask', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(NOW);
-    // checkMissionProgress é fire-and-forget (chama .catch() direto no retorno) —
-    // o auto-mock do módulo retorna undefined por padrão, o que quebra essa chamada.
-    (checkMissionProgress as jest.Mock).mockResolvedValue(undefined);
+    // checkMissionProgress é aguardado e seu retorno é lido (missões concluídas e
+    // conquistas destravadas) — o auto-mock retorna undefined por padrão, então
+    // simulamos o caso neutro: nenhuma missão concluída, nenhuma conquista.
+    (checkMissionProgress as jest.Mock).mockResolvedValue({
+      completedMissions:    [],
+      unlockedAchievements: [],
+    });
   });
 
   afterEach(() => {

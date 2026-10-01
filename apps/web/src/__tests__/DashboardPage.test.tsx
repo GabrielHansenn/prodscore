@@ -41,7 +41,11 @@ const mockStats = {
   activeMissions:         [],
 };
 
-const todayDate = new Date().toISOString().split('T')[0]!;
+// Meio-dia no horário LOCAL de hoje — a página filtra "tarefas de hoje" pelo
+// dia local. Montar a data a partir do dia UTC quebrava o teste à noite no
+// Brasil (UTC-3): depois das 21h o dia UTC já virou e a tarefa caía em "amanhã".
+const todayNoonLocal = new Date();
+todayNoonLocal.setHours(12, 0, 0, 0);
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -52,7 +56,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     description:  null,
     difficulty:   TaskDifficulty.Medium,
     status:       TaskStatus.Pending,
-    dueDate:      `${todayDate}T23:59:00.000Z`,
+    dueDate:      todayNoonLocal.toISOString(),
     completedAt:  null,
     pointsEarned: null,
     createdAt:    new Date().toISOString(),
@@ -69,9 +73,16 @@ const mockFetchStats   = vi.fn();
 const mockFetchTasks   = vi.fn();
 const mockCompleteTask = vi.fn();
 
+// Simula o hook do zustand: com seletor, devolve só o pedaço selecionado
+// (ex: useAuthStore((s) => s.user)); sem seletor, devolve o estado inteiro.
+function mockStoreHook<T>(getState: () => T) {
+  return <R,>(selector?: (state: T) => R) =>
+    selector ? selector(getState()) : getState();
+}
+
 // taskStore retorna tarefas por padrão — trocamos em testes específicos via mockReturnValueOnce
 vi.mock('../store/authStore.js', () => ({
-  useAuthStore: () => ({ user: mockUser, isAuthenticated: true, isLoading: false }),
+  useAuthStore: mockStoreHook(() => ({ user: mockUser, isAuthenticated: true, isLoading: false })),
 }));
 
 const taskStoreMock = {
@@ -85,7 +96,7 @@ const taskStoreMock = {
 };
 
 vi.mock('../store/taskStore.js', () => ({
-  useTaskStore: () => taskStoreMock,
+  useTaskStore: mockStoreHook(() => taskStoreMock),
 }));
 
 const userStoreMock = {
@@ -95,7 +106,7 @@ const userStoreMock = {
 };
 
 vi.mock('../store/userStore.js', () => ({
-  useUserStore: () => userStoreMock,
+  useUserStore: mockStoreHook(() => userStoreMock),
 }));
 
 
