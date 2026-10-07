@@ -49,6 +49,27 @@ export const supabase: SupabaseClient = createClient(
 );
 
 // ---------------------------------------------------------------------------
+// Cliente descartável — para signUp / signInWithPassword
+// ---------------------------------------------------------------------------
+
+/**
+ * Cria um cliente Supabase novo (anon key) para operações que abrem sessão de
+ * usuário, como `auth.signUp` e `auth.signInWithPassword`.
+ *
+ * NUNCA chame esses métodos no singleton `supabase`: o supabase-js guarda a
+ * sessão retornada em memória (mesmo com persistSession: false) e passa a
+ * enviar o JWT desse usuário no lugar da service role key em TODAS as
+ * requisições seguintes do processo — o que faz o RLS ser aplicado e quebra,
+ * por exemplo, uploads em buckets privados ("new row violates row-level
+ * security policy").
+ */
+export function createEphemeralAuthClient(): SupabaseClient {
+  return createClient(supabaseUrl as string, supabaseAnonKey as string, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Cliente com sessão do usuário — necessário para supabase.auth.mfa.*
 // ---------------------------------------------------------------------------
 

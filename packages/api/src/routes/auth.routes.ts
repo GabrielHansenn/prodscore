@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { supabase, createUserScopedClient } from '../lib/supabase.js';
+import { supabase, createUserScopedClient, createEphemeralAuthClient } from '../lib/supabase.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { requireAAL2 } from '../middleware/aal.js';
@@ -107,7 +107,8 @@ router.post('/register', async (req, res) => {
   try {
     const body = registerSchema.parse(req.body);
 
-    const { data, error } = await supabase.auth.signUp({
+    // Cliente descartável — signUp abre sessão e não pode contaminar o singleton service role
+    const { data, error } = await createEphemeralAuthClient().auth.signUp({
       email:    body.email,
       password: body.password,
       options: {
@@ -169,7 +170,8 @@ router.post('/login', async (req, res) => {
   try {
     const body = loginSchema.parse(req.body);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Cliente descartável — a sessão do login não pode contaminar o singleton service role
+    const { data, error } = await createEphemeralAuthClient().auth.signInWithPassword({
       email:    body.email,
       password: body.password,
     });
