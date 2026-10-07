@@ -75,9 +75,11 @@ const mockCompleteTask = vi.fn();
 
 // Simula o hook do zustand: com seletor, devolve só o pedaço selecionado
 // (ex: useAuthStore((s) => s.user)); sem seletor, devolve o estado inteiro.
+// Também expõe `getState()`, usado fora de componentes (ex: lib/xpGain.ts).
 function mockStoreHook<T>(getState: () => T) {
-  return <R,>(selector?: (state: T) => R) =>
+  const hook = <R,>(selector?: (state: T) => R) =>
     selector ? selector(getState()) : getState();
+  return Object.assign(hook, { getState });
 }
 
 // taskStore retorna tarefas por padrão — trocamos em testes específicos via mockReturnValueOnce

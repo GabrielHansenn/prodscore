@@ -5,6 +5,8 @@
 
 // Mock do cliente Supabase — deve ser chamado antes de qualquer import dos serviços
 jest.mock('../lib/supabase');
+// Notificações são efeito colateral (nunca lançam) — fora do escopo destes testes
+jest.mock('../services/notification.service');
 
 import { TaskDifficulty, TaskPriority } from '@prodscore/shared';
 import { levelThreshold, applyLatePenalty } from '@prodscore/shared/constants';
@@ -47,6 +49,13 @@ function mockInsertSingle(data: unknown, error: unknown = null) {
         single: jest.fn().mockResolvedValue({ data, error }),
       }),
     }),
+  };
+}
+
+/** Cria cadeia de mock para INSERT simples, sem retorno (ex: histórico de freeze) */
+function mockInsert(error: unknown = null) {
+  return {
+    insert: jest.fn().mockResolvedValue({ error }),
   };
 }
 
@@ -222,7 +231,10 @@ describe('updateStreak', () => {
 
   it('deve detectar marco de streak e retornar milestoneReached', async () => {
     // Streak atual de 2 → vai chegar em 3 (marco STREAK_MILESTONES inclui 3)
-    const profileData = { current_streak: 2, longest_streak: 2, last_active_date: yesterday };
+    const profileData = {
+      current_streak: 2, longest_streak: 2, last_active_date: yesterday,
+      streak_freezes: 0, freeze_armed_at: null, freeze_streak_credited: 0,
+    };
     const txData = {
       id: 'tx-1', user_id: userId, amount: 50,
       reason: 'streak_bonus', reference_id: null, created_at: new Date().toISOString(),
@@ -230,7 +242,8 @@ describe('updateStreak', () => {
 
     mockFrom
       .mockReturnValueOnce(mockSelectSingle(profileData))      // select streak
-      .mockReturnValueOnce(mockUpdate())                        // update streak
+      .mockReturnValueOnce(mockUpdate())                        // update streak (+ freeze do marco)
+      .mockReturnValueOnce(mockInsert())                        // evento de freeze do marco
       .mockReturnValueOnce(mockInsertSingle(txData));           // insert transação do bônus
 
     const result = await updateStreak(userId);
@@ -266,7 +279,8 @@ describe('updateStreak', () => {
 
     mockFrom
       .mockReturnValueOnce(mockSelectSingle(profileData))  // select perfil
-      .mockReturnValueOnce(mockUpdate());                   // update (consome freeze)
+      .mockReturnValueOnce(mockUpdate())                    // update (consome freeze)
+      .mockReturnValueOnce(mockInsert());                   // evento de freeze consumido
 
     const result = await updateStreak(userId);
 
@@ -467,7 +481,8 @@ describe('checkLevelUp', () => {
       .mockReturnValueOnce(mockUpdate())                      // update level
       .mockReturnValueOnce(mockSelectMaybeSingle(rewardData))// level_rewards
       .mockReturnValueOnce(mockInsertSingle(txData))         // insert tx (bônus pts)
-      .mockReturnValueOnce(mockUpdate());                     // update streak_freezes
+      .mockReturnValueOnce(mockUpdate())                      // update streak_freezes
+      .mockReturnValueOnce(mockInsert());                     // evento de freeze ganho por nível
 
     const result = await checkLevelUp(userId);
 
