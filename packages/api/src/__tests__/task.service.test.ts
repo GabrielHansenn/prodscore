@@ -1,13 +1,14 @@
 /**
  * Testes do serviço de tarefas.
- * Foca no fluxo de conclusão (completeTask) que dispara o pipeline de gamificação.
+ * Foca no fluxo de conclusão (completeTask) que dispara o pipeline de gamificação
+ * e na regra de criação de tarefas em grupo (createTask).
  */
 
 jest.mock('../lib/supabase');
 jest.mock('../services/mission.service'); // aguardado no completeTask — mock simula "nenhuma missão concluída"
 
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
-import { completeTask } from '../services/task.service';
+import { completeTask, createTask } from '../services/task.service';
 import { supabase } from '../lib/supabase';
 import { checkMissionProgress } from '../services/mission.service';
 
@@ -376,5 +377,91 @@ describe('completeTask', () => {
       expect(result.pointsEarned).toBe(25);
       expect(result.task.status).toBe(TaskStatus.Completed);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createTask — tarefas em grupo
+// ---------------------------------------------------------------------------
+
+describe('createTask', () => {
+  /** Mock da consulta de participação em group_members */
+  function membershipQuery(membership: { user_id: string } | null) {
+    return {
+      select: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            maybeSingle: jest.fn().mockResolvedValue({ data: membership, error: null }),
+          }),
+        }),
+      }),
+    };
+  }
+
+  /** Mock do INSERT em tasks */
+  function insertTaskQuery(row: object) {
+    const insert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: jest.fn().mockResolvedValue({ data: row, error: null }),
+      }),
+    });
+    return { query: { insert }, insert };
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('T8 — deve recusar tarefa em grupo do qual o usuário não é membro', async () => {
+    mockFrom.mockReturnValueOnce(membershipQuery(null));
+
+    await expect(
+      createTask({
+        userId:     'user-1',
+        title:      'Tarefa do grupo',
+        difficulty: TaskDifficulty.Medium,
+        groupId:    'grupo-alheio',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'NAO_MEMBRO_DO_GRUPO' });
+
+    // Nada pode ter sido gravado: só a consulta de participação aconteceu
+    expect(mockFrom).toHaveBeenCalledTimes(1);
+    expect(mockFrom).toHaveBeenCalledWith('group_members');
+  });
+
+  it('T8b — deve criar a tarefa quando o usuário é membro do grupo', async () => {
+    const { query, insert } = insertTaskQuery({ ...pendingTaskRow(), group_id: 'meu-grupo' });
+    mockFrom
+      .mockReturnValueOnce(membershipQuery({ user_id: 'user-1' }))
+      .mockReturnValueOnce(query);
+
+    const task = await createTask({
+      userId:     'user-1',
+      title:      'Implementar feature X',
+      difficulty: TaskDifficulty.Medium,
+      groupId:    'meu-grupo',
+    });
+
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'tasks');
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ group_id: 'meu-grupo', status: 'pending' }),
+    );
+    expect(task.title).toBe('Implementar feature X');
+  });
+
+  it('tarefa pessoal (sem grupo) não deve consultar participação em grupo', async () => {
+    const { query, insert } = insertTaskQuery(pendingTaskRow());
+    mockFrom.mockReturnValueOnce(query);
+
+    await createTask({
+      userId:     'user-1',
+      title:      'Implementar feature X',
+      difficulty: TaskDifficulty.Medium,
+    });
+
+    expect(mockFrom).not.toHaveBeenCalledWith('group_members');
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ group_id: null, due_date: null, description: null }),
+    );
   });
 });

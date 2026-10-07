@@ -15,7 +15,8 @@
     "build:api": "npm run build --workspace=packages/api",
     "build:shared": "npm run build --workspace=packages/shared",
     "build": "npm run build:shared && npm run build:api && npm run build:web",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

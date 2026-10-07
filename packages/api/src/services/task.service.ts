@@ -75,12 +75,16 @@ export function mapTaskRow(row: TaskRow): Task {
 // Filtros de listagem
 // ---------------------------------------------------------------------------
 
+// Os campos opcionais aceitam `undefined` explícito porque o Zod devolve
+// `campo: undefined` quando o cliente não envia o campo (o projeto usa
+// exactOptionalPropertyTypes). O serviço trata undefined como "não informado".
+
 /** Opções de filtragem para GET /tasks */
 export interface TaskFilters {
-  status?:     TaskStatus;
-  difficulty?: TaskDifficulty;
-  priority?:   TaskPriority;
-  groupId?:    string;
+  status?:     TaskStatus     | undefined;
+  difficulty?: TaskDifficulty | undefined;
+  priority?:   TaskPriority   | undefined;
+  groupId?:    string         | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,14 +94,14 @@ export interface TaskFilters {
 export interface CreateTaskInput {
   userId:            string;
   title:             string;
-  description?:      string;
+  description?:      string | undefined;
   difficulty:        TaskDifficulty;
-  priority?:         TaskPriority;
-  estimatedMinutes?: number;
-  dueDate?:          string;
-  groupId?:          string;
+  priority?:         TaskPriority | undefined;
+  estimatedMinutes?: number | undefined;
+  dueDate?:          string | undefined;
+  groupId?:          string | undefined;
   /** Se true, a tarefa só pode ser concluída com uma foto de comprovação anexada */
-  requiresProof?:    boolean;
+  requiresProof?:    boolean | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,15 +243,15 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 
 /** Campos que podem ser atualizados manualmente */
 export interface UpdateTaskInput {
-  title?:            string;
-  description?:      string | null;
-  difficulty?:       TaskDifficulty;
-  priority?:         TaskPriority;
-  estimatedMinutes?: number | null;
+  title?:            string | undefined;
+  description?:      string | null | undefined;
+  difficulty?:       TaskDifficulty | undefined;
+  priority?:         TaskPriority | undefined;
+  estimatedMinutes?: number | null | undefined;
   /** A proteção contra 'completed' é feita em runtime — use PATCH /complete para concluir */
-  status?:           TaskStatus;
-  dueDate?:          string | null;
-  requiresProof?:    boolean;
+  status?:           TaskStatus | undefined;
+  dueDate?:          string | null | undefined;
+  requiresProof?:    boolean | undefined;
 }
 
 /**
