@@ -23,7 +23,9 @@ export default function PrivacyPolicyPage() {
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
         <h1 className="mb-2 text-3xl font-bold text-gray-900">Política de Privacidade</h1>
-        <p className="mb-8 text-sm text-gray-400">Última atualização: {new Date().toLocaleDateString('pt-BR')}</p>
+        {/* Data fixa da última revisão do texto — antes usava new Date() e
+            mostrava sempre o dia de hoje. Atualize ao mudar a política. */}
+        <p className="mb-8 text-sm text-gray-400">Última atualização: 17 de agosto de 2026</p>
 
         <div className="space-y-6 text-sm leading-relaxed text-gray-600">
           <section>

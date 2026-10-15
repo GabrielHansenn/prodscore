@@ -14,6 +14,7 @@ import { showToast } from '../store/toastStore';
 import { confirmTaskDeletion } from '../lib/confirmTaskDeletion';
 import { usePullToRefresh } from '../lib/usePullToRefresh';
 import TaskItem from '../components/TaskItem';
+import TaskDetailModal from '../components/TaskDetailModal';
 import ErrorState from '../components/ErrorState';
 import Dropdown from '../components/Dropdown';
 import TaskFormModal, { BASE_POINTS } from '../components/TaskFormModal';
@@ -66,6 +67,8 @@ export default function TasksScreen() {
   const [sortBy,           setSortBy]           = useState<SortBy>('createdAt');
   const [showCreate,       setShowCreate]       = useState(false);
   const [editingTask,      setEditingTask]      = useState<Task | null>(null);
+  // "Ver" nas sugestões abre o detalhe (antes abria direto o formulário de edição)
+  const [viewingTask,      setViewingTask]      = useState<Task | null>(null);
   const [suggestions,      setSuggestions]      = useState<TaskSuggestion[]>([]);
   const [showSuggestions,  setShowSuggestions]  = useState(true);
 
@@ -138,7 +141,7 @@ export default function TasksScreen() {
                       <Text style={styles.suggestTaskTitle} numberOfLines={1}>{task.title}</Text>
                       <Text style={styles.suggestReason} numberOfLines={1}>{reason}</Text>
                     </View>
-                    <TouchableOpacity style={styles.suggestViewBtn} onPress={() => setEditingTask(task)}>
+                    <TouchableOpacity style={styles.suggestViewBtn} onPress={() => setViewingTask(task)} accessibilityLabel={`Ver a tarefa ${task.title}`}>
                       <Text style={styles.suggestViewBtnText}>Ver</Text>
                     </TouchableOpacity>
                   </View>
@@ -206,6 +209,9 @@ export default function TasksScreen() {
           onClose={() => setShowCreate(false)}
           onSubmit={async (data) => { await createTask(data); }}
         />
+      )}
+      {viewingTask && (
+        <TaskDetailModal task={viewingTask} onClose={() => setViewingTask(null)} onEdit={(t) => setEditingTask(t)} />
       )}
       {editingTask && (
         <TaskFormModal

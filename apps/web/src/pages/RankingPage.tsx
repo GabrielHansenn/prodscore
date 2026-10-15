@@ -6,6 +6,7 @@ import { getFriendsRanking, getGlobalRanking, getWeeklyRanking, refreshRanking, 
 import RankingTable from '../components/RankingTable.js';
 import { FlameIcon, UsersIcon } from '../components/icons.js';
 import ErrorState from '../components/ErrorState.js';
+import Spinner from '../components/Spinner.js';
 
 type Tab = 'global' | 'semanal' | 'amigos';
 
@@ -162,7 +163,7 @@ export default function RankingPage() {
       {/* Tabela */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
         </div>
       ) : error ? (
         <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
@@ -177,7 +178,7 @@ export default function RankingPage() {
           </p>
           <button
             onClick={() => navigate('/amigos')}
-            className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+            className="btn-primary mt-5"
           >
             Adicionar amigos
           </button>
@@ -186,8 +187,21 @@ export default function RankingPage() {
         <>
           <RankingTable rows={rows} scoreLabel={tab === 'semanal' ? 'Pts na Semana' : 'Pontuação'} {...(user?.id ? { currentUserId: user.id } : {})} />
           {!isFriendsTab && myRow === undefined && user && rows.length > 0 && (
-            <p className="mt-3 text-center text-xs text-gray-400">
-              Você não está no top 50 ainda — continue completando tarefas!
+            <p className="mt-3 text-center text-sm text-gray-500">
+              {/* Antes só dizia "você não está no top 50", sem a posição — que o resumo já tem */}
+              {tab === 'global' && stats && stats.rankPosition > 0 ? (
+                <>
+                  Você está em <strong className="text-gray-800 dark:text-gray-200">#{stats.rankPosition}</strong>.{' '}
+                  {(() => {
+                    const gap = rows[rows.length - 1]!.score - stats.totalPoints + 1;
+                    return gap > 0
+                      ? `Faltam ${gap.toLocaleString('pt-BR')} pontos para entrar no top ${rows.length}.`
+                      : 'Continue completando tarefas para subir!';
+                  })()}
+                </>
+              ) : (
+                `Você ainda não está entre os ${rows.length} primeiros desta semana. Continue completando tarefas!`
+              )}
             </p>
           )}
         </>

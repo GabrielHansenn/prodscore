@@ -11,6 +11,7 @@ import { useChatStore } from '../store/chatStore.js';
 import { useIncomingMessages } from '../lib/useIncomingMessages.js';
 import FormFeedback from '../components/FormFeedback.js';
 import { UsersIcon, FlameIcon } from '../components/icons.js';
+import Spinner from '../components/Spinner.js';
 
 type Tab = 'friends' | 'received' | 'sent';
 
@@ -247,7 +248,7 @@ export default function FriendsPage() {
       <div className="card overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+            <Spinner size="sm" />
           </div>
         ) : tab === 'friends' ? (
           friends.length === 0 ? (

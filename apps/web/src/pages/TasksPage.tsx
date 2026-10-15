@@ -11,9 +11,11 @@ import FormFeedback from '../components/FormFeedback.js';
 import Modal from '../components/Modal.js';
 import ErrorState from '../components/ErrorState.js';
 import TaskCard from '../components/TaskCard.js';
+import TaskDetailModal from '../components/TaskDetailModal.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import { ClipboardIcon, SparklesIcon } from '../components/icons.js';
 import { getTaskSuggestions } from '../services/behavioral.service.js';
+import Spinner from '../components/Spinner.js';
 
 const STATUS_TABS: Array<{ value: TaskStatus | 'all'; label: string }> = [
   { value: 'all',                  label: 'Todas'        },
@@ -139,7 +141,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isCompleted}
-              placeholder="Ex: Implementar login com OAuth"
+              placeholder="Ex: Estudar para a prova de cálculo"
               className="input disabled:opacity-50"
             />
           </div>
@@ -258,6 +260,8 @@ export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal,  setShowCreateModal]  = useState(() => searchParams.get('nova') === '1');
   const [editingTask,      setEditingTask]      = useState<Task | null>(null);
+  // "Ver" nas sugestões abre o detalhe (antes abria direto o formulário de edição)
+  const [viewingTask,      setViewingTask]      = useState<Task | null>(null);
   const [completing,       setCompleting]       = useState<Set<string>>(new Set());
   const [suggestions,      setSuggestions]      = useState<TaskSuggestion[]>([]);
   const [showSuggestions,  setShowSuggestions]  = useState(true);
@@ -330,7 +334,7 @@ export default function TasksPage() {
                   <p className="truncate text-xs text-gray-500">{reason}</p>
                 </div>
                 <button
-                  onClick={() => setEditingTask(task)}
+                  onClick={() => setViewingTask(task)}
                   className="shrink-0 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
                 >
                   Ver
@@ -387,7 +391,7 @@ export default function TasksPage() {
       {/* Lista */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
         </div>
       ) : loadError ? (
         // Falha ao carregar ≠ "nenhuma tarefa" (antes mostrava "Crie sua primeira tarefa!")
@@ -429,6 +433,9 @@ export default function TasksPage() {
           }}
           onSubmit={async (data) => { await createTask(data); }}
         />
+      )}
+      {viewingTask && (
+        <TaskDetailModal task={viewingTask} onClose={() => setViewingTask(null)} onEdit={(t) => setEditingTask(t)} />
       )}
       {editingTask && (
         <TaskModal

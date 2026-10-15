@@ -7,6 +7,7 @@ import {
   supabase, signOut, getAssuranceLevel, listTOTPFactors, verifyTOTPChallenge, translateMFAErrorMessage,
 } from '../lib/supabase.js';
 import { useAuthStore } from '../store/authStore.js';
+import Spinner from '../components/Spinner.js';
 
 type Stage = 'checking' | 'ready' | 'invalid';
 
@@ -111,7 +112,7 @@ export default function ResetPasswordPage() {
 
         {stage === 'checking' && (
           <div className="flex flex-col items-center gap-3 py-8" role="status">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+            <Spinner size="md" />
             <p className="text-sm text-gray-500">Abrindo o link…</p>
           </div>
         )}

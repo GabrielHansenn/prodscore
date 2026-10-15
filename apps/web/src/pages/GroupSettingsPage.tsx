@@ -18,11 +18,13 @@ import {
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
 import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
+import { copyText } from '../lib/clipboard.js';
 import FormFeedback from '../components/FormFeedback.js';
 import ImagePickerField from '../components/ImagePickerField.js';
 import RichText from '../components/RichText.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import { FlameIcon, CogIcon, TrashIcon, UsersIcon } from '../components/icons.js';
+import Spinner from '../components/Spinner.js';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -259,7 +261,7 @@ function InviteCodeSection({
   const [currentCode, setCurrentCode] = useState(inviteCode);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(currentCode);
+    if (!(await copyText(currentCode, 'o código'))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -676,7 +678,7 @@ export default function GroupSettingsPage() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+        <Spinner size="lg" />
       </div>
     );
   }

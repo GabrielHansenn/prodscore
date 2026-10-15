@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { NotificationType, type Notification } from '@prodscore/shared';
 import { useNotificationStore } from '../store/notificationStore.js';
 import { TrophyIcon, BoltIcon, UsersIcon, ChatIcon, BellIcon } from './icons.js';
+import Spinner from './Spinner.js';
 
 /** Ícone e cor por tipo de notificação */
 const TYPE_STYLES: Record<NotificationType, { icon: (p: { className?: string }) => React.JSX.Element; bg: string; fg: string }> = {
@@ -29,7 +30,7 @@ function relativeTime(iso: string): string {
 function destinationFor(n: Notification): string | null {
   switch (n.type) {
     case NotificationType.FriendMessage: return n.actorId ? `/amigos/${n.actorId}/chat` : '/amigos';
-    case NotificationType.GroupMessage:  return n.entityId ? `/grupos/${n.entityId}` : '/grupos';
+    case NotificationType.GroupMessage:  return n.entityId ? `/grupos/${n.entityId}?aba=chat` : '/grupos';
     case NotificationType.Achievement:   return '/conquistas';
     case NotificationType.LevelUp:       return '/estatisticas';
   }
@@ -139,7 +140,7 @@ export default function NotificationBell({
           <div className="max-h-96 overflow-y-auto">
             {isLoading && notifications.length === 0 ? (
               <div className="flex justify-center py-10">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+                <Spinner size="sm" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-10 text-center">

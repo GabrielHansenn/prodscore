@@ -8,6 +8,7 @@ import { getMessages, sendMessage, markConversationRead } from '../services/mess
 import { useIncomingMessages } from '../lib/useIncomingMessages.js';
 import { showToast } from '../store/toastStore.js';
 import FormFeedback from '../components/FormFeedback.js';
+import Spinner from '../components/Spinner.js';
 
 function dayKey(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -178,7 +179,7 @@ export default function ChatPage() {
       <div className="card flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+            <Spinner size="sm" />
           </div>
         ) : error ? (
           <div className="p-4"><FormFeedback variant="error" message={error} /></div>

@@ -10,6 +10,7 @@ import FormFeedback from '../components/FormFeedback.js';
 import ImagePickerField from '../components/ImagePickerField.js';
 import { FlameIcon } from '../components/icons.js';
 import { getBehavioralProfile } from '../services/behavioral.service.js';
+import Spinner from '../components/Spinner.js';
 
 interface PointTransaction {
   id:          string;
@@ -65,12 +66,15 @@ const PROFILE_META: Record<BehavioralProfileType, { emoji: string; label: string
   [BehavioralProfileType.Undefined]:  { emoji: '🔍', label: 'Indefinido',  description: 'Complete mais tarefas para identificar seu perfil de produtividade.' },
 };
 
+// Texto -700 no tema claro e -300 no escuro: o -400 sobre o fundo claro tinha
+// contraste baixo. "Procrastinador" em vermelho desestimulava — num app de
+// motivação, a tag descreve o hábito sem julgar a pessoa.
 const TAG_META: Record<string, { label: string; color: string }> = {
-  consistente:    { label: 'Consistente',    color: 'bg-green-500/20 text-green-400 dark:text-green-300' },
-  procrastinador: { label: 'Procrastinador', color: 'bg-red-500/20 text-red-400 dark:text-red-300' },
-  intenso:        { label: 'Intenso',        color: 'bg-orange-500/20 text-orange-400 dark:text-orange-300' },
-  metódico:       { label: 'Metódico',       color: 'bg-blue-500/20 text-blue-400 dark:text-blue-300' },
-  iniciante:      { label: 'Iniciante',      color: 'bg-gray-500/20 text-gray-500' },
+  consistente:    { label: 'Consistente',       color: 'bg-green-500/15 text-green-700 dark:text-green-300' },
+  procrastinador: { label: 'Deixa para depois', color: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
+  intenso:        { label: 'Intenso',           color: 'bg-orange-500/15 text-orange-700 dark:text-orange-300' },
+  metódico:       { label: 'Metódico',          color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300' },
+  iniciante:      { label: 'Iniciante',         color: 'bg-gray-500/15 text-gray-700 dark:text-gray-300' },
 };
 
 function BehavioralProfileCard({ profile }: { profile: BehavioralProfile }) {
@@ -313,7 +317,7 @@ export default function ProfilePage() {
         </div>
         {txLoading ? (
           <div className="flex items-center justify-center py-10">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+            <Spinner size="sm" />
           </div>
         ) : transactions.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-400">Nenhuma transação registrada ainda.</p>

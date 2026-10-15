@@ -4,6 +4,7 @@ import { getFriendStats, type FriendStats } from '../services/friend.service.js'
 import StatisticsContent from '../components/StatisticsContent.js';
 import FormFeedback from '../components/FormFeedback.js';
 import { TrophyIcon } from '../components/icons.js';
+import Spinner from '../components/Spinner.js';
 
 /** Perfil de um amigo — mesmas estatísticas da tela própria, com dados do amigo */
 export default function FriendProfilePage() {
@@ -36,7 +37,7 @@ export default function FriendProfilePage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
         </div>
       ) : error || !data ? (
         <FormFeedback variant="error" message={error || 'Perfil indisponível.'} />

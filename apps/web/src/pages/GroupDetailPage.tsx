@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   MemberRole, TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, richTextToPlainText,
   MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, type Task, type RichTextDoc,
@@ -17,6 +17,7 @@ import { createGroupMission, type MissionWithParticipation } from '../services/m
 import { getTasks, createTask } from '../services/task.service.js';
 import GroupChat from '../components/GroupChat.js';
 import RichText from '../components/RichText.js';
+import { copyText } from '../lib/clipboard.js';
 import ErrorState from '../components/ErrorState.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import RichTextPreview from '../components/RichTextPreview.js';
@@ -29,8 +30,10 @@ import FormFeedback from '../components/FormFeedback.js';
 import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
 import { UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon } from '../components/icons.js';
+import Spinner from '../components/Spinner.js';
 
 type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'chat';
+const TAB_KEYS: Tab[] = ['membros', 'ranking', 'missoes', 'tarefas', 'chat'];
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -582,7 +585,12 @@ export default function GroupDetailPage() {
   const [ranking,  setRanking]  = useState<GroupRankingRow[]>([]);
   const [missions, setMissions] = useState<MissionWithParticipation[]>([]);
   const [tasks,    setTasks]    = useState<Task[]>([]);
-  const [tab,      setTab]      = useState<Tab>('membros');
+  // Aba atual no endereço (?aba=chat): recarregar mantém a aba e dá para
+  // mandar o link direto (antes voltava sempre para Membros)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('aba');
+  const tab: Tab = TAB_KEYS.includes(tabParam as Tab) ? (tabParam as Tab) : 'membros';
+  const setTab = (next: Tab) => setSearchParams(next === 'membros' ? {} : { aba: next }, { replace: true });
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
   const [copied,   setCopied]   = useState(false);
@@ -648,7 +656,7 @@ export default function GroupDetailPage() {
 
   const copyInviteCode = async () => {
     if (!group?.inviteCode) return;
-    await navigator.clipboard.writeText(group.inviteCode);
+    if (!(await copyText(group.inviteCode, 'o código'))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -670,7 +678,7 @@ export default function GroupDetailPage() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -702,6 +710,21 @@ export default function GroupDetailPage() {
     { key: 'tarefas',  label: 'Tarefas',  count: tasks.length },
     { key: 'chat',     label: 'Chat' },
   ];
+
+  // Setas esquerda/direita, Home e End trocam de aba (padrão ARIA de abas)
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const i = TAB_KEYS.indexOf(tab);
+    const next =
+      e.key === 'ArrowRight' ? TAB_KEYS[(i + 1) % TAB_KEYS.length]
+      : e.key === 'ArrowLeft' ? TAB_KEYS[(i - 1 + TAB_KEYS.length) % TAB_KEYS.length]
+      : e.key === 'Home' ? TAB_KEYS[0]
+      : e.key === 'End' ? TAB_KEYS[TAB_KEYS.length - 1]
+      : undefined;
+    if (!next) return;
+    e.preventDefault();
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
 
   return (
     <div>
@@ -798,13 +821,24 @@ export default function GroupDetailPage() {
         </section>
       )}
 
-      {/* Abas */}
-      <div className="mb-5 flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800/50">
+      {/* Abas — rolam de lado no celular (antes espremiam), padrão ARIA de abas
+          com setas do teclado */}
+      <div
+        role="tablist"
+        aria-label="Seções do grupo"
+        onKeyDown={handleTabKeyDown}
+        className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800/50"
+      >
         {TABS.map((t) => (
           <button
             key={t.key}
+            id={`tab-${t.key}`}
+            role="tab"
+            aria-selected={tab === t.key}
+            aria-controls="group-tabpanel"
+            tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-medium transition-all ${
+            className={`flex min-w-[6.5rem] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
               tab === t.key
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
@@ -823,7 +857,7 @@ export default function GroupDetailPage() {
       </div>
 
       {/* Conteúdo das abas */}
-      <div className="card overflow-hidden">
+      <div id="group-tabpanel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="card overflow-hidden">
 
         {/* Membros */}
         {tab === 'membros' && tabError('membros')}

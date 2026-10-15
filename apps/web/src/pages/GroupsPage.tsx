@@ -20,6 +20,7 @@ import ImagePickerField from '../components/ImagePickerField.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import RichTextPreview from '../components/RichTextPreview.js';
 import { UsersIcon, UserIcon, CalendarIcon } from '../components/icons.js';
+import Spinner from '../components/Spinner.js';
 
 function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate: (g: GroupWithMeta) => void }) {
   const userId = useAuthStore((s) => s.user?.id);
@@ -264,7 +265,7 @@ export default function GroupsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
         </div>
       ) : loadError ? (
         <ErrorState message={loadError} onRetry={loadGroups} />

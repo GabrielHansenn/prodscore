@@ -13,7 +13,7 @@ import { getFriendlyErrorMessage } from '../lib/errors';
 import { markdownToRichText, richTextToMarkdown } from '../lib/markdownToRichText';
 import { showToast } from '../store/toastStore';
 import Dropdown from './Dropdown';
-import InlineFeedback from './InlineFeedback';
+import InlineFeedback, { FieldError } from './InlineFeedback';
 import RichTextInput from './RichTextInput';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
@@ -63,6 +63,28 @@ function parseDateBR(masked: string): string | null {
   if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
   return `${yyyy}-${mm}-${dd}`;
 }
+
+/**
+ * Erro do campo Prazo, ou null se vazio/válido. Só avalia a data completa
+ * (DD/MM/AAAA) — assim o aviso aparece ao terminar de digitar, não só ao salvar.
+ */
+function dueDateError(masked: string): string | null {
+  const value = masked.trim();
+  if (value.length < 10) return null;
+  const parsed = parseDateBR(value);
+  const endOfDay = parsed ? endOfLocalDayISO(parsed) : null;
+  if (!endOfDay) return 'Essa data não existe.';
+  if (new Date(endOfDay) <= new Date()) return 'A data de entrega deve ser hoje ou depois.';
+  return null;
+}
+
+/** Atalhos de prazo: hoje, amanhã e daqui a uma semana (dias no fuso do aparelho) */
+const DUE_SHORTCUTS: Array<{ label: string; days: number | null }> = [
+  { label: 'Hoje',        days: 0 },
+  { label: 'Amanhã',      days: 1 },
+  { label: 'Em 1 semana', days: 7 },
+  { label: 'Sem prazo',   days: null },
+];
 
 /** AAAA-MM-DD (como vem da API) → DD/MM/AAAA (como o usuário vê) */
 function isoToBR(iso: string): string {
@@ -117,6 +139,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const [loading,        setLoading]        = useState(false);
 
   const isEdit      = task !== null;
+  const liveDueError = dueDateError(dueDateInput);
   const isCompleted = task?.status === TaskStatus.Completed;
   const pts         = Math.floor(BASE_POINTS[difficulty] * PRIORITY_MULT[priority]);
 
@@ -178,7 +201,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
               <Text style={styles.fieldLabel}>Título</Text>
               <TextInput
                 style={styles.input} value={title} onChangeText={setTitle} editable={!isCompleted}
-                placeholder="Ex: Implementar login com OAuth" placeholderTextColor={colors.textMuted}
+                placeholder="Ex: Estudar para a prova de cálculo" placeholderTextColor={colors.textMuted}
               />
 
               <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Descrição (opcional)</Text>
@@ -202,11 +225,13 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Prazo</Text>
                   <TextInput
-                    style={styles.input} value={dueDateInput}
+                    style={[styles.input, liveDueError ? styles.inputError : null]} value={dueDateInput}
                     onChangeText={(t) => setDueDateInput(maskDateBR(t))}
                     editable={!isCompleted} keyboardType="number-pad" maxLength={10}
                     placeholder="DD/MM/AAAA" placeholderTextColor={colors.textMuted}
+                    accessibilityLabel="Prazo, no formato dia, mês e ano"
                   />
+                  <FieldError msg={liveDueError ?? undefined} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Tempo estimado (min)</Text>
@@ -216,6 +241,31 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
                   />
                 </View>
               </View>
+
+              {/* Atalhos de prazo: um toque em vez de digitar a data */}
+              {!isCompleted && (
+                <View style={styles.dueShortcuts}>
+                  {DUE_SHORTCUTS.map((s) => {
+                    const value = s.days === null ? '' : (() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + s.days);
+                      return isoToBR(localDateKey(d));
+                    })();
+                    const active = dueDateInput === value;
+                    return (
+                      <TouchableOpacity
+                        key={s.label}
+                        style={[styles.dueChip, active && styles.dueChipActive]}
+                        onPress={() => setDueDateInput(value)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                      >
+                        <Text style={[styles.dueChipText, active && styles.dueChipTextActive]}>{s.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
 
               <View style={styles.proofRow}>
                 <Text style={[styles.fieldLabel, styles.proofLabel]}>Exige comprovação fotográfica para concluir</Text>
@@ -267,6 +317,12 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   warnText: { fontSize: 12, color: colors.amberText },
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
   input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
+  inputError: { borderColor: colors.red },
+  dueShortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginTop: SPACING.sm },
+  dueChip: { borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.md, paddingVertical: 8 },
+  dueChipActive: { backgroundColor: colors.primaryDim, borderColor: colors.primary },
+  dueChipText: { fontSize: FONT.sm, color: colors.textSecondary },
+  dueChipTextActive: { color: colors.primary, fontWeight: '600' },
   rowFields: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
 
   proofRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md, gap: SPACING.sm },

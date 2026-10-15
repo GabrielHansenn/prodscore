@@ -61,7 +61,8 @@ const PROFILE_META: Record<BehavioralProfileType, { emoji: string; label: string
 
 const TAG_LABELS: Record<BehavioralTag, string> = {
   consistente:    'Consistente',
-  procrastinador: 'Procrastinador',
+  // Descreve o hábito sem julgar a pessoa (antes: "Procrastinador")
+  procrastinador: 'Deixa para depois',
   intenso:        'Intenso',
   metódico:       'Metódico',
   iniciante:      'Iniciante',

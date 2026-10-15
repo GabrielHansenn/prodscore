@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useUserStore } from '../store/userStore.js';
 import StatisticsContent from '../components/StatisticsContent.js';
 import ErrorState from '../components/ErrorState.js';
+import Spinner from '../components/Spinner.js';
 
 export default function StatisticsPage() {
   const { stats, loadError, fetchStats } = useUserStore();
@@ -23,7 +24,7 @@ export default function StatisticsPage() {
         <ErrorState message={loadError} onRetry={fetchStats} />
       ) : !stats ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
         </div>
       ) : (
         <StatisticsContent stats={stats} />

@@ -13,6 +13,7 @@ import StreakBadge from '../components/StreakBadge.js';
 import MissionCard from '../components/MissionCard.js';
 import PointTransactionFeed from '../components/PointTransactionFeed.js';
 import Modal from '../components/Modal.js';
+import { getDismissedAlertTypes, dismissAlertType } from '../lib/dismissedAlerts.js';
 import ErrorState from '../components/ErrorState.js';
 import { SparklesIcon, FlameIcon, ExclamationTriangleIcon, SnowflakeIcon } from '../components/icons.js';
 import { getProcrastinationAlerts } from '../services/behavioral.service.js';
@@ -78,7 +79,8 @@ export default function DashboardPage() {
   const [levelRewardPop, setLevelRewardPop] = useState<LevelReward | null>(null);
   const [completing,     setCompleting]     = useState<Set<string>>(new Set());
   const [alerts,         setAlerts]         = useState<ProcrastinationAlert[]>([]);
-  const [alertsDismissed, setAlertsDismissed] = useState(false);
+  // Tipos de alerta fechados hoje (lembrados até o fim do dia)
+  const [dismissedAlerts, setDismissedAlerts] = useState(getDismissedAlertTypes);
 
   useEffect(() => {
     void fetchTasks();
@@ -113,6 +115,8 @@ export default function DashboardPage() {
     void getProcrastinationAlerts().then(setAlerts).catch(() => { /* opcional */ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.type));
 
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
@@ -214,11 +218,11 @@ export default function DashboardPage() {
       )}
 
       {/* Alertas de procrastinação — Mecânica 10 */}
-      {alerts.length > 0 && !alertsDismissed && (
+      {visibleAlerts.length > 0 && (
         <div className="mb-6 space-y-2">
-          {alerts.map((alert, i) => (
+          {visibleAlerts.map((alert) => (
             <div
-              key={i}
+              key={alert.type}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
                 alert.severity === 'critical'
                   ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300'
@@ -235,15 +239,19 @@ export default function DashboardPage() {
                   </p>
                 )}
               </div>
-              {i === 0 && (
-                <button
-                  onClick={() => setAlertsDismissed(true)}
-                  className="shrink-0 text-xs opacity-60 hover:opacity-100"
-                  aria-label="Fechar alertas"
-                >
-                  ✕
-                </button>
-              )}
+              {/* Um botão por alerta, com área de toque de 44px (antes: "✕" minúsculo só
+                  no primeiro alerta, que fechava todos e voltava ao recarregar) */}
+              <button
+                type="button"
+                onClick={() => setDismissedAlerts(dismissAlertType(alert.type))}
+                className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg opacity-70 transition-opacity hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+                aria-label="Fechar este alerta até amanhã"
+                title="Fechar até amanhã"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           ))}
         </div>

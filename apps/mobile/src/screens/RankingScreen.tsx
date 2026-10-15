@@ -4,6 +4,7 @@ import {
   TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { usePullToRefresh } from '../lib/usePullToRefresh';
+import ErrorState from '../components/ErrorState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -117,6 +118,8 @@ export default function RankingScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error,    setError]    = useState('');
+  // Incrementa para recarregar a aba atual ("Tentar novamente")
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => { void fetchStats(); }, []);
 
@@ -135,7 +138,7 @@ export default function RankingScreen() {
         setIsLoading(false);
       }
     })();
-  }, [tab]);
+  }, [tab, reloadKey]);
 
   // Puxar para atualizar: recarrega a aba atual e o resumo (o botão de
   // atualizar, que recalcula o ranking no servidor, continua separado)
@@ -252,9 +255,7 @@ export default function RankingScreen() {
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
       ) : hasNoFriends ? (
         <View style={styles.center}>
           <View style={styles.emptyIcon}>

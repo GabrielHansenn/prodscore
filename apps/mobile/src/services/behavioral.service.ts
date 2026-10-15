@@ -1,4 +1,4 @@
-import type { BehavioralProfile, TaskSuggestion } from '@prodscore/shared';
+import type { BehavioralProfile, ProcrastinationAlert, TaskSuggestion } from '@prodscore/shared';
 import { api } from './api';
 
 /** Busca o perfil comportamental do usuário autenticado */
@@ -15,4 +15,12 @@ export async function getTaskSuggestions(): Promise<TaskSuggestion[]> {
     '/users/me/task-suggestions',
   );
   return data.sugestoes;
+}
+
+/** Alertas de procrastinação (tarefas paradas, atrasadas ou acumuladas) */
+export async function getProcrastinationAlerts(): Promise<ProcrastinationAlert[]> {
+  const { data } = await api.get<{ alertas: ProcrastinationAlert[] }>(
+    '/users/me/procrastination-alerts',
+  );
+  return data.alertas;
 }

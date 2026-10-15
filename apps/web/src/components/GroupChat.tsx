@@ -10,6 +10,7 @@ import { showToast } from '../store/toastStore.js';
 import RichText from './RichText.js';
 import RichTextEditor from './RichTextEditor.js';
 import FormFeedback from './FormFeedback.js';
+import Spinner from './Spinner.js';
 
 function dayKey(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -139,7 +140,7 @@ export default function GroupChat({ groupId }: { groupId: string }) {
     <div className="flex h-[32rem] flex-col">
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="sm" />
         </div>
       ) : (
         <div ref={listRef} onScroll={handleScroll} className="flex-1 space-y-1 overflow-y-auto px-4 py-3">

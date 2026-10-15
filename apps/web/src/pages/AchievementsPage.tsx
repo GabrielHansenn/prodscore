@@ -10,6 +10,7 @@ import AchievementCard from '../components/AchievementCard.js';
 import { TrophyIcon, LockClosedIcon } from '../components/icons.js';
 import ErrorState from '../components/ErrorState.js';
 import { getFriendlyErrorMessage } from '../lib/errors.js';
+import Spinner from '../components/Spinner.js';
 
 type Filter = 'todas' | 'conquistadas' | 'bloqueadas';
 
@@ -87,11 +88,6 @@ export default function AchievementsPage() {
             style={{ width: `${pct}%` }}
           />
         </div>
-        {stats?.achievementsCount !== undefined && stats.achievementsCount !== earnedCount && (
-          <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-            (baseado em dados do servidor: {stats.achievementsCount} conquistas)
-          </p>
-        )}
       </div>
 
       {/* Filtros */}
@@ -119,7 +115,7 @@ export default function AchievementsPage() {
       {/* Galeria */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600 dark:border-gray-700" />
+          <Spinner size="md" />
         </div>
       ) : error ? (
         <ErrorState message={error} onRetry={loadAchievements} />

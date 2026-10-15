@@ -17,6 +17,7 @@ import RegisterPage       from './pages/RegisterPage.js';
 import MfaVerifyPage      from './pages/MfaVerifyPage.js';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
 import ResetPasswordPage  from './pages/ResetPasswordPage.js';
+import NotFoundPage       from './pages/NotFoundPage.js';
 import PrivacyPolicyPage  from './pages/PrivacyPolicyPage.js';
 
 // Páginas privadas
@@ -33,6 +34,7 @@ import SecurityPage     from './pages/SecurityPage.js';
 import FriendsPage      from './pages/FriendsPage.js';
 import FriendProfilePage from './pages/FriendProfilePage.js';
 import ChatPage         from './pages/ChatPage.js';
+import Spinner from './components/Spinner.js';
 
 // ---------------------------------------------------------------------------
 // Layout privado — protege + fornece sidebar
@@ -48,7 +50,7 @@ function PrivateAppLayout() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <Spinner size="md" />
           <p className="text-sm text-gray-500">Carregando...</p>
         </div>
       </div>
@@ -75,7 +77,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   if (isInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+        <Spinner size="md" />
       </div>
     );
   }
@@ -171,7 +173,8 @@ export default function App() {
         <Route path="/privacy-policy" element={<Navigate to="/politica-de-privacidade" replace />} />
 
         {/* 404 */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Endereço inexistente: avisa em vez de voltar à landing sem explicação */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {/* Elementos globais de consentimento de cookies — presentes em toda rota */}

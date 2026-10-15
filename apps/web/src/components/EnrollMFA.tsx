@@ -10,6 +10,8 @@ import {
 } from '../lib/supabase.js';
 import { ClipboardDocumentIcon, CheckCircleIcon } from './icons.js';
 import FormFeedback from './FormFeedback.js';
+import { copyText } from '../lib/clipboard.js';
+import Spinner from './Spinner.js';
 
 /** Estado do fluxo de ativação/gerenciamento do 2FA */
 type Phase = 'checking' | 'active' | 'setup' | 'success' | 'error';
@@ -164,13 +166,9 @@ export default function EnrollMFA() {
 
   const handleCopySecret = async () => {
     if (!enrollment) return;
-    try {
-      await navigator.clipboard.writeText(enrollment.secret);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard indisponível (ex: contexto não seguro) — ignora silenciosamente
-    }
+    if (!(await copyText(enrollment.secret, 'a chave'))) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // -------------------------------------------------------------------------
@@ -180,7 +178,7 @@ export default function EnrollMFA() {
   if (phase === 'checking') {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+        <Spinner size="sm" />
       </div>
     );
   }

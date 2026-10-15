@@ -4,7 +4,7 @@ import { LogoWordmark } from '../components/Logo.js';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
 import { getFriendlyErrorMessage } from '../lib/errors.js';
-import FormFeedback from '../components/FormFeedback.js';
+import FormFeedback, { FieldError } from '../components/FormFeedback.js';
 import { TrophyIcon, FlameIcon, FlagIcon } from '../components/icons.js';
 
 function EyeIcon({ className }: { className?: string }) {
@@ -29,6 +29,8 @@ export default function LoginPage() {
   const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error,        setError]        = useState('');
+  // Erros por campo, como no cadastro (antes: balão nativo do navegador + aviso geral)
+  const [fieldErrors,  setFieldErrors]  = useState<{ email?: string | undefined; password?: string | undefined }>({});
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
@@ -42,8 +44,13 @@ export default function LoginPage() {
     setError('');
     setNeedsConfirm(false);
 
-    if (!email.trim() || !password) {
-      setError('Preencha o e-mail e a senha.');
+    const errs = {
+      email:    email.trim() ? undefined : 'Digite seu e-mail.',
+      password: password ? undefined : 'Digite sua senha.',
+    };
+    setFieldErrors(errs);
+    if (errs.email || errs.password) {
+      document.getElementById(errs.email ? 'email' : 'password')?.focus();
       return;
     }
 
@@ -118,7 +125,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
             <div>
               <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-gray-600">
                 E-mail
@@ -127,12 +134,15 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setFieldErrors((p) => ({ ...p, email: undefined })); }}
                 placeholder="seu@email.com"
                 autoComplete="email"
-                required
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                aria-invalid={!!fieldErrors.email}
+                className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 ${
+                  fieldErrors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
+                }`}
               />
+              <FieldError msg={fieldErrors.email} />
             </div>
 
             <div>
@@ -149,11 +159,13 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setFieldErrors((p) => ({ ...p, password: undefined })); }}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  required
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  aria-invalid={!!fieldErrors.password}
+                  className={`w-full rounded-xl border bg-white px-3 py-2.5 pr-11 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 ${
+                  fieldErrors.password ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
+                }`}
                 />
                 <button
                   type="button"
@@ -167,6 +179,7 @@ export default function LoginPage() {
                   }
                 </button>
               </div>
+              <FieldError msg={fieldErrors.password} />
             </div>
 
             {/* E-mail não confirmado */}

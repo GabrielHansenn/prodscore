@@ -24,6 +24,8 @@ import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import NotificationBell from '../components/NotificationBell';
+import FriendsShortcut from '../components/FriendsShortcut';
+import ProcrastinationAlerts from '../components/ProcrastinationAlerts';
 import ErrorState from '../components/ErrorState';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -104,7 +106,11 @@ export default function DashboardScreen() {
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
             </Text>
           </View>
-          <NotificationBell />
+          {/* Amigos ao lado do sino: no app ficava escondido no menu do Perfil */}
+          <View style={styles.headerActions}>
+            <FriendsShortcut />
+            <NotificationBell />
+          </View>
         </View>
 
         {/* Linha de stat cards — 2x2 em telas estreitas, 1x4 em telas largas
@@ -148,6 +154,9 @@ export default function DashboardScreen() {
             ))}
           </View>
         )}
+
+        {/* Alertas de procrastinação — o web já tinha, o app não */}
+        <ProcrastinationAlerts />
 
         {/* Barra de nível */}
         {stats && (
@@ -291,6 +300,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   root:   { flex: 1, backgroundColor: colors.background },
   scroll: { padding: SPACING.md, paddingBottom: SPACING.xl },
   greeting: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.lg },
+  headerActions: { flexDirection: 'row', gap: SPACING.sm },
   greetTitle: { fontSize: FONT.xxl, fontWeight: '800', color: colors.text },
   greetSub:   { fontSize: FONT.base, color: colors.textMuted, marginTop: SPACING.xs },
 
