@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { validateEmail, validatePassword, REGISTER_ERROR_CODES } from '@prodscore/shared';
 import { supabase, createUserScopedClient, createEphemeralAuthClient } from '../lib/supabase.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
@@ -35,17 +36,32 @@ function translateMfaError(rawMessage: string | undefined): string {
 // Schemas de validação (mensagens em português)
 // ---------------------------------------------------------------------------
 
+const EMAIL_TAKEN_MESSAGE = 'Este e-mail já está cadastrado. Tente fazer login.';
+
 const registerSchema = z.object({
+  // Mesmas regras do formulário (validateEmail do @prodscore/shared) — inclui
+  // terminações inexistentes como ".comm" e "gmail.co"
   email: z
     .string({ required_error: 'E-mail é obrigatório.' })
-    .email({ message: 'E-mail inválido.' }),
+    .trim()
+    .toLowerCase()
+    .superRefine((email, ctx) => {
+      const message = validateEmail(email);
+      if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    }),
 
+  // Mesmas regras do formulário (validatePassword do @prodscore/shared):
+  // mínimo 8 caracteres, com pelo menos uma letra e um número
   password: z
     .string({ required_error: 'Senha é obrigatória.' })
-    .min(8, { message: 'A senha deve ter no mínimo 8 caracteres.' }),
+    .superRefine((password, ctx) => {
+      const message = validatePassword(password);
+      if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    }),
 
   username: z
     .string({ required_error: 'Nome de usuário é obrigatório.' })
+    .trim()
     .min(3,  { message: 'O nome de usuário deve ter no mínimo 3 caracteres.' })
     .max(30, { message: 'O nome de usuário deve ter no máximo 30 caracteres.' })
     .regex(
@@ -102,10 +118,28 @@ const changePasswordSchema = z.object({
  *
  * Se a confirmação de e-mail estiver habilitada no Supabase, session será null
  * e o usuário precisará confirmar o e-mail antes de fazer login.
+ *
+ * Erros com `codigo` para o front ligar a mensagem ao campo certo:
+ * - 409 USERNAME_JA_EM_USO  → campo "Nome de usuário"
+ * - 409 EMAIL_JA_CADASTRADO → campo "E-mail"
  */
 router.post('/register', async (req, res) => {
   try {
     const body = registerSchema.parse(req.body);
+
+    // Username repetido: checado ANTES do signUp. Se ficasse para o banco, o
+    // UNIQUE de profiles.username faria o trigger handle_new_user falhar e o
+    // Supabase devolveria só "Database error saving new user", sem dizer qual
+    // campo é o problema. (Mesma comparação do UNIQUE: sensível a maiúsculas.)
+    const { data: usernameOwner } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', body.username)
+      .maybeSingle();
+
+    if (usernameOwner) {
+      throw new AppError('Este nome de usuário já está em uso.', 409, REGISTER_ERROR_CODES.usernameTaken);
+    }
 
     // Cliente descartável — signUp abre sessão e não pode contaminar o singleton service role
     const { data, error } = await createEphemeralAuthClient().auth.signUp({
@@ -118,15 +152,29 @@ router.post('/register', async (req, res) => {
     });
 
     if (error) {
-      // Supabase retorna erros específicos em inglês — traduzimos os mais comuns
-      if (error.message.includes('already registered')) {
-        throw new AppError('Este e-mail já está cadastrado.', 409, 'EMAIL_JA_CADASTRADO');
+      // Com a confirmação de e-mail DESLIGADA, o Supabase acusa o e-mail
+      // repetido como erro (com ela ligada, ver o caso de identities abaixo)
+      if (error.code === 'user_already_exists' || error.message.includes('already registered')) {
+        throw new AppError(EMAIL_TAKEN_MESSAGE, 409, REGISTER_ERROR_CODES.emailTaken);
       }
-      throw new AppError(`Erro ao criar conta: ${error.message}`, 400);
+      if (error.status === 429) {
+        throw new AppError('Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.', 429, 'MUITAS_TENTATIVAS');
+      }
+      // Mensagem crua do Supabase/banco fica só no log — não vai para o cliente
+      console.error('[auth/register] Erro do Supabase no signUp:', error.message);
+      throw new AppError('Não foi possível criar a conta. Tente novamente em instantes.', 500, 'CADASTRO_FALHOU');
     }
 
     if (!data.user) {
-      throw new AppError('Erro ao criar conta.', 500);
+      throw new AppError('Não foi possível criar a conta. Tente novamente em instantes.', 500, 'CADASTRO_FALHOU');
+    }
+
+    // E-mail JÁ cadastrado com a confirmação de e-mail LIGADA: o Supabase não
+    // retorna erro (proteção contra enumeração de contas) — devolve um usuário
+    // "fantasma" sem nenhuma identidade e sem sessão. Era esse caso que antes
+    // caía no 201 "Conta criada! Verifique seu e-mail" abaixo.
+    if (data.user.identities?.length === 0) {
+      throw new AppError(EMAIL_TAKEN_MESSAGE, 409, REGISTER_ERROR_CODES.emailTaken);
     }
 
     // Sessão pode ser null se confirmação de e-mail estiver habilitada

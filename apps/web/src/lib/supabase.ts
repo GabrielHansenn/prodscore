@@ -53,29 +53,26 @@ export interface AuthResult<T = null> {
 // Helpers de autenticação
 // ---------------------------------------------------------------------------
 
+// O cadastro NÃO usa supabase.auth.signUp direto daqui: ele passa pela API
+// (POST /auth/register), que valida as regras e detecta e-mail/username já
+// cadastrados — o signUp do Supabase, com confirmação de e-mail ligada, não
+// acusa e-mail repetido (ver auth.routes.ts). Quando a API devolve sessão,
+// ela é instalada no cliente com `setAuthSession`.
+
 /**
- * Registra um novo usuário com e-mail e senha.
+ * Instala no cliente Supabase uma sessão criada pelo backend (ex: cadastro
+ * com auto-confirmação). A partir daí ela é persistida no localStorage e
+ * renovada automaticamente, como num login feito pelo próprio cliente.
  *
- * O Supabase envia um e-mail de confirmação após o registro.
- * O trigger `handle_new_user` cria automaticamente o perfil em `public.profiles`.
- *
- * @param email    - Endereço de e-mail do novo usuário
- * @param password - Senha (mínimo 6 caracteres, recomendado 8+)
- * @param username - Nome de usuário desejado (único na plataforma)
- * @returns Sessão criada ou null se o e-mail precisar de confirmação
+ * @returns a sessão instalada, ou erro
  */
-export async function signUp(
-  email: string,
-  password: string,
-  username: string,
+export async function setAuthSession(
+  accessToken: string,
+  refreshToken: string,
 ): Promise<AuthResult<Session | null>> {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      // username é lido pelo trigger handle_new_user para criar o perfil
-      data: { username },
-    },
+  const { data, error } = await supabase.auth.setSession({
+    access_token:  accessToken,
+    refresh_token: refreshToken,
   });
 
   if (error) return { data: null, error: error.message };

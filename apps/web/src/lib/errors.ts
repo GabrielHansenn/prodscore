@@ -63,3 +63,16 @@ export function getFriendlyErrorMessage(err: unknown, fallback: string = GENERIC
 
   return fallback;
 }
+
+/**
+ * Código de erro (`codigo`) devolvido pela API Express, ex: 'EMAIL_JA_CADASTRADO'.
+ * Serve para a tela reagir a um erro específico (ex: marcar o campo de e-mail)
+ * sem depender do texto da mensagem.
+ *
+ * @returns o código, ou `null` se o erro não veio da API ou não tem código
+ */
+export function getApiErrorCode(err: unknown): string | null {
+  if (!axios.isAxiosError(err)) return null;
+  const body = err.response?.data as { codigo?: unknown } | undefined;
+  return typeof body?.codigo === 'string' ? body.codigo : null;
+}

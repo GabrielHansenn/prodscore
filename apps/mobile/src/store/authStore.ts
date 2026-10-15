@@ -12,6 +12,14 @@ interface LoginResponse {
   usuario?:    User;
 }
 
+/**
+ * Resultado de um cadastro BEM-SUCEDIDO (espelho do web):
+ * - 'authenticated' → conta criada e sessão aberta
+ * - 'confirm_email' → conta criada, aguardando confirmação do e-mail
+ * Falhas (e-mail já cadastrado, validação...) lançam o erro da API.
+ */
+export type RegisterResult = 'authenticated' | 'confirm_email';
+
 interface AuthState {
   user:            User | null;
   accessToken:     string | null;
@@ -30,8 +38,11 @@ interface AuthState {
   login:              (email: string, password: string) => Promise<void>;
   /** Confirma o código TOTP do step-up de login e eleva a sessão para aal2 */
   verifyMfaChallenge: (code: string) => Promise<void>;
-  /** Registra novo usuário via POST /auth/register */
-  register:    (username: string, email: string, password: string) => Promise<void>;
+  /**
+   * Registra novo usuário via POST /auth/register. Resolve só quando a conta
+   * foi realmente criada (ver RegisterResult); qualquer falha é lançada.
+   */
+  register:    (username: string, email: string, password: string) => Promise<RegisterResult>;
   /** Encerra a sessão e limpa tokens do SecureStore */
   logout:      () => Promise<void>;
   /** Restaura sessão a partir do SecureStore na montagem do app */
@@ -119,10 +130,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         usuario?:  User;
       }>('/auth/register', { username, email, password });
 
-      // Se confirmação de e-mail estiver habilitada, não há sessão
+      // Erros (409 e-mail/username já cadastrado, 400...) fazem o axios lançar
+      // antes daqui. Sem sessão = conta criada, aguardando confirmação do e-mail
       if (!data.sessao || !data.usuario) {
         set({ isLoading: false });
-        throw new Error('CONFIRM_EMAIL');
+        return 'confirm_email';
       }
 
       await SecureStore.setItemAsync(TOKEN_KEY,         data.sessao.accessToken);
@@ -134,6 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading:       false,
       });
+      return 'authenticated';
     } catch (err) {
       set({ isLoading: false });
       throw err;

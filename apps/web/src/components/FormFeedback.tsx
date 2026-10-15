@@ -19,7 +19,7 @@ export default function FormFeedback({ variant, message }: { variant: 'error' | 
 }
 
 /** Erro de um campo específico, exibido logo abaixo do input. */
-export function FieldError({ msg }: { msg?: string }) {
+export function FieldError({ msg }: { msg?: string | undefined }) {
   if (!msg) return null;
   return (
     <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">

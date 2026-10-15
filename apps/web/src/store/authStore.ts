@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { AssuranceLevel, type User } from '@prodscore/shared';
 import {
   signIn,
-  signUp,
+  setAuthSession,
   signOut,
   getSession,
   getAssuranceLevel,
@@ -19,6 +19,20 @@ interface Session {
   accessToken: string;
   refreshToken: string;
 }
+
+/** Resposta de POST /auth/register — `sessao` só vem quando a auto-confirmação está ativa */
+interface RegisterResponse {
+  mensagem: string;
+  sessao?:  { accessToken: string; refreshToken: string };
+}
+
+/**
+ * Resultado de um cadastro BEM-SUCEDIDO:
+ * - 'authenticated' → conta criada e sessão aberta
+ * - 'confirm_email' → conta criada, aguardando confirmação do e-mail
+ * Falhas (e-mail já cadastrado, validação...) lançam o erro da API.
+ */
+export type RegisterResult = 'authenticated' | 'confirm_email';
 
 interface AuthState {
   /** Perfil completo do usuário autenticado (inclui dados de gamificação) */
@@ -43,8 +57,11 @@ interface AuthState {
    * para a tela de verificação e chamar `verifyMfaChallenge` na sequência.
    */
   login: (email: string, password: string) => Promise<void>;
-  /** Registra novo usuário; lança 'CONFIRM_EMAIL' se precisar confirmar e-mail */
-  register: (username: string, email: string, password: string) => Promise<void>;
+  /**
+   * Registra novo usuário via API. Resolve só quando a conta foi realmente
+   * criada (ver RegisterResult); qualquer falha é lançada.
+   */
+  register: (username: string, email: string, password: string) => Promise<RegisterResult>;
   /** Encerra a sessão e limpa o estado */
   logout: () => Promise<void>;
   /** Restaura sessão existente do localStorage na montagem da aplicação */
@@ -154,19 +171,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (username, email, password) => {
     set({ isLoading: true });
     try {
-      const { data: supabaseSession, error } = await signUp(email, password, username);
+      // Pela API (e não supabase.auth.signUp direto): é ela que valida as
+      // regras e responde 409 para e-mail/username já cadastrados. Qualquer
+      // status de erro faz o axios lançar — nunca chega ao retorno de sucesso.
+      const { data: res } = await api.post<RegisterResponse>('/auth/register', { username, email, password });
 
-      if (error) {
-        throw new Error(error);
-      }
-
-      if (!supabaseSession) {
-        // Confirmação de e-mail obrigatória — código especial para a UI tratar
+      if (!res.sessao) {
+        // Conta criada de verdade, aguardando confirmação do e-mail
         set({ isLoading: false });
-        throw new Error('CONFIRM_EMAIL');
+        return 'confirm_email';
       }
 
-      // Auto-confirmação ativa: busca o perfil criado pelo trigger
+      // Auto-confirmação ativa: instala a sessão no cliente Supabase e busca
+      // o perfil criado pelo trigger
+      const { data: supabaseSession, error } = await setAuthSession(res.sessao.accessToken, res.sessao.refreshToken);
+      if (error || !supabaseSession) throw new Error(error ?? 'Sessão inválida.');
+
       const { data } = await api.get<{ usuario: User }>('/users/me');
 
       set({
@@ -180,6 +200,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading:       false,
       });
+      return 'authenticated';
     } catch (err) {
       set({ isLoading: false });
       throw err;

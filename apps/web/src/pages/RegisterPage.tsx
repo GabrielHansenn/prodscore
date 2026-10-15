@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { validateUsername, validateEmail, validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
+import {
+  validateUsername, validateEmail, validatePassword, validatePasswordConfirmation,
+  REGISTER_ERROR_CODES, REGISTER_ERROR_FIELDS,
+} from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
-import { getFriendlyErrorMessage } from '../lib/errors.js';
+import { getFriendlyErrorMessage, getApiErrorCode } from '../lib/errors.js';
 import FormFeedback, { FieldError } from '../components/FormFeedback.js';
 import { BoltIcon, ArrowTrendingUpIcon, UsersIcon } from '../components/icons.js';
 import { LogoWordmark } from '../components/Logo.js';
@@ -37,11 +40,12 @@ function MailIcon({ className }: { className?: string }) {
 // ---------------------------------------------------------------------------
 // Validação de campos — regras compartilhadas com o mobile (@prodscore/shared)
 // ---------------------------------------------------------------------------
+// `| undefined` explícito: os handlers limpam um erro com `{ ...p, email: undefined }`
 interface FieldErrors {
-  username?:       string;
-  email?:          string;
-  password?:       string;
-  confirmPassword?: string;
+  username?:        string | undefined;
+  email?:           string | undefined;
+  password?:        string | undefined;
+  confirmPassword?: string | undefined;
 }
 
 function validateFields(
@@ -206,6 +210,8 @@ export default function RegisterPage() {
   const [showConfirm,     setShowConfirm]     = useState(false);
   const [fieldErrors,     setFieldErrors]     = useState<FieldErrors>({});
   const [globalError,     setGlobalError]     = useState('');
+  /** A API respondeu que o e-mail já tem conta — mostra o atalho para o login */
+  const [emailTaken,      setEmailTaken]      = useState(false);
   const [step,            setStep]            = useState<'form' | 'confirm'>('form');
 
   const { register, isLoading } = useAuthStore((s) => ({ register: s.register, isLoading: s.isLoading }));
@@ -221,6 +227,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setGlobalError('');
+    setEmailTaken(false);
 
     const errs = validateFields(username, email, password, confirmPassword);
     if (Object.keys(errs).length > 0) {
@@ -233,14 +240,24 @@ export default function RegisterPage() {
     setFieldErrors({});
 
     try {
-      await register(username.trim(), email.trim(), password);
-      // cadastro sem confirmação de e-mail → vai para o dashboard via authStore
+      const result = await register(username.trim(), email.trim(), password);
+      // Só chega aqui se a conta foi criada de verdade. 'authenticated' →
+      // o authStore já abriu a sessão e as rotas levam ao dashboard.
+      if (result === 'confirm_email') setStep('confirm');
     } catch (err) {
-      if (err instanceof Error && err.message === 'CONFIRM_EMAIL') {
-        setStep('confirm');
+      const message = getFriendlyErrorMessage(err, 'Erro ao criar conta. Tente novamente mais tarde.');
+
+      // E-mail / username já cadastrado: a mensagem vai para o campo, que é focado
+      const code  = getApiErrorCode(err);
+      const field = code ? REGISTER_ERROR_FIELDS[code] : undefined;
+      if (field) {
+        setFieldErrors({ [field]: message });
+        setEmailTaken(code === REGISTER_ERROR_CODES.emailTaken);
+        document.getElementById(field)?.focus();
         return;
       }
-      setGlobalError(getFriendlyErrorMessage(err, 'Erro ao criar conta. Tente novamente mais tarde.'));
+
+      setGlobalError(message);
     }
   };
 
@@ -300,6 +317,7 @@ export default function RegisterPage() {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }));
+                    setEmailTaken(false);
                   }}
                   placeholder="seu@email.com"
                   autoComplete="email"
@@ -308,6 +326,12 @@ export default function RegisterPage() {
                   className={inputClass('email').replace('pr-11', 'pr-3')}
                 />
                 <FieldError msg={fieldErrors.email} />
+                {/* E-mail já cadastrado: atalho direto para o login */}
+                {fieldErrors.email && emailTaken && (
+                  <Link to="/login" className="mt-1 inline-block text-xs font-medium text-brand-600 hover:text-brand-700">
+                    Ir para o login →
+                  </Link>
+                )}
               </div>
 
               {/* Senha */}

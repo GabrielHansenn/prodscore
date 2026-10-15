@@ -24,6 +24,7 @@ const {
   mockVerifyTOTPChallenge,
   mockApiGet,
   mockApiPost,
+  mockSetAuthSession,
 } = vi.hoisted(() => ({
   mockSignIn:              vi.fn(),
   mockSignUp:              vi.fn(),
@@ -35,6 +36,7 @@ const {
   mockVerifyTOTPChallenge: vi.fn(),
   mockApiGet:              vi.fn(),
   mockApiPost:             vi.fn(),
+  mockSetAuthSession:      vi.fn(),
 }));
 
 // Isola authStore da rede real (axios) — chamadas a /users/me e /auth/logout
@@ -71,11 +73,9 @@ vi.mock('../lib/supabase.js', () => ({
     if (error) return { data: null, error: error.message as string };
     return { data: data.session, error: null };
   },
-  signUp: async (email: string, password: string, username: string) => {
-    const { data, error } = await mockSignUp({ email, password, options: { data: { username } } });
-    if (error) return { data: null, error: error.message as string };
-    return { data: data.session, error: null };
-  },
+  // O cadastro passa pela API (api.post mockado) — do Supabase só se usa a
+  // instalação da sessão devolvida pelo backend
+  setAuthSession: mockSetAuthSession,
   signOut: async () => {
     const { error } = await mockSignOut();
     if (error) return { data: null, error: error.message as string };
@@ -340,5 +340,71 @@ describe('authStore', () => {
         expect(requiresMFAVerification(useAuthStore.getState())).toBe(false);
       });
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cadastro
+// ---------------------------------------------------------------------------
+
+describe('authStore.register', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    mockApiGet.mockResolvedValue({ data: { usuario: mockUser } });
+  });
+
+  /** Erro no formato que o axios lança para uma resposta de erro da API */
+  function apiError(status: number, body: object) {
+    return Object.assign(new Error(`Request failed with status code ${status}`), {
+      isAxiosError: true,
+      response:     { status, data: body },
+    });
+  }
+
+  it('cadastra pela API (não chama o signUp do Supabase direto)', async () => {
+    mockApiPost.mockResolvedValue({ data: { mensagem: 'Conta criada! Verifique seu e-mail para confirmar o cadastro.' } });
+
+    await useAuthStore.getState().register('gabriel', 'gabriel@test.com', 'abcd1234');
+
+    expect(mockApiPost).toHaveBeenCalledWith('/auth/register', {
+      username: 'gabriel', email: 'gabriel@test.com', password: 'abcd1234',
+    });
+    expect(mockSignUp).not.toHaveBeenCalled();
+  });
+
+  it('conta criada sem sessão → resolve "confirm_email" (sucesso), sem autenticar', async () => {
+    mockApiPost.mockResolvedValue({ data: { mensagem: 'Conta criada! Verifique seu e-mail para confirmar o cadastro.' } });
+
+    const result = await useAuthStore.getState().register('gabriel', 'gabriel@test.com', 'abcd1234');
+
+    expect(result).toBe('confirm_email');
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().isLoading).toBe(false);
+  });
+
+  it('conta criada com sessão → instala a sessão e autentica', async () => {
+    mockApiPost.mockResolvedValue({
+      data: { mensagem: 'Conta criada com sucesso.', sessao: { accessToken: 'acc', refreshToken: 'ref' } },
+    });
+    mockSetAuthSession.mockResolvedValue({ data: mockSession, error: null });
+
+    const result = await useAuthStore.getState().register('gabriel', 'gabriel@test.com', 'abcd1234');
+
+    expect(result).toBe('authenticated');
+    expect(mockSetAuthSession).toHaveBeenCalledWith('acc', 'ref');
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(useAuthStore.getState().user).toEqual(mockUser);
+  });
+
+  it('e-mail já cadastrado (409) → LANÇA o erro, nunca resolve como sucesso', async () => {
+    mockApiPost.mockRejectedValue(apiError(409, { erro: 'Este e-mail já está cadastrado. Tente fazer login.', codigo: 'EMAIL_JA_CADASTRADO' }));
+
+    await expect(
+      useAuthStore.getState().register('gabriel', 'gabriel@test.com', 'abcd1234'),
+    ).rejects.toMatchObject({ response: { status: 409 } });
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().isLoading).toBe(false);
   });
 });
