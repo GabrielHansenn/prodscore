@@ -1,38 +1,15 @@
 /**
- * Handler para deploy serverless na Vercel.
- * Exporta o app Express como handler compatível com Vercel Functions.
+ * Função da Vercel (serverless): o mesmo app Express do servidor local, com
+ * as rotas sob /api — o site e a API ficam no mesmo domínio.
+ *
+ * Empacotada pelo scripts/vercel-build.mjs (esbuild) num arquivo só, já com o
+ * @prodscore/shared embutido. As variáveis de ambiente vêm do painel da Vercel.
  */
 
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
+import { createApp } from './app.js';
 
-import authRoutes         from './routes/auth.routes.js';
-import usersRoutes        from './routes/users.routes.js';
-import tasksRoutes        from './routes/tasks.routes.js';
-import groupsRoutes       from './routes/groups.routes.js';
-import rankingRoutes      from './routes/ranking.routes.js';
-import achievementsRoutes from './routes/achievements.routes.js';
-import missionsRoutes     from './routes/missions.routes.js';
-
-const app = express();
-
-app.use(cors({
-  // Permite apenas a origem do frontend em produção
-  origin: process.env['FRONTEND_URL'] ?? '*',
-}));
-app.use(express.json());
-
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+export default createApp({
+  basePath:   '/api',
+  corsOrigin: process.env['FRONTEND_URL'],
 });
-
-app.use('/api/auth',         authRoutes);
-app.use('/api/users',        usersRoutes);
-app.use('/api/tasks',        tasksRoutes);
-app.use('/api/groups',       groupsRoutes);
-app.use('/api/ranking',      rankingRoutes);
-app.use('/api/achievements', achievementsRoutes);
-app.use('/api/missions',     missionsRoutes);
-
-export default app;

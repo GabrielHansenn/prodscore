@@ -37,22 +37,15 @@ prodscore/
 
 ## Variáveis de Ambiente
 
-Copie `.env.example` para `.env` na raiz e preencha:
+São três arquivos, um por aplicação (nenhum vai para o Git):
 
-```env
-SUPABASE_URL=             # URL do projeto Supabase
-SUPABASE_ANON_KEY=        # Chave anônima (pública)
-SUPABASE_SERVICE_ROLE_KEY= # Chave de service role (apenas backend)
-JWT_SECRET=               # Segredo para JWT
-PORT=3333                 # Porta do servidor Express
-```
+| Arquivo | Para quê |
+|---|---|
+| `packages/api/.env` | API: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PORT` e `FRONTEND_URL` (endereço do site, usado no link de "Esqueci minha senha") |
+| `apps/web/.env.local` | Site: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_API_URL` |
+| `apps/mobile/.env` | App: `EXPO_PUBLIC_API_URL` (IP do computador, ex: `http://192.168.0.15:3333`), `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` e `EXPO_PUBLIC_WEB_URL` |
 
-Para o frontend (`apps/web`), crie `apps/web/.env.local`:
-
-```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-```
+Cada pasta tem um `.env.example` com o modelo.
 
 ## Como Rodar
 
@@ -142,32 +135,34 @@ npm run test:coverage --workspace=apps/web
 | `DashboardPage.test.tsx`        | Carregamento, stats, lista do dia, quick-complete       |
 | `authStore.test.ts`             | Login, logout, estado inicial                           |
 
-## Deploy
+## Deploy (Vercel)
 
-O projeto está configurado para deploy na [Vercel](https://vercel.com) via `vercel.json` na raiz.
+Site e API ficam no mesmo projeto da Vercel: o site na raiz do domínio e a API em `/api`.
+O build (`npm run build:vercel`, em `scripts/vercel-build.mjs`) usa a Build Output API: gera o site
+com o Vite e empacota a API com o esbuild num arquivo só. Para testar o build localmente, rode o
+mesmo comando e veja a pasta `.vercel/output`.
 
-### Variáveis de ambiente — Vercel (Secrets)
+### Variáveis de ambiente (Settings → Environment Variables)
 
-Configure no painel do projeto (Settings → Environment Variables):
+| Variável | Valor |
+|---|---|
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_ANON_KEY` | chave anon |
+| `SUPABASE_SERVICE_ROLE_KEY` | chave service role (só a API usa) |
+| `FRONTEND_URL` | endereço do site, ex: `https://prodscore.vercel.app` |
+| `VITE_SUPABASE_URL` | mesma URL do Supabase |
+| `VITE_SUPABASE_ANON_KEY` | mesma chave anon |
 
-| Variável                    | Ambiente |
-|-----------------------------|----------|
-| `SUPABASE_URL`              | API      |
-| `SUPABASE_SERVICE_ROLE_KEY` | API      |
-| `FRONTEND_URL`              | API      |
-| `VITE_SUPABASE_URL`         | Web      |
-| `VITE_SUPABASE_ANON_KEY`    | Web      |
-| `VITE_API_URL`              | Web      |
+`VITE_API_URL` não precisa ser definida: sem ela o site usa `/api`, que é o próprio domínio.
 
-### Deploy manual
+### Supabase
 
-```bash
-# Instalar Vercel CLI
-npm i -g vercel
+Em *Authentication → URL Configuration*, coloque o endereço do site em **Site URL** e adicione
+`https://SEU-DOMINIO/redefinir-senha` em **Redirect URLs** (link do e-mail de "Esqueci minha senha").
 
-# Fazer deploy de produção
-vercel --prod
-```
+### Limites da Vercel
+
+Uma requisição pode ter no máximo 4,5 MB; por isso a foto de comprovação aceita até 4 MB.
 
 ## CI/CD
 

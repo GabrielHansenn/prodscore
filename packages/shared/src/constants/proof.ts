@@ -11,8 +11,12 @@ export const ACCEPTED_PROOF_MIME_TYPES: ReadonlyArray<ProofMimeType> = [
   'image/webp',
 ];
 
-/** Tamanho máximo aceito para o arquivo de comprovação (5 MB) */
-export const MAX_PROOF_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+/**
+ * Tamanho máximo aceito para o arquivo de comprovação (4 MB).
+ * Era 5 MB, mas a Vercel recusa requisições acima de 4,5 MB: uma foto entre
+ * 4,5 e 5 MB passaria na validação e falharia no envio.
+ */
+export const MAX_PROOF_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 /** Mesmo limite, em MB — conveniência para mensagens de UI */
 export const MAX_PROOF_FILE_SIZE_MB = MAX_PROOF_FILE_SIZE_BYTES / (1024 * 1024);

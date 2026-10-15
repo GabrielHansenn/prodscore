@@ -9,6 +9,9 @@ import { compressImage } from '../lib/imageCompression.js';
 import { uploadTaskProof } from '../services/proof.service.js';
 import FormFeedback from './FormFeedback.js';
 
+/** Teto do arquivo original, antes da compressão (só para não travar o navegador) */
+const MAX_SOURCE_IMAGE_BYTES = 25 * 1024 * 1024;
+
 function CameraIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -57,8 +60,11 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
       setError('Formato inválido. Envie uma imagem JPEG, PNG ou WebP.');
       return;
     }
-    if (file.size > MAX_PROOF_FILE_SIZE_BYTES) {
-      setError(`A imagem deve ter no máximo ${MAX_PROOF_FILE_SIZE_MB} MB.`);
+    // O limite vale para o arquivo ENVIADO (já comprimido): uma foto de celular
+    // de 8 MB costuma cair para menos de 1 MB. Antes a foto era recusada pelo
+    // tamanho original. O teto abaixo só evita travar o navegador.
+    if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+      setError('Essa imagem é grande demais. Escolha uma foto com menos de 25 MB.');
       return;
     }
 
@@ -66,6 +72,10 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
     setProcessing(true);
     try {
       const compressedBlob = await compressImage(file);
+      if (compressedBlob.size > MAX_PROOF_FILE_SIZE_BYTES) {
+        setError(`Mesmo comprimida, a imagem passou de ${MAX_PROOF_FILE_SIZE_MB} MB. Tente outra foto.`);
+        return;
+      }
       setCompressed(compressedBlob);
       setPreview(URL.createObjectURL(compressedBlob));
     } catch {

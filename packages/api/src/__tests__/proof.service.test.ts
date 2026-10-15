@@ -82,7 +82,7 @@ describe('uploadTaskProof', () => {
     const oversizedBuffer = Buffer.concat([validJpegBuffer, Buffer.alloc(6 * 1024 * 1024)]);
 
     await expect(uploadTaskProof(taskId, ownerId, oversizedBuffer)).rejects.toThrow(
-      'A imagem deve ter no máximo 5 MB.',
+      'A imagem deve ter no máximo 4 MB.',
     );
   });
 

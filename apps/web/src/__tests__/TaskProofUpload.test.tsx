@@ -51,15 +51,36 @@ describe('TaskProofUpload', () => {
     expect(mockCompressImage).not.toHaveBeenCalled();
   });
 
-  it('deve rejeitar arquivos maiores que 5 MB e não chamar compressImage', async () => {
+  it('aceita foto original grande (8 MB) porque o limite vale para a versão comprimida', async () => {
+    mockCompressImage.mockResolvedValueOnce(new Blob([new Uint8Array(800 * 1024)], { type: 'image/jpeg' }));
+    render(<TaskProofUpload taskId="task-1" onUploaded={vi.fn()} onCancel={vi.fn()} />);
+
+    const input = screen.getByLabelText('Selecionar ou tirar foto de comprovação');
+    await userEvent.upload(input, makeFile({ size: 8 * 1024 * 1024 }));
+
+    await waitFor(() => expect(mockCompressImage).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('recusa quando mesmo comprimida a imagem passa de 4 MB', async () => {
+    mockCompressImage.mockResolvedValueOnce(new Blob([new Uint8Array(5 * 1024 * 1024)], { type: 'image/jpeg' }));
     render(<TaskProofUpload taskId="task-1" onUploaded={vi.fn()} onCancel={vi.fn()} />);
 
     const input = screen.getByLabelText('Selecionar ou tirar foto de comprovação');
     await userEvent.upload(input, makeFile({ size: 6 * 1024 * 1024 }));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('A imagem deve ter no máximo 5 MB.');
+      expect(screen.getByRole('alert')).toHaveTextContent('Mesmo comprimida, a imagem passou de 4 MB.');
     });
+  });
+
+  it('recusa arquivo original acima de 25 MB sem tentar comprimir', async () => {
+    render(<TaskProofUpload taskId="task-1" onUploaded={vi.fn()} onCancel={vi.fn()} />);
+
+    const input = screen.getByLabelText('Selecionar ou tirar foto de comprovação');
+    await userEvent.upload(input, makeFile({ size: 26 * 1024 * 1024 }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('menos de 25 MB'));
     expect(mockCompressImage).not.toHaveBeenCalled();
   });
 

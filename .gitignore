@@ -46,3 +46,6 @@ coverage/
 
 # Claude Code (contexto local, não vai para o repo)
 .claude/
+
+# Saída do build da Vercel (npm run build:vercel) e vínculo do projeto (vercel link)
+.vercel

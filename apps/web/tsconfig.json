@@ -6,7 +6,15 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "moduleResolution": "bundler",
+    // react/react-dom → tipos do React 18 do próprio web. Sem isso, pacotes
+    // instalados na raiz do monorepo (react-router) pegam os tipos do React 19
+    // do app mobile e todo <Routes>/<Route> dava erro TS2786 — o que quebrava
+    // o `tsc` do build de produção.
     "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
       "@prodscore/shared": ["../../packages/shared/src/index.ts"],
       "@prodscore/shared/constants": ["../../packages/shared/src/constants/gamification.ts"]
     }

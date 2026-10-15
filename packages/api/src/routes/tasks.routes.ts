@@ -6,6 +6,7 @@ import {
   TaskPriority,
   TaskStatus,
   MAX_PROOF_FILE_SIZE_BYTES,
+  MAX_PROOF_FILE_SIZE_MB,
   MAX_TASK_DESCRIPTION_LENGTH,
 } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
@@ -42,7 +43,7 @@ const proofUpload = multer({
 function handleProofUpload(req: Request, res: Response, next: NextFunction): void {
   proofUpload.single('proof')(req, res, (err: unknown) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-      res.status(400).json({ erro: 'A imagem deve ter no máximo 5 MB.', codigo: 'ARQUIVO_MUITO_GRANDE' });
+      res.status(400).json({ erro: `A imagem deve ter no máximo ${MAX_PROOF_FILE_SIZE_MB} MB.`, codigo: 'ARQUIVO_MUITO_GRANDE' });
       return;
     }
     if (err) {

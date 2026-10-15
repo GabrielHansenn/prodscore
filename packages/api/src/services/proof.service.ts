@@ -1,4 +1,4 @@
-import { MAX_PROOF_FILE_SIZE_BYTES, type TaskProof, type ProofMimeType } from '@prodscore/shared';
+import { MAX_PROOF_FILE_SIZE_BYTES, MAX_PROOF_FILE_SIZE_MB, type TaskProof, type ProofMimeType } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
 import { detectImageType, extensionForImageType } from '../lib/imageSniff.js';
@@ -114,7 +114,7 @@ export async function uploadTaskProof(
     throw new AppError('Arquivo vazio.', 400, 'ARQUIVO_INVALIDO');
   }
   if (buffer.length > MAX_PROOF_FILE_SIZE_BYTES) {
-    throw new AppError('A imagem deve ter no máximo 5 MB.', 400, 'ARQUIVO_MUITO_GRANDE');
+    throw new AppError(`A imagem deve ter no máximo ${MAX_PROOF_FILE_SIZE_MB} MB.`, 400, 'ARQUIVO_MUITO_GRANDE');
   }
 
   const contentType = detectImageType(buffer);
