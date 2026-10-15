@@ -201,7 +201,7 @@ export default function EnrollMFA() {
           <Text style={styles.secretHint}>Não conseguiu escanear? Digite o código manualmente:</Text>
           <View style={styles.secretRow}>
             <Text style={styles.secretText} numberOfLines={1}>{enrollment.secret}</Text>
-            <TouchableOpacity onPress={() => void handleCopySecret()} hitSlop={8}>
+            <TouchableOpacity onPress={() => void handleCopySecret()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Copiar chave">
               <Ionicons name="copy-outline" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </View>

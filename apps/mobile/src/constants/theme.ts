@@ -44,8 +44,9 @@ export const lightColors = {
 
   // Semânticas de dificuldade/status
   amber:     '#f59e0b',
-  amberDim:  'rgba(245,158,11,0.12)',
+  /** Texto sobre fundo âmbar (avisos): 5,0:1 sobre amberDim no tema claro */
   amberText: '#b45309',
+  amberDim:  'rgba(245,158,11,0.12)',
   orange:    '#f97316',
   orangeDim: 'rgba(249,115,22,0.12)',
   red:    '#ef4444',
@@ -55,8 +56,10 @@ export const lightColors = {
 
   // Texto
   text:          '#111827',
-  textSecondary: '#6b7280',
-  textMuted:     '#9ca3af',
+  // Contraste sobre o card branco (WCAG AA pede 4,5:1 para texto):
+  // textSecondary 7,6:1 e textMuted 4,8:1. O textMuted antigo (#9ca3af) tinha 2,5:1.
+  textSecondary: '#4b5563',
+  textMuted:     '#6b7280',
   textOnDark:    '#f9fafb',
 };
 
@@ -104,8 +107,8 @@ export const darkColors: typeof lightColors = {
 
   // Semânticas de dificuldade/status
   amber:     '#fbbf24',
-  amberDim:  'rgba(245,158,11,0.18)',
   amberText: '#fcd34d',
+  amberDim:  'rgba(245,158,11,0.18)',
   orange:    '#fb923c',
   orangeDim: 'rgba(249,115,22,0.18)',
   red:    '#f87171',

@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Image, Alert,
+  ActivityIndicator, Image, Alert, RefreshControl,
 } from 'react-native';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import type { Friend, FriendRequest, FriendUser, UserSearchResult } from '@prodscore/shared';
@@ -59,6 +60,8 @@ export default function FriendsScreen({ navigation }: Props) {
       setLoading(false);
     }
   };
+
+  const { refreshing, onRefresh } = usePullToRefresh(() => Promise.all([loadAll(), fetchUnread()]));
 
   useEffect(() => { void loadAll(); void fetchUnread(); }, []);
 
@@ -142,7 +145,7 @@ export default function FriendsScreen({ navigation }: Props) {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
@@ -151,7 +154,12 @@ export default function FriendsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+      >
         {/* Busca */}
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Buscar por nome de usuário</Text>
@@ -167,7 +175,7 @@ export default function FriendsScreen({ navigation }: Props) {
               autoCorrect={false}
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Limpar busca">
                 <Ionicons name="close-circle" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             )}

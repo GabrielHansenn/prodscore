@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform,
+  Modal, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +14,7 @@ import {
 import GroupCard, { type GroupCardData } from '../components/GroupCard';
 import ImagePickerField from '../components/ImagePickerField';
 import RichTextInput from '../components/RichTextInput';
+import ErrorState from '../components/ErrorState';
 import { markdownToRichText } from '../lib/markdownToRichText';
 import { api } from '../services/api';
 import { uploadGroupImage } from '../services/group.service';
@@ -211,16 +213,26 @@ export default function GroupsScreen() {
   const [showCreate,  setShowCreate]  = useState(false);
   const [showJoin,    setShowJoin]    = useState(false);
 
+  const [loadError, setLoadError] = useState('');
+
+  const loadGroups = async () => {
+    try {
+      setGroups(await fetchGroups());
+      setLoadError('');
+    } catch (err) {
+      // Sem nenhum grupo na tela: mostra o erro no lugar (antes: aviso rápido +
+      // "Nenhum grupo ainda"). Com grupos já na tela (recarga), basta o aviso.
+      const message = getFriendlyErrorMessage(err, 'Não foi possível carregar seus grupos.');
+      if (groups.length === 0) setLoadError(message);
+      else showToast(message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const { refreshing, onRefresh } = usePullToRefresh(loadGroups);
+
   useEffect(() => {
-    void (async () => {
-      try {
-        setGroups(await fetchGroups());
-      } catch (err) {
-        showToast(getFriendlyErrorMessage(err, 'Erro ao carregar seus grupos.'), 'error');
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    void loadGroups();
   }, []);
 
   const toCardData = (g: MobileGroup): GroupCardData => ({
@@ -254,6 +266,8 @@ export default function GroupsScreen() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
+      ) : loadError && groups.length === 0 ? (
+        <ErrorState message={loadError} onRetry={loadGroups} />
       ) : groups.length === 0 ? (
         <View style={styles.center}>
           <Text style={{ fontSize: 48 }}>👥</Text>
@@ -264,6 +278,7 @@ export default function GroupsScreen() {
         <FlatList
           data={groups}
           keyExtractor={(g) => g.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           renderItem={({ item }) => (
             <GroupCard
               group={toCardData(item)}

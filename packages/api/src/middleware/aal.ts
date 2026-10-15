@@ -7,7 +7,7 @@ import type { Request, Response, NextFunction } from 'express';
  * na cadeia (ver rotas), que já validou a assinatura e a expiração do token
  * junto ao Supabase Auth via `verifySupabaseToken`.
  */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
 

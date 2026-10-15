@@ -25,7 +25,7 @@ export default function InlineFeedback({ variant, message }: { variant: 'error' 
 }
 
 /** Erro de um campo específico, exibido logo abaixo do input. */
-export function FieldError({ msg }: { msg?: string }) {
+export function FieldError({ msg }: { msg?: string | undefined }) {
   const styles = useStyles();
   if (!msg) return null;
   return <Text style={styles.fieldError}>{msg}</Text>;

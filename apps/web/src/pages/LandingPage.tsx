@@ -9,32 +9,33 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Nav */}
-      <nav className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
-        <LogoWordmark variant="light" className="h-8 w-auto" />
-        <div className="flex items-center gap-3">
+      <nav className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-8 sm:py-4">
+        <LogoWordmark variant="light" className="h-7 w-auto sm:h-8" />
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link to="/login" className="btn-secondary text-sm">Entrar</Link>
           <Link to="/cadastro" className="btn-primary text-sm">Começar grátis</Link>
         </div>
       </nav>
 
       {/* Hero */}
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
+      <main className="flex flex-1 flex-col items-center justify-center px-5 py-12 text-center sm:px-6 sm:py-20">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-1.5 text-xs font-medium text-brand-700">
           <SparklesIcon className="h-3.5 w-3.5" /> Plataforma de gamificação de produtividade
         </div>
 
-        <h1 className="mx-auto max-w-2xl text-5xl font-bold leading-tight tracking-tight text-gray-900">
+        <h1 className="mx-auto max-w-2xl text-balance text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">
           Transforme suas tarefas em{' '}
           <span className="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
             conquistas
           </span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-lg text-lg text-gray-500">
+        <p className="mx-auto mt-5 max-w-lg text-base text-gray-500 sm:mt-6 sm:text-lg">
           Ganhe pontos, suba de nível, mantenha sequências e compita no ranking. ProdScore torna sua produtividade um jogo.
         </p>
 
-        <div className="mt-8 flex gap-4">
+        {/* Empilha no celular: lado a lado os dois botões não cabem em 375px */}
+        <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
           <Link to="/cadastro" className="btn-primary px-6 py-3 text-base">
             Começar agora →
           </Link>
@@ -44,7 +45,7 @@ export default function LandingPage() {
         </div>
 
         {/* Feature cards */}
-        <div className="mt-20 grid max-w-3xl gap-6 sm:grid-cols-3">
+        <div className="mt-14 grid w-full max-w-3xl gap-4 sm:mt-20 sm:grid-cols-3 sm:gap-6">
           {[
             {
               icon: <TrophyIcon className="h-8 w-8 text-amber-500" />,
@@ -71,7 +72,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 px-8 py-5 text-center text-xs text-gray-400">
+      <footer className="border-t border-gray-200 px-4 py-5 text-center text-xs text-gray-400 sm:px-8">
         © {new Date().getFullYear()} ProdScore — Plataforma de gamificação de produtividade
         {' · '}
         <Link to="/politica-de-privacidade" className="underline hover:text-gray-600">

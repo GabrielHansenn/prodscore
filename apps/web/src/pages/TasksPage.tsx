@@ -1,12 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
-  MAX_TASK_DESCRIPTION_LENGTH, type Task, type TaskSuggestion, type RichTextDoc,
+  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, type Task, type TaskSuggestion, type RichTextDoc,
 } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
 import { showToast } from '../store/toastStore.js';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
 import FormFeedback from '../components/FormFeedback.js';
+import Modal from '../components/Modal.js';
+import ErrorState from '../components/ErrorState.js';
 import TaskCard from '../components/TaskCard.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import { ClipboardIcon, SparklesIcon } from '../components/icons.js';
@@ -72,7 +75,7 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const [difficulty,       setDifficulty]       = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
   const [priority,         setPriority]         = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>(task?.estimatedMinutes?.toString() ?? '');
-  const [dueDate,          setDueDate]          = useState(task?.dueDate ? task.dueDate.split('T')[0]! : '');
+  const [dueDate,          setDueDate]          = useState(task?.dueDate ? localDateKey(new Date(task.dueDate)) : '');
   const [requiresProof,    setRequiresProof]    = useState(task?.requiresProof ?? false);
   const [error,            setError]            = useState('');
   const [loading,          setLoading]          = useState(false);
@@ -92,7 +95,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     setError('');
     setLoading(true);
     try {
-      const due      = dueDate ? `${dueDate}T23:59:00.000Z` : undefined;
+      // 23h59 do dia escolhido no fuso do usuário (antes era 23h59 UTC = 20h59 no Brasil)
+      const due      = dueDate ? endOfLocalDayISO(dueDate) ?? undefined : undefined;
       const estMins  = estimatedMinutes ? parseInt(estimatedMinutes, 10) : undefined;
       await onSubmit({
         title:       title.trim(),
@@ -114,10 +118,9 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      {/* max-h + rolagem: o editor de descrição cresce e o modal não pode sair da tela */}
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
-        <h2 className="mb-5 text-lg font-semibold text-gray-900">
+    // Modal padrão: Esc e clique fora fecham; max-h com rolagem para o editor de descrição
+    <Modal onClose={onClose} labelledBy="task-modal-title" className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+        <h2 id="task-modal-title" className="mb-5 text-lg font-semibold text-gray-900">
           {isEdit ? 'Editar Tarefa' : 'Nova Tarefa'}
         </h2>
 
@@ -129,19 +132,20 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Título</label>
+            <label htmlFor="task-title" className="mb-1 block text-xs font-medium text-gray-600">Título</label>
             <input
+              id="task-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={isCompleted}
               placeholder="Ex: Implementar login com OAuth"
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
+              className="input disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Descrição (opcional)</label>
+            <p id="task-description-label" className="mb-1 block text-xs font-medium text-gray-600">Descrição (opcional)</p>
             <RichTextEditor
               initialContent={description}
               onChange={setDescription}
@@ -153,12 +157,13 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Dificuldade</label>
+              <label htmlFor="task-difficulty" className="mb-1 block text-xs font-medium text-gray-600">Dificuldade</label>
               <select
+                id="task-difficulty"
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as TaskDifficulty)}
                 disabled={isCompleted}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 disabled:opacity-50"
+                className="input disabled:opacity-50"
               >
                 {DIFFICULTY_OPTIONS.filter((o) => o.value !== 'all').map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -166,12 +171,13 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Prioridade</label>
+              <label htmlFor="task-priority" className="mb-1 block text-xs font-medium text-gray-600">Prioridade</label>
               <select
+                id="task-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 disabled={isCompleted}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 disabled:opacity-50"
+                className="input disabled:opacity-50"
               >
                 {Object.values(TaskPriority).map((p) => (
                   <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
@@ -182,26 +188,28 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
+              <label htmlFor="task-due" className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
               <input
+                id="task-due"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 disabled={isCompleted}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 disabled:opacity-50"
+                min={localDateKey()}
+                className="input disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Tempo estimado (min)</label>
+              <label htmlFor="task-estimate" className="mb-1 block text-xs font-medium text-gray-600">Tempo estimado (min)</label>
               <input
+                id="task-estimate"
                 type="number"
                 value={estimatedMinutes}
                 onChange={(e) => setEstimatedMinutes(e.target.value)}
                 disabled={isCompleted}
                 min={1}
                 placeholder="Ex: 60"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 disabled:opacity-50"
+                className="input disabled:opacity-50"
               />
             </div>
           </div>
@@ -236,18 +244,19 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
 export default function TasksPage() {
-  const { tasks, isLoading, fetchTasks, createTask, updateTask, deleteTask, completeTask } = useTaskStore();
+  const { tasks, isLoading, loadError, fetchTasks, createTask, updateTask, deleteTask, completeTask } = useTaskStore();
 
   const [activeStatus,     setActiveStatus]     = useState<TaskStatus | 'all'>('all');
   const [activeDifficulty, setActiveDifficulty] = useState<TaskDifficulty | 'all'>('all');
   const [sortBy,           setSortBy]           = useState<'dueDate' | 'points' | 'createdAt'>('createdAt');
-  const [showCreateModal,  setShowCreateModal]  = useState(false);
+  // ?nova=1 abre o formulário direto (ex: botão "Nova tarefa" do Início)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showCreateModal,  setShowCreateModal]  = useState(() => searchParams.get('nova') === '1');
   const [editingTask,      setEditingTask]      = useState<Task | null>(null);
   const [completing,       setCompleting]       = useState<Set<string>>(new Set());
   const [suggestions,      setSuggestions]      = useState<TaskSuggestion[]>([]);
@@ -380,6 +389,9 @@ export default function TasksPage() {
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
         </div>
+      ) : loadError ? (
+        // Falha ao carregar ≠ "nenhuma tarefa" (antes mostrava "Crie sua primeira tarefa!")
+        <ErrorState message={loadError} onRetry={fetchTasks} />
       ) : filtered.length === 0 ? (
         <div className="card py-16 text-center">
           <ClipboardIcon className="mx-auto h-10 w-10 text-gray-300" />
@@ -411,7 +423,10 @@ export default function TasksPage() {
       {showCreateModal && (
         <TaskModal
           task={null}
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            if (searchParams.has('nova')) setSearchParams({}, { replace: true });
+          }}
           onSubmit={async (data) => { await createTask(data); }}
         />
       )}

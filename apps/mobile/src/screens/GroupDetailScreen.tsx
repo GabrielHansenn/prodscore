@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  ActivityIndicator, TextInput, Modal, Pressable, KeyboardAvoidingView, Platform,
+  ActivityIndicator, TextInput, Modal, Pressable, KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,8 @@ import TaskItem from '../components/TaskItem';
 import TaskFormModal from '../components/TaskFormModal';
 import GroupChat from '../components/GroupChat';
 import RichTextPreview from '../components/RichTextPreview';
+import ErrorState from '../components/ErrorState';
+import { confirmTaskDeletion } from '../lib/confirmTaskDeletion';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -62,8 +65,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [showMissionForm, setShowMissionForm] = useState(false);
   const [showTaskForm,    setShowTaskForm]    = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  /**
+   * Recarrega o grupo. O indicador de tela inteira só aparece no primeiro
+   * carregamento — recargas depois de uma ação ou do "puxar para atualizar"
+   * mantêm a tela e a posição da rolagem.
+   */
+  const [failedTabs, setFailedTabs] = useState<Set<Tab>>(new Set());
+
+  const load = async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     const [detailRes, memsRes, rankRes, missRes, tasksRes] = await Promise.allSettled([
       getGroupDetail(groupId),
       getGroupMembers(groupId),
@@ -72,14 +82,18 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       api.get<{ tarefas: Task[] }>('/tasks', { params: { groupId } }),
     ]);
     if (detailRes.status === 'fulfilled') setGroup(detailRes.value);
-    if (memsRes.status   === 'fulfilled') setMembers(memsRes.value);
-    if (rankRes.status   === 'fulfilled') setRanking(rankRes.value);
-    if (missRes.status   === 'fulfilled') setMissions(missRes.value);
-    if (tasksRes.status  === 'fulfilled') setTasks(tasksRes.value.data.tarefas);
+    // Abas que falharam mostram erro com "Tentar novamente" (antes: "Nenhuma missão ativa")
+    const failed = new Set<Tab>();
+    if (memsRes.status   === 'fulfilled') setMembers(memsRes.value);           else failed.add('membros');
+    if (rankRes.status   === 'fulfilled') setRanking(rankRes.value);           else failed.add('ranking');
+    if (missRes.status   === 'fulfilled') setMissions(missRes.value);          else failed.add('missoes');
+    if (tasksRes.status  === 'fulfilled') setTasks(tasksRes.value.data.tarefas); else failed.add('tarefas');
+    setFailedTabs(failed);
     setLoading(false);
   };
 
-  useEffect(() => { void load(); }, [groupId]);
+  useEffect(() => { void load(true); }, [groupId]);
+  const { refreshing, onRefresh } = usePullToRefresh(() => load());
 
   const myRole  = group?.role;
   const isAdmin = myRole === MemberRole.Owner || myRole === MemberRole.Admin;
@@ -110,7 +124,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerIcon}>
@@ -133,6 +147,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           onPress={() => navigation.navigate('GroupSettings', { groupId })}
           hitSlop={12}
           style={styles.settingsBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Configurações do grupo"
         >
           <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -141,9 +157,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : !group ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>Não foi possível carregar o grupo.</Text>
-        </View>
+        <ErrorState message="Não foi possível carregar o grupo. Verifique se você ainda é membro." onRetry={() => load(true)} />
       ) : (
         <>
           {/* Código de convite */}
@@ -197,8 +211,15 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
           {tab === 'chat' ? (
             <GroupChat groupId={groupId} />
           ) : (
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {tab === 'membros' && (
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+          >
+            {failedTabs.has(tab) && (
+              <ErrorState message="Não foi possível carregar esta parte do grupo." onRetry={() => load()} />
+            )}
+            {tab === 'membros' && !failedTabs.has('membros') && (
               members.length === 0
                 ? <Text style={styles.emptyText}>Nenhum membro encontrado.</Text>
                 : members.map((m) => {
@@ -225,7 +246,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 })
             )}
 
-            {tab === 'ranking' && (
+            {tab === 'ranking' && !failedTabs.has('ranking') && (
               rankingRows.length === 0
                 ? <Text style={styles.emptyText}>Nenhum dado de ranking ainda.</Text>
                 : (
@@ -237,7 +258,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 )
             )}
 
-            {tab === 'missoes' && (
+            {tab === 'missoes' && !failedTabs.has('missoes') && (
               <>
                 {isAdmin && (
                   <TouchableOpacity
@@ -276,7 +297,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
               </>
             )}
 
-            {tab === 'tarefas' && (
+            {tab === 'tarefas' && !failedTabs.has('tarefas') && (
               <>
                 <TouchableOpacity style={styles.addBtn} onPress={() => setShowTaskForm(true)}>
                   <Ionicons name="add" size={16} color={colors.primary} />
@@ -288,21 +309,17 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                   <TaskItem
                     key={t.id}
                     task={t}
-                    onComplete={(id) => {
-                      void completeTask(id).then((result) => {
+                    onComplete={(id) =>
+                      completeTask(id).then((result) => {
                         void load();
                         void refreshStatsAndShowXpGain(result);
                       }).catch((err: unknown) => {
                         showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
-                      });
-                    }}
-                    onDelete={(id) => {
-                      void deleteTask(id)
-                        .then(() => setTasks((prev) => prev.filter((x) => x.id !== id)))
-                        .catch((err: unknown) => {
-                          showToast(getFriendlyErrorMessage(err, 'Não foi possível excluir a tarefa.'), 'error');
-                        });
-                    }}
+                      })
+                    }
+                    onDelete={(id) => confirmTaskDeletion(() =>
+                      deleteTask(id).then(() => setTasks((prev) => prev.filter((x) => x.id !== id))),
+                    )}
                   />
                 ))}
               </>
@@ -478,7 +495,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   missionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
   missionTitle: { flex: 1, fontSize: FONT.base, fontWeight: '600', color: colors.text },
   missionPtsBadge: { backgroundColor: colors.amberDim, borderRadius: RADIUS.xl, paddingHorizontal: SPACING.sm, paddingVertical: 2 },
-  missionPtsText: { fontSize: 11, fontWeight: '700', color: '#b45309' },
+  missionPtsText: { fontSize: 11, fontWeight: '700', color: colors.amberText },
   missionDesc: { fontSize: 12, color: colors.textMuted },
   missionProgressRow: { flexDirection: 'row', justifyContent: 'space-between' },
   missionProgressLabel: { fontSize: 11, color: colors.textMuted },

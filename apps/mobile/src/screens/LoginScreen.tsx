@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
-import { getFriendlyErrorMessage } from '../lib/errors';
+import { getFriendlyErrorMessage, getApiErrorCode } from '../lib/errors';
+import { api } from '../services/api';
 import InlineFeedback from '../components/InlineFeedback';
+import PasswordInput from '../components/PasswordInput';
 import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -24,19 +26,40 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
+  // Senha certa, e-mail ainda não confirmado: mostra o aviso com "reenviar"
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
     if (!email.trim())    { setError('Informe seu e-mail.');  return; }
     if (!password.trim()) { setError('Informe sua senha.');   return; }
     setError('');
+    setNeedsConfirm(false);
     setLoading(true);
     try {
       await login(email.trim(), password);
       // Navegação é tratada pelo RootNavigator via isAuthenticated
     } catch (err) {
-      setError(getFriendlyErrorMessage(err, 'E-mail ou senha incorretos.'));
+      if (getApiErrorCode(err) === 'EMAIL_NAO_CONFIRMADO') {
+        setNeedsConfirm(true);
+        setResendStatus('idle');
+      } else {
+        setError(getFriendlyErrorMessage(err, 'E-mail ou senha incorretos.'));
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResendStatus('sending');
+    try {
+      await api.post('/auth/resend-confirmation', { email: email.trim() });
+      setResendStatus('sent');
+    } catch (err) {
+      setResendStatus('idle');
+      setError(getFriendlyErrorMessage(err, 'Não foi possível reenviar o e-mail. Tente novamente.'));
     }
   };
 
@@ -68,20 +91,51 @@ export default function LoginScreen({ navigation }: Props) {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="email"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="E-mail"
             />
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Senha</Text>
-            <TextInput
-              style={styles.input}
+            <PasswordInput
+              ref={passwordRef}
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
+              autoComplete="password"
+              returnKeyType="go"
+              onSubmitEditing={() => void handleLogin()}
+              accessibilityLabel="Senha"
             />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}
+              style={styles.forgot}
+              accessibilityRole="link"
+            >
+              <Text style={styles.forgotText}>Esqueci minha senha</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* E-mail não confirmado — mesmo aviso do web, com reenvio */}
+          {needsConfirm && (
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmTitle}>Confirme seu e-mail antes de entrar.</Text>
+              <Text style={styles.confirmText}>Enviamos um link para {email.trim()}. Procure também no spam.</Text>
+              {resendStatus === 'sent' ? (
+                <Text style={styles.confirmSent}>E-mail reenviado!</Text>
+              ) : (
+                <TouchableOpacity onPress={() => void handleResend()} disabled={resendStatus === 'sending'} accessibilityRole="button">
+                  <Text style={styles.confirmLink}>
+                    {resendStatus === 'sending' ? 'Enviando…' : 'Reenviar e-mail de confirmação'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {error ? <InlineFeedback variant="error" message={error} /> : null}
 
@@ -177,6 +231,18 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   btnDisabled: {
     opacity: 0.6,
   },
+  forgot:     { alignSelf: 'flex-end', paddingVertical: SPACING.xs },
+  forgotText: { fontSize: FONT.sm, fontWeight: '600', color: colors.primary },
+  confirmBox: {
+    backgroundColor: colors.amberDim,
+    borderRadius:    RADIUS.md,
+    padding:         SPACING.md,
+    gap:             SPACING.xs,
+  },
+  confirmTitle: { fontSize: FONT.sm, fontWeight: '700', color: colors.amberText },
+  confirmText:  { fontSize: FONT.sm, color: colors.amberText },
+  confirmLink:  { fontSize: FONT.sm, fontWeight: '700', color: colors.amberText, textDecorationLine: 'underline', paddingVertical: SPACING.xs },
+  confirmSent:  { fontSize: FONT.sm, fontWeight: '700', color: colors.success },
   btnText: {
     color:      '#fff',
     fontWeight: '700',

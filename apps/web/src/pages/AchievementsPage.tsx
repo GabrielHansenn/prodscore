@@ -8,6 +8,8 @@ import {
 import { useUserStore } from '../store/userStore.js';
 import AchievementCard from '../components/AchievementCard.js';
 import { TrophyIcon, LockClosedIcon } from '../components/icons.js';
+import ErrorState from '../components/ErrorState.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 
 type Filter = 'todas' | 'conquistadas' | 'bloqueadas';
 
@@ -18,18 +20,26 @@ export default function AchievementsPage() {
   const [earned,  setEarned]  = useState<UserAchievementItem[]>([]);
   const [filter,  setFilter]  = useState<Filter>('todas');
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+
+  const loadAchievements = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [all, mine] = await Promise.all([getAchievements(), getUserAchievements()]);
+      setCatalog(all);
+      setEarned(mine);
+    } catch (err) {
+      // Antes não havia catch: a falha virava "0 de 0 conquistas"
+      setError(getFriendlyErrorMessage(err, 'Não foi possível carregar as conquistas.'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     void fetchStats();
-    void (async () => {
-      try {
-        const [all, mine] = await Promise.all([getAchievements(), getUserAchievements()]);
-        setCatalog(all);
-        setEarned(mine);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    void loadAchievements();
   }, []);
 
   const earnedMap  = new Map(earned.map((e) => [e.id, e]));
@@ -111,6 +121,8 @@ export default function AchievementsPage() {
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600 dark:border-gray-700" />
         </div>
+      ) : error ? (
+        <ErrorState message={error} onRetry={loadAchievements} />
       ) : filtered.length === 0 ? (
         <div className="card py-16 text-center">
           <LockClosedIcon className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600" />

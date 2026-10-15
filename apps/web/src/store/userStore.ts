@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api.js';
+import { getFriendlyErrorMessage } from '../lib/errors.js';
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -34,6 +35,8 @@ export interface UserStats {
 interface UserStoreState {
   stats:     UserStats | null;
   isLoading: boolean;
+  /** Mensagem da última falha ao carregar (null = carregou bem) */
+  loadError: string | null;
   /** Busca as estatísticas completas de desempenho do usuário autenticado */
   fetchStats: () => Promise<void>;
 }
@@ -45,14 +48,16 @@ interface UserStoreState {
 export const useUserStore = create<UserStoreState>((set) => ({
   stats:     null,
   isLoading: false,
+  loadError: null,
 
   fetchStats: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
     try {
       const { data } = await api.get<{ estatisticas: UserStats }>('/users/me/stats');
       set({ stats: data.estatisticas, isLoading: false });
-    } catch {
-      set({ isLoading: false });
+    } catch (err) {
+      // Antes o erro era descartado e as telas ficavam carregando para sempre
+      set({ isLoading: false, loadError: getFriendlyErrorMessage(err, 'Não foi possível carregar suas estatísticas.') });
     }
   },
 }));

@@ -223,7 +223,7 @@ export default function GroupChat({ groupId }: { groupId: string }) {
         {imagePicker.image && (
           <View style={styles.previewRow}>
             <Image source={{ uri: imagePicker.image.uri }} style={styles.preview} />
-            <TouchableOpacity onPress={imagePicker.clear} hitSlop={8}>
+            <TouchableOpacity onPress={imagePicker.clear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remover imagem">
               <Ionicons name="close-circle" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>

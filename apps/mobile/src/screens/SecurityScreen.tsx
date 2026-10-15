@@ -1,63 +1,63 @@
 import { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
-import { decodeJwtAal } from '../lib/jwt';
 import { changePassword, deleteAccount } from '../services/security.service';
-import { getFriendlyErrorMessage } from '../lib/errors';
+import { getApiErrorCode, getFriendlyErrorMessage } from '../lib/errors';
 import EnrollMFA from '../components/EnrollMFA';
-import InlineFeedback from '../components/InlineFeedback';
+import InlineFeedback, { FieldError } from '../components/InlineFeedback';
+import PasswordInput from '../components/PasswordInput';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
-/** Aviso exibido no lugar de uma ação sensível quando a sessão ainda não está em aal2 */
-function RequireAAL2Notice() {
-  const colors = useThemeColors();
-  const styles = useStyles();
-  return (
-    <View style={styles.aal2Notice}>
-      <Ionicons name="lock-closed-outline" size={16} color={colors.amber} style={{ marginTop: 1 }} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.aal2NoticeTitle}>Esta ação exige verificação em duas etapas.</Text>
-        <Text style={styles.aal2NoticeSub}>
-          Ative o 2FA acima e confirme o código do seu aplicativo autenticador para continuar.
-        </Text>
-      </View>
-    </View>
-  );
-}
+/** Erros da API que pertencem ao campo "Senha atual" (ver requireSensitiveAuth) */
+const CURRENT_PASSWORD_ERRORS = new Set(['SENHA_ATUAL_INCORRETA', 'SENHA_ATUAL_OBRIGATORIA']);
+
+type PasswordFormErrors = { current?: string | undefined; next?: string | undefined; confirm?: string | undefined };
 
 function ChangePasswordForm() {
   const colors = useThemeColors();
   const styles = useStyles();
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword,     setNewPassword]     = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors,     setFieldErrors]     = useState<PasswordFormErrors>({});
   const [error,           setError]           = useState('');
   const [saving,          setSaving]          = useState(false);
   const [saved,           setSaved]           = useState(false);
 
   const handleSubmit = async () => {
     setError('');
-    const passwordError = validatePassword(newPassword);
-    if (passwordError) { setError(passwordError); return; }
-    const confirmError = validatePasswordConfirmation(newPassword, confirmPassword);
-    if (confirmError) { setError(confirmError); return; }
+    setSaved(false);
+
+    const errs: PasswordFormErrors = {
+      current: currentPassword ? undefined : 'Digite sua senha atual.',
+      next:    validatePassword(newPassword) ?? undefined,
+      confirm: validatePasswordConfirmation(newPassword, confirmPassword) ?? undefined,
+    };
+    if (!errs.next && currentPassword && newPassword === currentPassword) {
+      errs.next = 'A nova senha precisa ser diferente da atual.';
+    }
+    setFieldErrors(errs);
+    if (errs.current || errs.next || errs.confirm) return;
 
     setSaving(true);
     try {
-      await changePassword(newPassword);
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(getFriendlyErrorMessage(err, 'Erro ao alterar a senha.'));
+      const message = getFriendlyErrorMessage(err, 'Erro ao alterar a senha.');
+      if (CURRENT_PASSWORD_ERRORS.has(getApiErrorCode(err) ?? '')) setFieldErrors({ current: message });
+      else setError(message);
     } finally {
       setSaving(false);
     }
@@ -66,18 +66,38 @@ function ChangePasswordForm() {
   return (
     <View style={{ gap: SPACING.sm }}>
       <View>
-        <Text style={styles.fieldLabel}>Nova senha</Text>
-        <TextInput
-          style={styles.input} value={newPassword} onChangeText={setNewPassword}
-          secureTextEntry autoCapitalize="none"
+        <Text style={styles.fieldLabel}>Senha atual</Text>
+        <PasswordInput
+          value={currentPassword}
+          onChangeText={(v) => { setCurrentPassword(v); setFieldErrors((p) => ({ ...p, current: undefined })); }}
+          autoComplete="password"
+          accessibilityLabel="Senha atual"
+          style={fieldErrors.current ? styles.inputError : null}
         />
+        <FieldError msg={fieldErrors.current} />
+      </View>
+      <View>
+        <Text style={styles.fieldLabel}>Nova senha</Text>
+        <PasswordInput
+          value={newPassword}
+          onChangeText={(v) => { setNewPassword(v); setFieldErrors((p) => ({ ...p, next: undefined })); }}
+          autoComplete="new-password"
+          accessibilityLabel="Nova senha"
+          placeholder="Mín. 8 caracteres, com letras e números"
+          style={fieldErrors.next ? styles.inputError : null}
+        />
+        <FieldError msg={fieldErrors.next} />
       </View>
       <View>
         <Text style={styles.fieldLabel}>Confirmar nova senha</Text>
-        <TextInput
-          style={styles.input} value={confirmPassword} onChangeText={setConfirmPassword}
-          secureTextEntry autoCapitalize="none"
+        <PasswordInput
+          value={confirmPassword}
+          onChangeText={(v) => { setConfirmPassword(v); setFieldErrors((p) => ({ ...p, confirm: undefined })); }}
+          autoComplete="new-password"
+          accessibilityLabel="Confirmar nova senha"
+          style={fieldErrors.confirm ? styles.inputError : null}
         />
+        <FieldError msg={fieldErrors.confirm} />
       </View>
 
       {error ? <InlineFeedback variant="error" message={error} /> : null}
@@ -93,86 +113,126 @@ function ChangePasswordForm() {
   );
 }
 
+/**
+ * Confirmação de exclusão da conta com a senha atual. Um modal próprio (e não
+ * o Alert nativo) porque o Alert não tem campo de senha no Android.
+ */
+function DeleteAccountModal({ onCancel, onDeleted }: { onCancel: () => void; onDeleted: () => Promise<void> }) {
+  const colors = useThemeColors();
+  const styles = useStyles();
+  const [password,   setPassword]   = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [error,      setError]      = useState('');
+  const [deleting,   setDeleting]   = useState(false);
+
+  const handleDelete = async () => {
+    if (!password) { setFieldError('Digite sua senha atual para confirmar.'); return; }
+    setFieldError('');
+    setError('');
+    setDeleting(true);
+    try {
+      await deleteAccount(password);
+      await onDeleted();
+    } catch (err) {
+      const message = getFriendlyErrorMessage(err, 'Erro ao excluir a conta.');
+      if (CURRENT_PASSWORD_ERRORS.has(getApiErrorCode(err) ?? '')) setFieldError(message);
+      else setError(message);
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={() => { if (!deleting) onCancel(); }}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={styles.overlay} onPress={() => { if (!deleting) onCancel(); }}>
+          <Pressable style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Excluir conta</Text>
+            <Text style={styles.sheetText}>
+              Essa ação é permanente. Todos os seus dados, tarefas e histórico de pontos serão apagados.
+            </Text>
+
+            <Text style={styles.fieldLabel}>Senha atual</Text>
+            <PasswordInput
+              value={password}
+              onChangeText={(v) => { setPassword(v); setFieldError(''); }}
+              autoComplete="password"
+              accessibilityLabel="Senha atual"
+              returnKeyType="go"
+              onSubmitEditing={() => void handleDelete()}
+              style={fieldError ? styles.inputError : null}
+            />
+            <FieldError msg={fieldError} />
+            {error ? <InlineFeedback variant="error" message={error} /> : null}
+
+            <View style={styles.sheetBtns}>
+              <TouchableOpacity style={[styles.secondaryBtn, styles.flex1]} onPress={onCancel} disabled={deleting}>
+                <Text style={styles.secondaryBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dangerBtnFill, styles.flex1, deleting && { opacity: 0.6 }]}
+                onPress={() => void handleDelete()}
+                disabled={deleting}
+                accessibilityRole="button"
+              >
+                {deleting
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.dangerBtnFillText}>Excluir</Text>}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 /** Tela de segurança da conta — 2FA, troca de senha e exclusão de conta */
 export default function SecurityScreen({ navigation }: { navigation: { goBack: () => void } }) {
   const insets = useSafeAreaInsets();
-  const { accessToken, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const colors = useThemeColors();
   const styles = useStyles();
-  const [deleteError, setDeleteError] = useState('');
-  const [deleting,    setDeleting]    = useState(false);
-
-  const isAAL2 = accessToken !== null && decodeJwtAal(accessToken) === 'aal2';
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Excluir conta',
-      'Essa ação é permanente. Todos os seus dados, tarefas e histórico de pontos serão apagados.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir permanentemente',
-          style: 'destructive',
-          onPress: () => void (async () => {
-            setDeleteError('');
-            setDeleting(true);
-            try {
-              await deleteAccount();
-              await logout();
-            } catch (err) {
-              setDeleteError(getFriendlyErrorMessage(err, 'Erro ao excluir a conta.'));
-            } finally {
-              setDeleting(false);
-            }
-          })(),
-        },
-      ],
-    );
-  };
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Segurança</Text>
-          <Text style={styles.headerSub}>Autenticação de dois fatores e configurações sensíveis</Text>
+          <Text style={styles.headerSub}>Verificação em duas etapas, senha e conta</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* 2FA */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Autenticação de dois fatores (2FA)</Text>
           <EnrollMFA />
         </View>
 
-        {/* Alterar senha — exige aal2 */}
+        {/* Alterar senha — confirma com a senha atual (e o 2FA, para quem tem) */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Alterar senha</Text>
-          {isAAL2 ? <ChangePasswordForm /> : <RequireAAL2Notice />}
+          <Text style={styles.cardHint}>Para sua segurança, confirme com a senha atual.</Text>
+          <ChangePasswordForm />
         </View>
 
-        {/* Zona de risco — exige aal2 */}
+        {/* Zona de risco */}
         <View style={[styles.card, styles.dangerCard]}>
           <Text style={[styles.cardTitle, { color: colors.red }]}>Zona de risco</Text>
-          {isAAL2 ? (
-            <View>
-              {deleteError ? <InlineFeedback variant="error" message={deleteError} /> : null}
-              <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount} disabled={deleting}>
-                {deleting
-                  ? <ActivityIndicator color={colors.red} size="small" />
-                  : <Text style={styles.dangerBtnText}>Excluir conta</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <RequireAAL2Notice />
-          )}
+          <Text style={styles.cardHint}>Excluir a conta apaga todos os seus dados. Você vai confirmar com a senha atual.</Text>
+          <TouchableOpacity style={styles.dangerBtn} onPress={() => setConfirmDelete(true)} accessibilityRole="button">
+            <Text style={styles.dangerBtnText}>Excluir conta</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {confirmDelete && (
+        <DeleteAccountModal onCancel={() => setConfirmDelete(false)} onDeleted={logout} />
+      )}
     </View>
   );
 }
@@ -192,24 +252,13 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft,
     padding: SPACING.md, ...CARD_SHADOW,
   },
-  cardTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
+  cardTitle: { fontSize: FONT.base, fontWeight: '700', color: colors.text, marginBottom: SPACING.xs },
+  cardHint:  { fontSize: FONT.sm, color: colors.textMuted, marginBottom: SPACING.md },
 
   dangerCard: { borderColor: 'rgba(248,113,113,0.3)' },
 
-  aal2Notice: {
-    flexDirection: 'row', gap: SPACING.sm,
-    backgroundColor: colors.amberDim, borderRadius: RADIUS.md,
-    borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)', padding: SPACING.sm,
-  },
-  aal2NoticeTitle: { fontSize: FONT.sm, fontWeight: '600', color: '#b45309' },
-  aal2NoticeSub:   { fontSize: 11, color: '#b45309', opacity: 0.9, marginTop: 2 },
-
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
-  input: {
-    backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder,
-    paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text,
-  },
-
+  inputError: { borderColor: colors.red },
 
   secondaryBtn: {
     borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md,
@@ -220,7 +269,15 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   dangerBtn: {
     borderWidth: 1, borderColor: 'rgba(248,113,113,0.4)', borderRadius: RADIUS.md,
     paddingVertical: 11, alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: SPACING.lg,
-    marginTop: SPACING.xs,
   },
   dangerBtnText: { fontSize: FONT.sm, fontWeight: '600', color: colors.red },
+
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: SPACING.lg },
+  sheet: { backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: SPACING.lg, gap: SPACING.sm, ...CARD_SHADOW },
+  sheetTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text },
+  sheetText:  { fontSize: FONT.sm, color: colors.textSecondary, marginBottom: SPACING.xs },
+  sheetBtns:  { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  flex1:      { flex: 1, alignSelf: 'stretch' },
+  dangerBtnFill: { backgroundColor: colors.red, borderRadius: RADIUS.md, paddingVertical: 11, alignItems: 'center' },
+  dangerBtnFillText: { fontSize: FONT.sm, fontWeight: '700', color: '#fff' },
 }));

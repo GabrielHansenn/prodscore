@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogoWordmark } from '../components/Logo.js';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
@@ -34,6 +34,8 @@ export default function LoginPage() {
 
   const { login, isLoading } = useAuthStore((s) => ({ login: s.login, isLoading: s.isLoading }));
   const navigate = useNavigate();
+  // Vindo de /redefinir-senha depois de salvar a senha nova
+  const passwordReset = (useLocation().state as { passwordReset?: boolean } | null)?.passwordReset === true;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -110,6 +112,12 @@ export default function LoginPage() {
           <h1 className="mb-1 text-2xl font-bold text-gray-900">Bem-vindo de volta</h1>
           <p className="mb-8 text-sm text-gray-500">Entre com sua conta para continuar</p>
 
+          {passwordReset && (
+            <div className="mb-6">
+              <FormFeedback variant="success" message="Senha alterada. Entre com a nova senha." />
+            </div>
+          )}
+
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-gray-600">
@@ -128,9 +136,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-gray-600">
-                Senha
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="password" className="block text-xs font-medium text-gray-600">
+                  Senha
+                </label>
+                <Link to="/esqueci-senha" className="text-xs font-medium text-brand-600 hover:text-brand-700">
+                  Esqueci minha senha
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   id="password"

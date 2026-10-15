@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
@@ -11,6 +11,8 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { getFriendlyErrorMessage, getApiErrorCode } from '../lib/errors';
 import InlineFeedback, { FieldError } from '../components/InlineFeedback';
+import PasswordInput from '../components/PasswordInput';
+import { PRIVACY_POLICY_URL, openPrivacyPolicy } from '../lib/links';
 import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -39,6 +41,10 @@ export default function RegisterScreen({ navigation }: Props) {
   const [fieldErrors,     setFieldErrors]     = useState<FieldErrors>({});
   const [globalError,     setGlobalError]     = useState('');
   const [loading,         setLoading]         = useState(false);
+  // "Próximo" do teclado passa para o campo seguinte
+  const emailRef    = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef  = useRef<TextInput>(null);
   const [confirmEmail,    setConfirmEmail]    = useState(false);
   /** A API respondeu que o e-mail já tem conta — mostra o atalho para o login */
   const [emailTaken,      setEmailTaken]      = useState(false);
@@ -125,6 +131,10 @@ export default function RegisterScreen({ navigation }: Props) {
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="Nome de usuário"
             />
             <FieldError msg={fieldErrors.username} />
           </View>
@@ -132,6 +142,7 @@ export default function RegisterScreen({ navigation }: Props) {
           <View style={styles.field}>
             <Text style={styles.label}>E-mail</Text>
             <TextInput
+              ref={emailRef}
               style={[styles.input, fieldErrors.email ? styles.inputError : null]}
               value={email}
               onChangeText={(v) => { setEmail(v); if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined })); setEmailTaken(false); }}
@@ -140,6 +151,11 @@ export default function RegisterScreen({ navigation }: Props) {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="email"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="E-mail"
             />
             <FieldError msg={fieldErrors.email} />
             {/* E-mail já cadastrado: atalho direto para o login */}
@@ -152,28 +168,33 @@ export default function RegisterScreen({ navigation }: Props) {
 
           <View style={styles.field}>
             <Text style={styles.label}>Senha</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.password ? styles.inputError : null]}
+            <PasswordInput
+              ref={passwordRef}
+              style={fieldErrors.password ? styles.inputError : null}
               value={password}
               onChangeText={(v) => { setPassword(v); if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined })); }}
               placeholder="Mín. 8 caracteres, com letras e números"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              autoCorrect={false}
+              autoComplete="new-password"
+              returnKeyType="next"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              blurOnSubmit={false}
+              accessibilityLabel="Senha"
             />
             <FieldError msg={fieldErrors.password} />
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Confirmar senha</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.confirmPassword ? styles.inputError : null]}
+            <PasswordInput
+              ref={confirmRef}
+              style={fieldErrors.confirmPassword ? styles.inputError : null}
               value={confirmPassword}
               onChangeText={(v) => { setConfirmPassword(v); if (fieldErrors.confirmPassword) setFieldErrors((p) => ({ ...p, confirmPassword: undefined })); }}
               placeholder="••••••••"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              autoCorrect={false}
+              autoComplete="new-password"
+              returnKeyType="go"
+              onSubmitEditing={() => void handleRegister()}
+              accessibilityLabel="Confirmar senha"
             />
             <FieldError msg={fieldErrors.confirmPassword} />
           </View>
@@ -191,6 +212,17 @@ export default function RegisterScreen({ navigation }: Props) {
               : <Text style={styles.btnText}>Criar conta</Text>
             }
           </TouchableOpacity>
+
+          {/* Cadastro coleta dados pessoais: a política precisa estar a um toque (LGPD) */}
+          {PRIVACY_POLICY_URL && (
+            <Text style={styles.legal}>
+              Ao criar a conta, você concorda com a nossa{' '}
+              <Text style={styles.legalLink} onPress={openPrivacyPolicy} accessibilityRole="link">
+                Política de Privacidade
+              </Text>
+              .
+            </Text>
+          )}
         </View>
 
         <View style={styles.footer}>
@@ -230,6 +262,8 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   // Mesmo destaque do web: borda vermelha no campo com erro
   inputError: { borderColor: colors.red },
   emailTakenLink: { color: colors.primary, fontWeight: '600', fontSize: FONT.sm },
+  legal:     { fontSize: FONT.sm, color: colors.textMuted, textAlign: 'center' },
+  legalLink: { color: colors.primary, fontWeight: '600' },
   btn:       { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center', marginTop: SPACING.xs },
   btnDisabled: { opacity: 0.6 },
   btnText:   { color: '#fff', fontWeight: '700', fontSize: FONT.md },

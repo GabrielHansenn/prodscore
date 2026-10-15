@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Task, LevelReward, TaskPriority, Achievement, RichTextDoc } from '@prodscore/shared';
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { api } from '../services/api';
+import { getFriendlyErrorMessage } from '../lib/errors';
 
 // Pontuação base por dificuldade (espelho do backend)
 const BASE_POINTS: Record<TaskDifficulty, number> = {
@@ -49,6 +50,8 @@ interface TaskFilters {
 interface TaskStoreState {
   tasks:     Task[];
   isLoading: boolean;
+  /** Mensagem da última falha ao carregar a lista (null = carregou bem) */
+  loadError: string | null;
   filters:   TaskFilters;
 
   fetchTasks:    (filters?: TaskFilters) => Promise<void>;
@@ -63,10 +66,11 @@ interface TaskStoreState {
 export const useTaskStore = create<TaskStoreState>((set, get) => ({
   tasks:     [],
   isLoading: false,
+  loadError: null,
   filters:   {},
 
   fetchTasks: async (filters) => {
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
     try {
       const params: Record<string, string> = {};
       const f = filters ?? get().filters;
@@ -75,8 +79,9 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
 
       const { data } = await api.get<{ tarefas: Task[] }>('/tasks', { params });
       set({ tasks: data.tarefas, isLoading: false });
-    } catch {
-      set({ isLoading: false });
+    } catch (err) {
+      // Antes o erro era descartado e a tela dizia "Nenhuma tarefa encontrada"
+      set({ isLoading: false, loadError: getFriendlyErrorMessage(err, 'Não foi possível carregar suas tarefas.') });
     }
   },
 

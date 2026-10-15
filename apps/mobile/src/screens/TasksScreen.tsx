@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,10 @@ import { getTaskSuggestions } from '../services/behavioral.service';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
+import { confirmTaskDeletion } from '../lib/confirmTaskDeletion';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import TaskItem from '../components/TaskItem';
+import ErrorState from '../components/ErrorState';
 import Dropdown from '../components/Dropdown';
 import TaskFormModal, { BASE_POINTS } from '../components/TaskFormModal';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
@@ -54,7 +57,7 @@ const SORT_OPTIONS: Array<{ value: SortBy; label: string }> = [
 export default function TasksScreen() {
   const insets = useSafeAreaInsets();
   const { isWide } = useResponsive();
-  const { tasks, isLoading, fetchTasks, createTask, updateTask, deleteTask, completeTask } = useTaskStore();
+  const { tasks, isLoading, loadError, fetchTasks, createTask, updateTask, deleteTask, completeTask } = useTaskStore();
   const colors = useThemeColors();
   const styles = useStyles();
 
@@ -66,9 +69,14 @@ export default function TasksScreen() {
   const [suggestions,      setSuggestions]      = useState<TaskSuggestion[]>([]);
   const [showSuggestions,  setShowSuggestions]  = useState(true);
 
+  const loadAll = () => Promise.all([
+    fetchTasks(),
+    getTaskSuggestions().then(setSuggestions).catch(() => { /* opcional */ }),
+  ]);
+  const { refreshing, onRefresh } = usePullToRefresh(loadAll);
+
   useEffect(() => {
-    void fetchTasks();
-    void getTaskSuggestions().then(setSuggestions).catch(() => { /* opcional */ });
+    void loadAll();
   }, []);
 
   let filtered = tasks;
@@ -89,18 +97,7 @@ export default function TasksScreen() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Excluir tarefa?', 'Esta ação não pode ser desfeita.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir', style: 'destructive', onPress: () => {
-          void deleteTask(id).catch((err: unknown) => {
-            showToast(getFriendlyErrorMessage(err, 'Não foi possível excluir a tarefa.'), 'error');
-          });
-        },
-      },
-    ]);
-  };
+  const handleDelete = (id: string) => confirmTaskDeletion(() => deleteTask(id));
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
@@ -120,6 +117,7 @@ export default function TasksScreen() {
         keyExtractor={(t) => t.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         ListHeaderComponent={
           <>
             {/* Sugestões */}
@@ -181,13 +179,16 @@ export default function TasksScreen() {
         renderItem={({ item }) => (
           <TaskItem
             task={item}
-            onComplete={(id) => void handleComplete(id)}
+            onComplete={handleComplete}
             onDelete={handleDelete}
             onEdit={(t) => setEditingTask(t)}
           />
         )}
         ListEmptyComponent={
-          !isLoading ? (
+          // Falha ao carregar ≠ "nenhuma tarefa"
+          !isLoading && loadError ? (
+            <ErrorState message={loadError} onRetry={() => fetchTasks()} />
+          ) : !isLoading ? (
             <View style={styles.center}>
               <Ionicons name="clipboard-outline" size={40} color={colors.textMuted} />
               <Text style={styles.emptyText}>Nenhuma tarefa encontrada</Text>

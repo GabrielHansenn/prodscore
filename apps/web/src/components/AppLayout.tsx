@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 import Sidebar from './Sidebar.js';
 import { LogoWordmark } from './Logo.js';
+import NotificationBell from './NotificationBell.js';
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
@@ -56,6 +57,10 @@ export default function AppLayout() {
             </svg>
           </button>
           <LogoWordmark variant="light" className="h-6 w-auto" aria-hidden="true" />
+          {/* Sino também no cabeçalho do celular: a barra lateral fica escondida atrás do menu */}
+          <div className="ml-auto">
+            <NotificationBell variant="header" />
+          </div>
         </header>
 
         {/* Conteúdo — P5: role="main" para skip-link e a11y */}

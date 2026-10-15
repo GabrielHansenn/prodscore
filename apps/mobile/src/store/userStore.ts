@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { getFriendlyErrorMessage } from '../lib/errors';
 
 interface ActiveMission {
   id:           string;
@@ -30,6 +31,8 @@ export interface UserStats {
 interface UserStoreState {
   stats:     UserStats | null;
   isLoading: boolean;
+  /** Mensagem da última falha ao carregar (null = carregou bem) */
+  loadError: string | null;
   /** Busca estatísticas completas de desempenho do usuário autenticado */
   fetchStats: () => Promise<void>;
 }
@@ -37,16 +40,17 @@ interface UserStoreState {
 export const useUserStore = create<UserStoreState>((set) => ({
   stats:     null,
   isLoading: false,
+  loadError: null,
 
   fetchStats: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
     try {
       const { data } = await api.get<{ estatisticas: UserStats }>('/users/me/stats');
       set({ stats: data.estatisticas, isLoading: false });
     } catch (err) {
-      // Log local (Metro/console do dev) — stats fica preso em null sem isso
+      // As telas mostram o erro com "Tentar novamente" (antes ficavam carregando para sempre)
       console.error('[userStore.fetchStats] falhou:', err);
-      set({ isLoading: false });
+      set({ isLoading: false, loadError: getFriendlyErrorMessage(err, 'Não foi possível carregar suas estatísticas.') });
     }
   },
 }));

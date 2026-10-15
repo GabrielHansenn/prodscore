@@ -38,6 +38,8 @@ export interface CompleteTaskApiResult {
 interface TaskState {
   tasks:     Task[];
   isLoading: boolean;
+  /** Mensagem da última falha ao carregar a lista (null = carregou bem) */
+  loadError: string | null;
   filters:   TaskFilters;
 
   /** Busca tarefas do usuário com os filtros ativos */
@@ -77,10 +79,11 @@ interface TaskState {
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks:     [],
   isLoading: false,
+  loadError: null,
   filters:   {},
 
   fetchTasks: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true, loadError: null });
     try {
       const { filters } = get();
       const params: Record<string, string> = {};
@@ -90,8 +93,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
       const { data } = await api.get<{ tarefas: Task[] }>('/tasks', { params });
       set({ tasks: data.tarefas, isLoading: false });
-    } catch {
-      set({ isLoading: false });
+    } catch (err) {
+      // Antes o erro era descartado e a tela dizia "Nenhuma tarefa encontrada"
+      set({ isLoading: false, loadError: getFriendlyErrorMessage(err, 'Não foi possível carregar suas tarefas.') });
     }
   },
 

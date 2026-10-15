@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useUserStore } from '../store/userStore.js';
 import StatisticsContent from '../components/StatisticsContent.js';
+import ErrorState from '../components/ErrorState.js';
 
 export default function StatisticsPage() {
-  const { stats, fetchStats } = useUserStore();
+  const { stats, loadError, fetchStats } = useUserStore();
 
   useEffect(() => {
     void fetchStats();
@@ -17,7 +18,10 @@ export default function StatisticsPage() {
         <p className="mt-1 text-sm text-gray-500">Visão geral do seu desempenho</p>
       </div>
 
-      {!stats ? (
+      {!stats && loadError ? (
+        // Antes ficava carregando para sempre quando a API falhava
+        <ErrorState message={loadError} onRetry={fetchStats} />
+      ) : !stats ? (
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
         </div>

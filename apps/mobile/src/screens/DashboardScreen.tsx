@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, FlatList,
-  TouchableOpacity, Modal, Pressable,
+  TouchableOpacity, Modal, Pressable, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskStatus, type Task, type PointTransaction, type LevelReward } from '@prodscore/shared';
+import { TaskStatus, isLocalToday, type Task, type PointTransaction, type LevelReward } from '@prodscore/shared';
+import { showToast } from '../store/toastStore';
+import { getFriendlyErrorMessage } from '../lib/errors';
+import { confirmTaskDeletion } from '../lib/confirmTaskDeletion';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
 import { useUserStore } from '../store/userStore';
@@ -20,6 +24,7 @@ import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import NotificationBell from '../components/NotificationBell';
+import ErrorState from '../components/ErrorState';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
@@ -32,20 +37,20 @@ export default function DashboardScreen() {
   const insets  = useSafeAreaInsets();
   const { isWide } = useResponsive();
   const { user }                      = useAuthStore();
-  const { stats, fetchStats }         = useUserStore();
-  const { tasks, fetchTasks, completeTask, deleteTask } = useTaskStore();
+  const { stats, loadError: statsError, fetchStats } = useUserStore();
+  const { tasks, loadError: tasksError, fetchTasks, completeTask, deleteTask } = useTaskStore();
   const colors = useThemeColors();
   const styles = useStyles();
 
   const [celebrationStreak, setCelebrationStreak] = useState<number | null>(null);
   const [levelReward,       setLevelReward]       = useState<LevelReward | null>(null);
-  const [toast,             setToast]             = useState('');
   const [transactions,      setTransactions]      = useState<PointTransaction[]>([]);
 
+  const loadAll = () => Promise.all([fetchStats(), fetchTasks(), loadTransactions()]);
+  const { refreshing, onRefresh } = usePullToRefresh(loadAll);
+
   useEffect(() => {
-    void fetchStats();
-    void fetchTasks();
-    void loadTransactions();
+    void loadAll();
   }, []);
 
   const loadTransactions = async () => {
@@ -57,18 +62,13 @@ export default function DashboardScreen() {
     }
   };
 
-  // Filtra tarefas de hoje (pendentes/em andamento com vencimento hoje)
-  const today  = new Date().toISOString().split('T')[0]!;
+  // Tarefas de hoje (pendentes/em andamento com vencimento hoje) — "hoje" no
+  // fuso do aparelho; antes usava o dia em UTC, que depois das 21h já é amanhã
   const todayTasks = tasks.filter((t) => {
     if (t.status === TaskStatus.Completed) return false;
     if (!t.dueDate) return false;
-    return t.dueDate.startsWith(today);
+    return isLocalToday(t.dueDate);
   });
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2500);
-  };
 
   const handleComplete = async (id: string) => {
     try {
@@ -77,20 +77,23 @@ export default function DashboardScreen() {
       if (result.marcoStreak)     setCelebrationStreak(result.novoStreak);
       if (result.recompensaNivel) setLevelReward(result.recompensaNivel);
       void loadTransactions();
-    } catch {
-      showToast('Erro ao concluir tarefa.');
+    } catch (err) {
+      showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
     }
   };
 
-  const handleDelete = (id: string) => {
-    void deleteTask(id);
-  };
+  // Mesma confirmação das telas Tarefas e Grupo (antes excluía direto)
+  const handleDelete = (id: string) => confirmTaskDeletion(() => deleteTask(id));
 
   const firstName = user?.username.split('_')[0] ?? 'Jogador';
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+      >
       <ResponsiveContainer>
 
         {/* Saudação + sino de notificações */}
@@ -133,6 +136,9 @@ export default function DashboardScreen() {
               />
             </View>
           </View>
+        ) : statsError ? (
+          // Antes os placeholders ficavam na tela para sempre quando a API falhava
+          <ErrorState message={statsError} onRetry={fetchStats} />
         ) : (
           <View style={[styles.statsRow, !isWide && styles.statsRowWrap]}>
             {['Pontos','Sequência','Nível','Esta Semana'].map((l) => (
@@ -159,10 +165,12 @@ export default function DashboardScreen() {
                 <Text style={styles.countPillText}>{todayTasks.length}</Text>
               </View>
             </View>
-            {todayTasks.length === 0 ? (
+            {tasksError && tasks.length === 0 ? (
+              <ErrorState message={tasksError} onRetry={fetchTasks} />
+            ) : todayTasks.length === 0 ? (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Nenhuma tarefa para hoje!</Text>
-                <Text style={styles.emptyHint}>Que tal criar uma nova?</Text>
+                <Text style={styles.emptyText}>Nenhuma tarefa com prazo para hoje.</Text>
+                <Text style={styles.emptyHint}>Tarefas sem prazo ficam na aba Tarefas.</Text>
               </View>
             ) : (
               <FlatList
@@ -171,7 +179,7 @@ export default function DashboardScreen() {
                 renderItem={({ item }) => (
                   <TaskItem
                     task={item}
-                    onComplete={(id) => void handleComplete(id)}
+                    onComplete={handleComplete}
                     onDelete={handleDelete}
                   />
                 )}
@@ -225,14 +233,6 @@ export default function DashboardScreen() {
 
       </ResponsiveContainer>
       </ScrollView>
-
-      {/* Toast de pontos */}
-      {toast ? (
-        <View style={styles.toast}>
-          <Ionicons name="checkmark-circle" size={18} color={colors.lime} />
-          <Text style={styles.toastText}>{toast}</Text>
-        </View>
-      ) : null}
 
       {/* Modal de recompensa de nível */}
       <Modal visible={levelReward !== null} transparent animationType="fade">
@@ -372,23 +372,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   progressText:  { fontSize: FONT.sm, color: colors.textMuted },
   progressTrack: { height: 6, borderRadius: RADIUS.sm, backgroundColor: colors.border, overflow: 'hidden' },
   progressFill:  { height: '100%', borderRadius: RADIUS.sm, backgroundColor: colors.primary },
-
-  toast: {
-    position:        'absolute',
-    bottom:          80,
-    left:            SPACING.lg,
-    right:           SPACING.lg,
-    flexDirection:   'row',
-    backgroundColor: colors.card,
-    borderRadius:    RADIUS.md,
-    borderWidth:     1,
-    borderColor:     colors.primary100,
-    padding:         SPACING.md,
-    alignItems:      'center',
-    gap:             SPACING.sm,
-    ...CARD_SHADOW,
-  },
-  toastText: { color: colors.text, fontWeight: '600', fontSize: FONT.base },
 
   overlay: {
     flex:            1,

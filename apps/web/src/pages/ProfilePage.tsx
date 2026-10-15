@@ -230,8 +230,8 @@ export default function ProfilePage() {
           <h3 className="mb-4 font-semibold text-gray-900">Editar Informações</h3>
           <form onSubmit={(e) => void handleSave(e)} className="max-w-3xl space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Nome de usuário</label>
-              <input
+              <label htmlFor="profile-username" className="mb-1 block text-xs font-medium text-gray-600">Nome de usuário</label>
+              <input id="profile-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -240,8 +240,8 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Bio (opcional)</label>
-              <textarea
+              <label htmlFor="profile-bio" className="mb-1 block text-xs font-medium text-gray-600">Bio (opcional)</label>
+              <textarea id="profile-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={2}

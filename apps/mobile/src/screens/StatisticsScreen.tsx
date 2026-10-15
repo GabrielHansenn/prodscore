@@ -7,11 +7,12 @@ import StatisticsContent from '../components/StatisticsContent';
 import { FONT, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import ErrorState from '../components/ErrorState';
 
 /** Tela de estatísticas — espelha /estatisticas no web */
 export default function StatisticsScreen({ navigation }: { navigation: { goBack: () => void } }) {
   const insets = useSafeAreaInsets();
-  const { stats, fetchStats } = useUserStore();
+  const { stats, loadError, fetchStats } = useUserStore();
   const colors = useThemeColors();
   const styles = useStyles();
 
@@ -22,7 +23,7 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
@@ -31,7 +32,10 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
         </View>
       </View>
 
-      {!stats ? (
+      {!stats && loadError ? (
+        // Antes ficava carregando para sempre quando a API falhava
+        <ErrorState message={loadError} onRetry={fetchStats} />
+      ) : !stats ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

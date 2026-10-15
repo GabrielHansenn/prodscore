@@ -3,7 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
-import { requireAAL2 } from '../middleware/aal.js';
+import { requireSensitiveAuth } from '../middleware/sensitiveAction.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { supabase, getUserById } from '../lib/supabase.js';
 import { buyStreakFreeze } from '../services/gamification.service.js';
@@ -179,14 +179,15 @@ router.post('/me/avatar', authGuard, handleAvatarUpload, async (req, res) => {
 /**
  * Exclui permanentemente a conta do usuário autenticado.
  *
- * Ação sensível — exige requireAAL2 (segundo fator TOTP verificado nesta
- * sessão), além do authGuard padrão. A exclusão em auth.users é propagada
+ * Ação sensível — exige a senha atual (`currentPassword` no corpo) de todos
+ * e, de quem tem 2FA ativo, também a sessão verificada com o código
+ * (ver requireSensitiveAuth). A exclusão em auth.users é propagada
  * por ON DELETE CASCADE para o perfil e a maioria dos dados relacionados
  * (ver migrations); grupos dos quais o usuário é owner impedem a exclusão
  * (ON DELETE RESTRICT) até que a titularidade seja transferida ou o grupo
  * seja apagado.
  */
-router.delete('/me', authGuard, requireAAL2, async (req, res) => {
+router.delete('/me', authGuard, requireSensitiveAuth, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
 

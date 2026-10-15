@@ -232,6 +232,12 @@
 .dark .text-gray-500 { color: #a0a0c8; }
 .dark .text-gray-400 { color: #8f8fb8; }
 
+/* Tema claro: o cinza-400 do Tailwind (#9ca3af) tem só 2,5:1 de contraste
+   sobre branco e é usado como cor de TEXTO em dicas, datas e estados vazios.
+   Sobe para o tom do cinza-500 (4,8:1). Só a classe simples no tema claro:
+   as variantes dark: e o override .dark acima continuam valendo. */
+html:not(.dark) .text-gray-400 { color: #6b7280; }
+
 /* ── Estados hover/focus/active ──────────────────────────────
    O Tailwind gera uma classe própria para cada variante (ex:
    .hover\:bg-gray-50:hover), então os overrides acima em ".dark

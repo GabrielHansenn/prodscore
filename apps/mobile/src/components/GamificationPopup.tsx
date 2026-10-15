@@ -47,7 +47,7 @@ function XpCard({
           <Ionicons name="sparkles" size={18} color={colors.lime} />
           <Text style={styles.pointsText}>+{payload.points} XP</Text>
         </View>
-        <TouchableOpacity onPress={onClose} hitSlop={8}>
+        <TouchableOpacity onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fechar">
           <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
@@ -108,7 +108,7 @@ function AchievementCardPopup({ payload, onClose }: { payload: AchievementPayloa
           )}
         </View>
 
-        <TouchableOpacity onPress={onClose} hitSlop={8}>
+        <TouchableOpacity onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="Fechar">
           <Ionicons name="close" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </View>

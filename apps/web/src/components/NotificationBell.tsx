@@ -35,8 +35,17 @@ function destinationFor(n: Notification): string | null {
   }
 }
 
-/** Sino de notificações com badge de não lidas e painel suspenso */
-export default function NotificationBell({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
+/**
+ * Sino de notificações com badge de não lidas e painel suspenso.
+ *
+ * `variant`: 'sidebar' (fundo escuro da barra lateral, painel abre para a
+ * direita) ou 'header' (cabeçalho claro do celular, painel abre para a
+ * esquerda) — no celular a barra lateral fica escondida atrás do menu, e o
+ * contador de não lidas sumia junto.
+ */
+export default function NotificationBell({
+  onNavigate, variant = 'sidebar',
+}: { onNavigate?: (() => void) | undefined; variant?: 'sidebar' | 'header' }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,7 +98,11 @@ export default function NotificationBell({ onNavigate }: { onNavigate?: (() => v
         onClick={() => setOpen((v) => !v)}
         aria-label={unreadCount > 0 ? `Notificações (${unreadCount} não lidas)` : 'Notificações'}
         aria-expanded={open}
-        className="relative flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-white"
+        className={`relative flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${
+          variant === 'header'
+            ? 'text-gray-500 hover:bg-gray-100 active:bg-gray-200'
+            : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-white'
+        }`}
       >
         <BellIcon className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -103,7 +116,9 @@ export default function NotificationBell({ onNavigate }: { onNavigate?: (() => v
         <div
           role="dialog"
           aria-label="Notificações"
-          className="absolute left-0 top-12 z-50 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900"
+          className={`absolute top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 ${
+            variant === 'header' ? 'right-0' : 'left-0'
+          }`}
         >
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
             <p className="text-sm font-semibold text-gray-900 dark:text-white">Notificações</p>

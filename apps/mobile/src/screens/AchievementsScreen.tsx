@@ -7,6 +7,8 @@ import {
   type AchievementItem, type UserAchievementItem,
 } from '../services/achievement.service';
 import { useUserStore } from '../store/userStore';
+import ErrorState from '../components/ErrorState';
+import { getFriendlyErrorMessage } from '../lib/errors';
 import { ACHIEVEMENT_ICONS, ACHIEVEMENT_ICON_FALLBACK } from '../constants/achievementIcons';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
@@ -86,17 +88,26 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   const colors = useThemeColors();
   const styles = useStyles();
 
+  const [error, setError] = useState('');
+
+  const loadAchievements = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [all, mine] = await Promise.all([getAchievements(), getUserAchievements()]);
+      setCatalog(all);
+      setEarned(mine);
+    } catch (err) {
+      // Antes não havia catch: a falha virava "0 de 0 conquistas"
+      setError(getFriendlyErrorMessage(err, 'Não foi possível carregar as conquistas.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     void fetchStats();
-    void (async () => {
-      try {
-        const [all, mine] = await Promise.all([getAchievements(), getUserAchievements()]);
-        setCatalog(all);
-        setEarned(mine);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    void loadAchievements();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -124,7 +135,7 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View>
@@ -135,6 +146,8 @@ export default function AchievementsScreen({ navigation }: { navigation: { goBac
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
+      ) : error ? (
+        <ErrorState message={error} onRetry={loadAchievements} />
       ) : (
         <FlatList
           key={`cols-${numColumns}`}

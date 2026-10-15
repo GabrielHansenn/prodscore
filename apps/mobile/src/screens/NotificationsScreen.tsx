@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NotificationType, type Notification } from '@prodscore/shared';
@@ -68,6 +69,7 @@ export default function NotificationsScreen({ navigation }: Props) {
     }));
 
   useEffect(() => { void fetch(); }, [fetch]);
+  const { refreshing, onRefresh } = usePullToRefresh(() => fetch());
 
   const handlePress = (n: Notification) => {
     void markAsRead(n.id);
@@ -115,7 +117,7 @@ export default function NotificationsScreen({ navigation }: Props) {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Voltar">
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -147,6 +149,7 @@ export default function NotificationsScreen({ navigation }: Props) {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           onEndReachedThreshold={0.4}
           onEndReached={() => { if (hasMore && !isLoading) void loadMore(); }}
           ListEmptyComponent={

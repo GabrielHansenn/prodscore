@@ -4,7 +4,7 @@ import { validateEmail, validatePassword, REGISTER_ERROR_CODES } from '@prodscor
 import { supabase, createUserScopedClient, createEphemeralAuthClient } from '../lib/supabase.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
-import { requireAAL2 } from '../middleware/aal.js';
+import { requireSensitiveAuth } from '../middleware/sensitiveAction.js';
 
 const router = Router();
 
@@ -97,11 +97,21 @@ const mfaVerifySchema = refreshTokenSchema.extend({
     .regex(/^\d{6}$/, { message: 'Digite os 6 dígitos do código exibido no aplicativo autenticador.' }),
 });
 
-const changePasswordSchema = z.object({
-  newPassword: z
-    .string({ required_error: 'A nova senha é obrigatória.' })
-    .min(8, { message: 'A nova senha deve ter no mínimo 8 caracteres.' }),
-});
+const changePasswordSchema = z
+  .object({
+    // Já conferida em requireSensitiveAuth
+    currentPassword: z.string(),
+    // Mesmas regras do cadastro (letra, número, 8+ caracteres)
+    newPassword: z
+      .string({ required_error: 'A nova senha é obrigatória.' })
+      .superRefine((password, ctx) => {
+        const message = validatePassword(password);
+        if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+      }),
+  })
+  .refine((b) => b.newPassword !== b.currentPassword, {
+    message: 'A nova senha precisa ser diferente da atual.',
+  });
 
 // ---------------------------------------------------------------------------
 // POST /auth/register
@@ -204,6 +214,83 @@ router.post('/register', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /auth/resend-confirmation
+// ---------------------------------------------------------------------------
+
+const resendSchema = z.object({
+  email: z
+    .string({ required_error: 'E-mail é obrigatório.' })
+    .trim()
+    .toLowerCase()
+    .email({ message: 'E-mail inválido.' }),
+});
+
+/**
+ * Reenvia o e-mail de confirmação de cadastro. Usado pelo app, que não fala
+ * com o Supabase direto (o web chama supabase.auth.resend).
+ *
+ * Sempre responde a mesma mensagem, exista ou não a conta, para a rota não
+ * servir para descobrir e-mails cadastrados. Só o limite de envios do
+ * Supabase (429) é repassado, para o usuário saber que precisa esperar.
+ */
+router.post('/resend-confirmation', async (req, res) => {
+  try {
+    const { email } = resendSchema.parse(req.body);
+    const { error } = await createEphemeralAuthClient().auth.resend({ type: 'signup', email });
+
+    if (error?.status === 429) {
+      throw new AppError('Aguarde um minuto antes de pedir outro e-mail.', 429, 'MUITAS_TENTATIVAS');
+    }
+    if (error) console.error('[auth/resend-confirmation] Erro do Supabase:', error.message);
+
+    return res.status(200).json({
+      mensagem: 'Se houver um cadastro pendente para este e-mail, enviamos um novo link de confirmação.',
+    });
+  } catch (err) {
+    return sendError(res, err, '[auth/resend-confirmation]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /auth/forgot-password
+// ---------------------------------------------------------------------------
+
+/** Página do web que recebe o link do e-mail e define a nova senha */
+function passwordResetRedirectUrl(): string {
+  const base = (process.env['FRONTEND_URL'] ?? 'http://localhost:5173').replace(/\/+$/, '');
+  return `${base}/redefinir-senha`;
+}
+
+/**
+ * Envia o e-mail de "Esqueci minha senha" (web e app). O link leva à página
+ * /redefinir-senha do web — por isso ela precisa estar na lista de Redirect
+ * URLs do Supabase (Authentication → URL Configuration).
+ *
+ * Sempre responde a mesma mensagem, exista ou não a conta, para a rota não
+ * servir para descobrir e-mails cadastrados. Só o limite de envios do
+ * Supabase (429) é repassado.
+ */
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = resendSchema.parse(req.body);
+    const { error } = await createEphemeralAuthClient().auth.resetPasswordForEmail(email, {
+      redirectTo: passwordResetRedirectUrl(),
+    });
+
+    if (error?.status === 429) {
+      throw new AppError('Aguarde um minuto antes de pedir outro e-mail.', 429, 'MUITAS_TENTATIVAS');
+    }
+    if (error) console.error('[auth/forgot-password] Erro do Supabase:', error.message);
+
+    return res.status(200).json({
+      mensagem: 'Se existir uma conta com este e-mail, enviamos um link para criar uma nova senha.',
+    });
+  } catch (err) {
+    return sendError(res, err, '[auth/forgot-password]');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /auth/login
 // ---------------------------------------------------------------------------
 
@@ -225,6 +312,17 @@ router.post('/login', async (req, res) => {
     });
 
     if (error) {
+      // Senha certa, mas e-mail ainda não confirmado: o Supabase só chega a
+      // esse erro depois de validar a senha, então dizer isso não revela nada
+      // a quem não tem a senha. Antes caía no "E-mail ou senha incorretos",
+      // e o usuário não sabia que bastava confirmar o e-mail.
+      if (error.code === 'email_not_confirmed') {
+        throw new AppError(
+          'Confirme seu e-mail antes de entrar. Procure o link na sua caixa de entrada.',
+          403,
+          'EMAIL_NAO_CONFIRMADO',
+        );
+      }
       // Mensagem genérica por segurança — não revela se o e-mail existe
       throw new AppError(
         'E-mail ou senha incorretos.',
@@ -348,10 +446,10 @@ router.post('/logout', authGuard, async (req, res) => {
 /**
  * Altera a senha do usuário autenticado.
  *
- * Ação sensível — exige requireAAL2 (segundo fator TOTP verificado nesta
- * sessão), além do authGuard padrão.
+ * Ação sensível — exige a senha atual de todos e, de quem tem 2FA ativo,
+ * também a sessão verificada com o código (ver requireSensitiveAuth).
  */
-router.patch('/password', authGuard, requireAAL2, async (req, res) => {
+router.patch('/password', authGuard, requireSensitiveAuth, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
     const body = changePasswordSchema.parse(req.body);

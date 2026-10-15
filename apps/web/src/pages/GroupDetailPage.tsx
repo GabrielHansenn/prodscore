@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   MemberRole, TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, richTextToPlainText,
-  MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
+  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, type Task, type RichTextDoc,
 } from '@prodscore/shared';
 import {
   getGroupDetail,
@@ -17,6 +17,7 @@ import { createGroupMission, type MissionWithParticipation } from '../services/m
 import { getTasks, createTask } from '../services/task.service.js';
 import GroupChat from '../components/GroupChat.js';
 import RichText from '../components/RichText.js';
+import ErrorState from '../components/ErrorState.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import RichTextPreview from '../components/RichTextPreview.js';
 import TaskDetailModal from '../components/TaskDetailModal.js';
@@ -204,8 +205,8 @@ function CreateMissionForm({
 
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Título *</label>
-          <input
+          <label htmlFor="mission-title" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Título *</label>
+          <input id="mission-title"
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -215,8 +216,8 @@ function CreateMissionForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição</label>
-          <input
+          <label htmlFor="mission-description" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição</label>
+          <input id="mission-description"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             placeholder="Opcional"
@@ -226,16 +227,16 @@ function CreateMissionForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Meta (tarefas) *</label>
-            <input
+            <label htmlFor="mission-target" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Meta (tarefas) *</label>
+            <input id="mission-target"
               required type="number" min={1} max={10000}
               value={target} onChange={(e) => setTarget(e.target.value)}
               className="input w-full text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Recompensa (pts)</label>
-            <input
+            <label htmlFor="mission-reward" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Recompensa (pts)</label>
+            <input id="mission-reward"
               type="number" min={0}
               value={reward} onChange={(e) => setReward(e.target.value)}
               className="input w-full text-sm"
@@ -244,8 +245,8 @@ function CreateMissionForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Expira em (opcional)</label>
-          <input
+          <label htmlFor="mission-expires" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Expira em (opcional)</label>
+          <input id="mission-expires"
             type="datetime-local"
             value={expires} onChange={(e) => setExpires(e.target.value)}
             className="input w-full text-sm"
@@ -422,7 +423,8 @@ function GroupTasksTab({
         priority,
         groupId,
         ...(desc           ? { descriptionRich: desc }              : {}),
-        ...(dueDate        ? { dueDate: new Date(dueDate).toISOString() } : {}),
+        // 23h59 do dia escolhido no fuso do usuário (new Date("AAAA-MM-DD") é meia-noite UTC = 21h da véspera)
+        ...(dueDate && endOfLocalDayISO(dueDate) ? { dueDate: endOfLocalDayISO(dueDate)! } : {}),
       });
       onTaskCreated(task);
       setTitle(''); setDesc(null); setDueDate('');
@@ -451,8 +453,8 @@ function GroupTasksTab({
 
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Título *</label>
-              <input
+              <label htmlFor="group-task-title" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Título *</label>
+              <input id="group-task-title"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -474,8 +476,8 @@ function GroupTasksTab({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Dificuldade</label>
-                <select value={diff} onChange={(e) => setDiff(e.target.value as TaskDifficulty)} className="input w-full text-sm">
+                <label htmlFor="group-task-difficulty" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Dificuldade</label>
+                <select id="group-task-difficulty" value={diff} onChange={(e) => setDiff(e.target.value as TaskDifficulty)} className="input w-full text-sm">
                   <option value={TaskDifficulty.Easy}>Fácil</option>
                   <option value={TaskDifficulty.Medium}>Média</option>
                   <option value={TaskDifficulty.Hard}>Difícil</option>
@@ -483,8 +485,8 @@ function GroupTasksTab({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Prioridade</label>
-                <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="input w-full text-sm">
+                <label htmlFor="group-task-priority" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Prioridade</label>
+                <select id="group-task-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="input w-full text-sm">
                   <option value={TaskPriority.Low}>Baixa</option>
                   <option value={TaskPriority.Medium}>Média</option>
                   <option value={TaskPriority.High}>Alta</option>
@@ -494,10 +496,11 @@ function GroupTasksTab({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Prazo (opcional)</label>
-              <input
+              <label htmlFor="group-task-due" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Prazo (opcional)</label>
+              <input id="group-task-due"
                 type="date"
                 value={dueDate}
+                min={localDateKey()}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="input w-full text-sm"
               />
@@ -584,39 +587,50 @@ export default function GroupDetailPage() {
   const [error,    setError]    = useState('');
   const [copied,   setCopied]   = useState(false);
   const [showForm, setShowForm] = useState(false);
+  // Abas cujos dados falharam ao carregar — mostram erro, não "lista vazia"
+  const [failedTabs, setFailedTabs] = useState<Set<Tab>>(new Set());
+
+  const loadGroup = async () => {
+    if (!id) return;
+    const [detailRes, memsRes, rankRes, missRes, tasksRes] = await Promise.allSettled([
+      getGroupDetail(id),
+      getGroupMembers(id),
+      getGroupRanking(id),
+      getGroupMissions(id),
+      getTasks({ groupId: id }),
+    ]);
+
+    // Grupo é obrigatório — sem ele não tem como renderizar a página
+    if (detailRes.status === 'rejected') {
+      console.error('[grupo] detalhe falhou:', detailRes.reason);
+      setError('Não foi possível carregar o grupo. Verifique se você ainda é membro.');
+      setLoading(false);
+      return;
+    }
+
+    setGroup(detailRes.value);
+    const failed = new Set<Tab>();
+    if (memsRes.status   === 'fulfilled') setMembers(memsRes.value);
+    else { console.error('[grupo] membros falhou:', memsRes.reason); failed.add('membros'); }
+    if (rankRes.status   === 'fulfilled') setRanking(rankRes.value);
+    else { console.error('[grupo] ranking falhou:', rankRes.reason); failed.add('ranking'); }
+    if (missRes.status   === 'fulfilled') setMissions(missRes.value);
+    else { console.error('[grupo] missões falhou:', missRes.reason); failed.add('missoes'); }
+    if (tasksRes.status  === 'fulfilled') setTasks(tasksRes.value);
+    else { console.error('[grupo] tarefas falhou:', tasksRes.reason); failed.add('tarefas'); }
+    setFailedTabs(failed);
+
+    setLoading(false);
+  };
 
   useEffect(() => {
-    if (!id) return;
-    void (async () => {
-      const [detailRes, memsRes, rankRes, missRes, tasksRes] = await Promise.allSettled([
-        getGroupDetail(id),
-        getGroupMembers(id),
-        getGroupRanking(id),
-        getGroupMissions(id),
-        getTasks({ groupId: id }),
-      ]);
-
-      // Grupo é obrigatório — sem ele não tem como renderizar a página
-      if (detailRes.status === 'rejected') {
-        console.error('[grupo] detalhe falhou:', detailRes.reason);
-        setError('Não foi possível carregar o grupo. Verifique se você ainda é membro.');
-        setLoading(false);
-        return;
-      }
-
-      setGroup(detailRes.value);
-      if (memsRes.status   === 'fulfilled') setMembers(memsRes.value);
-      else console.error('[grupo] membros falhou:', memsRes.reason);
-      if (rankRes.status   === 'fulfilled') setRanking(rankRes.value);
-      else console.error('[grupo] ranking falhou:', rankRes.reason);
-      if (missRes.status   === 'fulfilled') setMissions(missRes.value);
-      else console.error('[grupo] missões falhou:', missRes.reason);
-      if (tasksRes.status  === 'fulfilled') setTasks(tasksRes.value);
-      else console.error('[grupo] tarefas falhou:', tasksRes.reason);
-
-      setLoading(false);
-    })();
+    void loadGroup();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const tabError = (t: Tab) => failedTabs.has(t)
+    ? <ErrorState compact message="Não foi possível carregar esta parte do grupo." onRetry={loadGroup} />
+    : null;
 
   // group.role já vem do getGroupDetail — confiável mesmo se members falhar
   const myRole  = group?.role;
@@ -812,12 +826,14 @@ export default function GroupDetailPage() {
       <div className="card overflow-hidden">
 
         {/* Membros */}
-        {tab === 'membros' && (
+        {tab === 'membros' && tabError('membros')}
+        {tab === 'membros' && !failedTabs.has('membros') && (
           <MembersList members={members} {...(user?.id ? { currentUserId: user.id } : {})} />
         )}
 
         {/* Ranking */}
-        {tab === 'ranking' && (
+        {tab === 'ranking' && tabError('ranking')}
+        {tab === 'ranking' && !failedTabs.has('ranking') && (
           <div className="p-4">
             {rankingRows.length === 0 ? (
               <p className="py-10 text-center text-sm text-gray-400">Nenhum dado de ranking ainda.</p>
@@ -832,7 +848,8 @@ export default function GroupDetailPage() {
         )}
 
         {/* Missões */}
-        {tab === 'missoes' && (
+        {tab === 'missoes' && tabError('missoes')}
+        {tab === 'missoes' && !failedTabs.has('missoes') && (
           <div className="p-4">
             {/* Formulário de criação (admin) */}
             {isAdmin && showForm && (
@@ -875,7 +892,8 @@ export default function GroupDetailPage() {
         )}
 
         {/* Tarefas */}
-        {tab === 'tarefas' && id && (
+        {tab === 'tarefas' && tabError('tarefas')}
+        {tab === 'tarefas' && id && !failedTabs.has('tarefas') && (
           <GroupTasksTab
             groupId={id}
             tasks={tasks}

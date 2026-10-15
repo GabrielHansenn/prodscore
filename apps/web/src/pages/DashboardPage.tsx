@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TaskStatus, MissionType, type LevelReward, type PointTransaction, type Mission, type ProcrastinationAlert } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { useTaskStore } from '../store/taskStore.js';
@@ -11,6 +12,8 @@ import LevelProgress from '../components/LevelProgress.js';
 import StreakBadge from '../components/StreakBadge.js';
 import MissionCard from '../components/MissionCard.js';
 import PointTransactionFeed from '../components/PointTransactionFeed.js';
+import Modal from '../components/Modal.js';
+import ErrorState from '../components/ErrorState.js';
 import { SparklesIcon, FlameIcon, ExclamationTriangleIcon, SnowflakeIcon } from '../components/icons.js';
 import { getProcrastinationAlerts } from '../services/behavioral.service.js';
 
@@ -27,32 +30,46 @@ const LEVEL_BADGE_EMOJI: Record<string, string> = {
 };
 
 function StatCard({
-  label, value, sub, accent, glow,
+  label, value, sub, accent, glow, loading = false,
 }: {
   label:  string;
   value:  string | number;
   sub?:   string;
   accent: string;
   glow?:  string;
+  /** Enquanto os dados não chegam: esqueleto no lugar de números zerados */
+  loading?: boolean;
 }) {
   return (
-    <div className={`card p-5 transition-all hover:shadow-card-hover ${glow ?? ''}`}>
+    <div className={`card p-5 transition-all hover:shadow-card-hover ${glow ?? ''}`} aria-busy={loading}>
       <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className={`mt-1 text-3xl font-bold ${accent}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+      {loading ? (
+        <>
+          <span className="mt-2 block h-8 w-20 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <span className="mt-2 block h-3 w-24 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
+          <span className="sr-only">Carregando</span>
+        </>
+      ) : (
+        <>
+          <p className={`mt-1 text-3xl font-bold ${accent}`}>{value}</p>
+          {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+        </>
+      )}
     </div>
   );
 }
 
 export default function DashboardPage() {
   const user        = useAuthStore((s) => s.user);
-  const { tasks, fetchTasks, completeTask } = useTaskStore((s) => ({
+  const { tasks, tasksError, fetchTasks, completeTask } = useTaskStore((s) => ({
     tasks:        s.tasks,
+    tasksError:   s.loadError,
     fetchTasks:   s.fetchTasks,
     completeTask: s.completeTask,
   }));
-  const { stats, fetchStats } = useUserStore((s) => ({
+  const { stats, statsError, fetchStats } = useUserStore((s) => ({
     stats:      s.stats,
+    statsError: s.loadError,
     fetchStats: s.fetchStats,
   }));
 
@@ -144,10 +161,19 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {/* Resumo não carregou: diz isso em vez de deixar os cards carregando para sempre */}
+      {!stats && statsError && (
+        <div className="mb-6">
+          <ErrorState message={statsError} onRetry={fetchStats} />
+        </div>
+      )}
+
       {/* 4 cards de estatísticas */}
+      {!(statsError && !stats) && (
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total de Pontos"
+          loading={!stats}
           value={(stats?.totalPoints ?? 0).toLocaleString('pt-BR')}
           sub={`#${stats?.rankPosition ?? '–'} no ranking`}
           accent="text-brand-500"
@@ -155,6 +181,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Sequência Atual"
+          loading={!stats}
           value={stats?.currentStreak ?? 0}
           sub={`${(stats?.currentStreak ?? 0) === 1 ? 'dia consecutivo' : 'dias consecutivos'}`}
           accent="text-amber-500"
@@ -162,6 +189,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Nível"
+          loading={!stats}
           value={stats?.level ?? 1}
           sub={`${stats?.achievementsCount ?? 0} conquistas`}
           accent="text-lime-700 dark:text-lime-400"
@@ -169,12 +197,14 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Tarefas Esta Semana"
+          loading={!stats}
           value={stats?.tasksCompletedThisWeek ?? 0}
           sub={`${stats?.pointsThisWeek ?? 0} pts esta semana`}
           accent="text-blue-600 dark:text-blue-400"
           glow="stat-card-glow-blue"
         />
       </div>
+      )}
 
       {/* Barra de XP */}
       {stats && (
@@ -230,11 +260,16 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            {todayTasks.length === 0 ? (
+            {tasksError && tasks.length === 0 ? (
+              <ErrorState compact message={tasksError} onRetry={fetchTasks} />
+            ) : todayTasks.length === 0 ? (
               <div className="py-8 text-center">
                 <SparklesIcon className="mx-auto h-10 w-10 text-brand-300" />
-                <p className="mt-2 text-sm text-gray-500">Nenhuma tarefa para hoje!</p>
-                <p className="mt-1 text-xs text-gray-400">Que tal criar uma nova?</p>
+                <p className="mt-2 text-sm text-gray-500">Nenhuma tarefa com prazo para hoje.</p>
+                <p className="mt-1 text-xs text-gray-400">Tarefas sem prazo ficam na página Tarefas.</p>
+                <Link to="/tarefas?nova=1" className="btn-secondary mt-4 text-sm">
+                  + Nova tarefa
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
@@ -296,12 +331,15 @@ export default function DashboardPage() {
 
       {/* Modal de recompensa de nível */}
       {levelRewardPop && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-brand-200 bg-white p-8 text-center shadow-2xl dark:border-brand-800/60">
-            <div className="mb-2 text-5xl">
+        <Modal
+          onClose={() => setLevelRewardPop(null)}
+          labelledBy="level-reward-title"
+          className="w-full max-w-sm rounded-2xl border border-brand-200 bg-white p-8 text-center shadow-2xl dark:border-brand-800/60"
+        >
+            <div className="mb-2 text-5xl" aria-hidden="true">
               {LEVEL_BADGE_EMOJI[levelRewardPop.badgeKey ?? ''] ?? '🎁'}
             </div>
-            <h2 className="text-2xl font-bold text-brand-600 dark:text-brand-400">
+            <h2 id="level-reward-title" className="text-2xl font-bold text-brand-600 dark:text-brand-400">
               Nível {levelRewardPop.level} atingido!
             </h2>
             <p className="mt-2 text-gray-600">{levelRewardPop.description}</p>
@@ -324,18 +362,20 @@ export default function DashboardPage() {
             >
               Incrível!
             </button>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal de streak */}
       {celebration && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-2xl dark:border-amber-800/60">
+        <Modal
+          onClose={() => setCelebration(null)}
+          labelledBy="streak-celebration-title"
+          className="w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-2xl dark:border-amber-800/60"
+        >
             <div className="mb-4 flex justify-center">
               <FlameIcon className="h-14 w-14 text-amber-500" />
             </div>
-            <h2 className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            <h2 id="streak-celebration-title" className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               Sequência de {celebration.days} dias!
             </h2>
             <p className="mt-2 text-gray-600">Incrível! Você está em chamas. Continue assim!</p>
@@ -346,8 +386,7 @@ export default function DashboardPage() {
             >
               Continue produtivo!
             </button>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { usePullToRefresh } from '../lib/usePullToRefresh';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -136,6 +137,15 @@ export default function RankingScreen() {
     })();
   }, [tab]);
 
+  // Puxar para atualizar: recarrega a aba atual e o resumo (o botão de
+  // atualizar, que recalcula o ranking no servidor, continua separado)
+  const { refreshing, onRefresh } = usePullToRefresh(async () => {
+    const [data] = await Promise.all([fetchTab(tab), fetchStats()]);
+    setRows(data.rows);
+    setTotalAmigos(data.totalAmigos);
+    setError('');
+  });
+
   const myRow = rows.find((r) => r.userId === user?.id);
   const isFriendsTab = tab === 'amigos';
   const hasNoFriends = isFriendsTab && totalAmigos === 0;
@@ -262,6 +272,7 @@ export default function RankingScreen() {
         <FlatList
           data={rows}
           keyExtractor={(r) => r.userId}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           renderItem={({ item }) => (
             <RankingItem row={item} isCurrentUser={item.userId === user?.id} />
           )}

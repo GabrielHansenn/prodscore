@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
+  localDateKey, endOfLocalDayISO,
   MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
 } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
@@ -109,7 +110,8 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const [difficulty,     setDifficulty]     = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
   const [priority,       setPriority]       = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estMinutes,     setEstMinutes]     = useState(task?.estimatedMinutes?.toString() ?? '');
-  const [dueDateInput,   setDueDateInput]   = useState(task?.dueDate ? isoToBR(task.dueDate.split('T')[0]!) : '');
+  // Dia do prazo no fuso do aparelho (o ISO da API está em UTC)
+  const [dueDateInput,   setDueDateInput]   = useState(task?.dueDate ? isoToBR(localDateKey(new Date(task.dueDate))) : '');
   const [requiresProof,  setRequiresProof]  = useState(task?.requiresProof ?? false);
   const [error,          setError]          = useState('');
   const [loading,        setLoading]        = useState(false);
@@ -128,19 +130,19 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
       return;
     }
 
-    let dueDateISO: string | undefined;
+    // 23h59 do dia escolhido no fuso do aparelho (antes era 23h59 UTC = 20h59 no Brasil)
+    let due: string | undefined;
     if (dueDateInput.trim()) {
       const parsed = parseDateBR(dueDateInput.trim());
-      if (!parsed) { setError('Data de prazo inválida. Use o formato DD/MM/AAAA.'); return; }
-      const isFuture = new Date(`${parsed}T23:59:00`) > new Date();
-      if (!isFuture) { setError('A data de entrega deve ser no futuro.'); return; }
-      dueDateISO = parsed;
+      const endOfDay = parsed ? endOfLocalDayISO(parsed) : null;
+      if (!endOfDay) { setError('Data de prazo inválida. Use o formato DD/MM/AAAA.'); return; }
+      if (new Date(endOfDay) <= new Date()) { setError('A data de entrega deve ser no futuro.'); return; }
+      due = endOfDay;
     }
 
     setError('');
     setLoading(true);
     try {
-      const due = dueDateISO ? `${dueDateISO}T23:59:00.000Z` : undefined;
       const est = estMinutes ? parseInt(estMinutes, 10) : undefined;
       await onSubmit({
         title: title.trim(), difficulty, priority, requiresProof,
@@ -262,7 +264,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   formSheet: { backgroundColor: colors.card, borderRadius: RADIUS.xl, padding: SPACING.lg, maxHeight: '85%', ...CARD_SHADOW },
   modalTitle: { fontSize: FONT.lg, fontWeight: '700', color: colors.text, marginBottom: SPACING.md },
   warnBox: { backgroundColor: colors.amberDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.md },
-  warnText: { fontSize: 12, color: '#b45309' },
+  warnText: { fontSize: 12, color: colors.amberText },
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
   input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
   rowFields: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },

@@ -5,6 +5,7 @@ import { useUserStore } from '../store/userStore.js';
 import { getFriendsRanking, getGlobalRanking, getWeeklyRanking, refreshRanking, type RankingRow } from '../services/ranking.service.js';
 import RankingTable from '../components/RankingTable.js';
 import { FlameIcon, UsersIcon } from '../components/icons.js';
+import ErrorState from '../components/ErrorState.js';
 
 type Tab = 'global' | 'semanal' | 'amigos';
 
@@ -25,6 +26,8 @@ export default function RankingPage() {
   const [isLoading,   setIsLoading]   = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error,       setError]       = useState('');
+  // Incrementa para recarregar a aba atual ("Tentar novamente")
+  const [reloadKey,   setReloadKey]   = useState(0);
 
   useEffect(() => { void fetchStats(); }, []);
 
@@ -38,12 +41,12 @@ export default function RankingPage() {
         setRows(data.rows);
         setTotalAmigos(data.totalAmigos);
       } catch {
-        setError('Não foi possível carregar o ranking. Tente novamente.');
+        setError('Não foi possível carregar o ranking.');
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [tab]);
+  }, [tab, reloadKey]);
 
   const myRow = rows.find((r) => r.userId === user?.id);
   const isFriendsTab = tab === 'amigos';
@@ -162,9 +165,7 @@ export default function RankingPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-600 dark:border-red-800/60 dark:bg-red-900/20 dark:text-red-300">
-          {error}
-        </div>
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
       ) : hasNoFriends ? (
         <div className="flex flex-col items-center rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">

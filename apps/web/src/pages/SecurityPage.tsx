@@ -2,55 +2,97 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { validatePassword, validatePasswordConfirmation } from '@prodscore/shared';
 import EnrollMFA from '../components/EnrollMFA.js';
-import RequireAAL2 from '../components/RequireAAL2.js';
 import FormFeedback from '../components/FormFeedback.js';
+import Modal from '../components/Modal.js';
+import PasswordField from '../components/PasswordField.js';
 import { useAuthStore } from '../store/authStore.js';
 import { changePassword, deleteAccount } from '../services/security.service.js';
+import { getApiErrorCode, getFriendlyErrorMessage } from '../lib/errors.js';
+
+/** Erros da API que pertencem ao campo "Senha atual" (ver requireSensitiveAuth) */
+const CURRENT_PASSWORD_ERRORS = new Set(['SENHA_ATUAL_INCORRETA', 'SENHA_ATUAL_OBRIGATORIA']);
 
 // ---------------------------------------------------------------------------
 // Modal de confirmação — excluir conta
 // ---------------------------------------------------------------------------
 
-function ConfirmDeleteModal({ onConfirm, onCancel }: { onConfirm: () => void | Promise<void>; onCancel: () => void }) {
-  const [loading, setLoading] = useState(false);
+function ConfirmDeleteModal({ onDeleted, onCancel }: { onDeleted: () => Promise<void>; onCancel: () => void }) {
+  const [password, setPassword] = useState('');
+  const [fieldError, setFieldError] = useState('');
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
 
-  const handle = async () => {
+  const handleDelete = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!password) { setFieldError('Digite sua senha atual para confirmar.'); return; }
+
+    setFieldError('');
+    setError('');
     setLoading(true);
-    try { await onConfirm(); }
-    finally { setLoading(false); }
+    try {
+      await deleteAccount(password);
+      await onDeleted();
+    } catch (err) {
+      const message = getFriendlyErrorMessage(err, 'Erro ao excluir a conta.');
+      if (CURRENT_PASSWORD_ERRORS.has(getApiErrorCode(err) ?? '')) setFieldError(message);
+      else setError(message);
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-        <h3 className="mb-2 text-base font-semibold text-gray-900 dark:text-white">Excluir conta</h3>
-        <p className="mb-5 text-sm text-gray-500 dark:text-gray-400">
-          Essa ação é permanente. Todos os seus dados, tarefas e histórico de pontos serão apagados.
-        </p>
+    <Modal
+      onClose={() => { if (!loading) onCancel(); }}
+      labelledBy="delete-account-title"
+      className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+    >
+      <form onSubmit={(e) => void handleDelete(e)} className="space-y-4">
+        <div>
+          <h3 id="delete-account-title" className="mb-2 text-base font-semibold text-gray-900 dark:text-white">Excluir conta</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Essa ação é permanente. Todos os seus dados, tarefas e histórico de pontos serão apagados.
+          </p>
+        </div>
+
+        <PasswordField
+          id="delete-current-password"
+          label="Senha atual"
+          value={password}
+          onChange={(v) => { setPassword(v); setFieldError(''); }}
+          autoComplete="current-password"
+          error={fieldError}
+        />
+
+        {error && <FormFeedback variant="error" message={error} />}
+
         <div className="flex gap-3">
-          <button onClick={onCancel} className="btn-secondary flex-1" disabled={loading}>
+          <button type="button" onClick={onCancel} className="btn-secondary flex-1" disabled={loading}>
             Cancelar
           </button>
           <button
-            onClick={() => void handle()}
+            type="submit"
             disabled={loading}
             className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60 dark:bg-red-700 dark:hover:bg-red-800"
           >
             {loading ? 'Excluindo...' : 'Excluir permanentemente'}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Seção: alterar senha (exige aal2)
+// Seção: alterar senha
 // ---------------------------------------------------------------------------
 
+type PasswordFormErrors = { current?: string | undefined; next?: string | undefined; confirm?: string | undefined };
+
 function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword,     setNewPassword]     = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors,     setFieldErrors]     = useState<PasswordFormErrors>({});
   const [error,           setError]           = useState('');
   const [saving,          setSaving]          = useState(false);
   const [saved,           setSaved]           = useState(false);
@@ -58,49 +100,62 @@ function ChangePasswordForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setSaved(false);
 
-    const passwordError = validatePassword(newPassword);
-    if (passwordError) { setError(passwordError); return; }
-
-    const confirmError = validatePasswordConfirmation(newPassword, confirmPassword);
-    if (confirmError) { setError(confirmError); return; }
+    const errs: PasswordFormErrors = {
+      current: currentPassword ? undefined : 'Digite sua senha atual.',
+      next:    validatePassword(newPassword) ?? undefined,
+      confirm: validatePasswordConfirmation(newPassword, confirmPassword) ?? undefined,
+    };
+    if (!errs.next && currentPassword && newPassword === currentPassword) {
+      errs.next = 'A nova senha precisa ser diferente da atual.';
+    }
+    setFieldErrors(errs);
+    if (errs.current || errs.next || errs.confirm) return;
 
     setSaving(true);
     try {
-      await changePassword(newPassword);
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao alterar a senha.');
+      const message = getFriendlyErrorMessage(err, 'Erro ao alterar a senha.');
+      if (CURRENT_PASSWORD_ERRORS.has(getApiErrorCode(err) ?? '')) setFieldErrors({ current: message });
+      else setError(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Nova senha</label>
-        <input
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          autoComplete="new-password"
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Confirmar nova senha</label>
-        <input
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          autoComplete="new-password"
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-        />
-      </div>
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3" noValidate>
+      <PasswordField
+        id="current-password"
+        label="Senha atual"
+        value={currentPassword}
+        onChange={(v) => { setCurrentPassword(v); setFieldErrors((p) => ({ ...p, current: undefined })); }}
+        autoComplete="current-password"
+        error={fieldErrors.current}
+      />
+      <PasswordField
+        id="new-password"
+        label="Nova senha"
+        value={newPassword}
+        onChange={(v) => { setNewPassword(v); setFieldErrors((p) => ({ ...p, next: undefined })); }}
+        autoComplete="new-password"
+        error={fieldErrors.next}
+        hint="Mínimo 8 caracteres, com letras e números"
+      />
+      <PasswordField
+        id="confirm-new-password"
+        label="Confirmar nova senha"
+        value={confirmPassword}
+        onChange={(v) => { setConfirmPassword(v); setFieldErrors((p) => ({ ...p, confirm: undefined })); }}
+        autoComplete="new-password"
+        error={fieldErrors.confirm}
+      />
 
       {error && <FormFeedback variant="error" message={error} />}
       {saved && <FormFeedback variant="success" message="Senha alterada com sucesso!" />}
@@ -121,25 +176,17 @@ export default function SecurityPage() {
   const navigate = useNavigate();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleteError,   setDeleteError]   = useState('');
 
-  const handleDeleteAccount = async () => {
-    setDeleteError('');
-    try {
-      await deleteAccount();
-      await logout();
-      navigate('/', { replace: true });
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Erro ao excluir a conta.');
-      setConfirmDelete(false);
-    }
+  const handleDeleted = async () => {
+    await logout();
+    navigate('/', { replace: true });
   };
 
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Segurança</h1>
       <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-        Gerencie a autenticação de dois fatores e outras configurações sensíveis da sua conta.
+        Gerencie a autenticação de dois fatores, sua senha e sua conta.
       </p>
 
       {/* Autenticação de dois fatores */}
@@ -150,41 +197,34 @@ export default function SecurityPage() {
         </div>
       </div>
 
-      {/* Alterar senha — exige aal2 */}
+      {/* Alterar senha — confirma com a senha atual (e o 2FA, para quem tem) */}
       <div className="card mb-6 p-6">
         <h3 className="mb-1 font-semibold text-gray-900 dark:text-white">Alterar senha</h3>
         <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-          Por segurança, esta ação exige verificação em duas etapas confirmada nesta sessão.
+          Para sua segurança, confirme com a senha atual.
         </p>
-        <RequireAAL2>
-          <div className="max-w-3xl">
-            <ChangePasswordForm />
-          </div>
-        </RequireAAL2>
+        <div className="max-w-md">
+          <ChangePasswordForm />
+        </div>
       </div>
 
-      {/* Zona de risco — excluir conta — exige aal2 */}
+      {/* Zona de risco — excluir conta */}
       <div className="card border-red-100 p-6 dark:border-red-900/40">
         <h3 className="mb-1 font-semibold text-red-700 dark:text-red-400">Zona de risco</h3>
         <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-          Por segurança, esta ação exige verificação em duas etapas confirmada nesta sessão.
+          Excluir a conta apaga todos os seus dados. Você vai confirmar com a senha atual.
         </p>
-        <RequireAAL2>
-          <div>
-            {deleteError && <div className="mb-3"><FormFeedback variant="error" message={deleteError} /></div>}
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-            >
-              Excluir conta
-            </button>
-          </div>
-        </RequireAAL2>
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="rounded-xl border border-red-200 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+        >
+          Excluir conta
+        </button>
       </div>
 
       {confirmDelete && (
-        <ConfirmDeleteModal onConfirm={handleDeleteAccount} onCancel={() => setConfirmDelete(false)} />
+        <ConfirmDeleteModal onDeleted={handleDeleted} onCancel={() => setConfirmDelete(false)} />
       )}
 
       {/*

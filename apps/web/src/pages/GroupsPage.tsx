@@ -14,6 +14,8 @@ import { useAuthStore } from '../store/authStore.js';
 import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
 import { showToast } from '../store/toastStore.js';
 import FormFeedback from '../components/FormFeedback.js';
+import Modal from '../components/Modal.js';
+import ErrorState from '../components/ErrorState.js';
 import ImagePickerField from '../components/ImagePickerField.js';
 import RichTextEditor from '../components/RichTextEditor.js';
 import RichTextPreview from '../components/RichTextPreview.js';
@@ -61,14 +63,13 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      {/* max-h + rolagem: o editor de descrição cresce e o modal não pode sair da tela */}
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">Criar Grupo</h2>
+    <Modal onClose={onClose} labelledBy="create-group-title">
+        <h2 id="create-group-title" className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">Criar Grupo</h2>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Nome do grupo</label>
+            <label htmlFor="group-name" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Nome do grupo</label>
             <input
+              id="group-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -103,8 +104,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -132,13 +132,15 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
-        <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Entrar com Código</h2>
+    <Modal onClose={onClose} labelledBy="join-group-title" className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+        <h2 id="join-group-title" className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Entrar com Código</h2>
         <p className="mb-5 text-xs text-gray-500 dark:text-gray-400">Cole o código de convite compartilhado pelo dono do grupo.</p>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+          <label htmlFor="invite-code" className="sr-only">Código de convite</label>
           <input
+            id="invite-code"
             type="text"
+            autoComplete="off"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="EX: AB12CD"
@@ -153,8 +155,7 @@ function JoinGroupModal({ onClose, onJoined }: { onClose: () => void; onJoined: 
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -225,16 +226,23 @@ export default function GroupsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin,   setShowJoin]   = useState(false);
 
+  const [loadError,  setLoadError]  = useState('');
+
+  const loadGroups = async () => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      setGroups(await getGroups());
+    } catch (err) {
+      // Antes: aviso rápido + "Você ainda não está em nenhum grupo" logo abaixo
+      setLoadError(err instanceof Error ? err.message : 'Não foi possível carregar seus grupos.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    void (async () => {
-      try {
-        setGroups(await getGroups());
-      } catch (err) {
-        showToast(err instanceof Error ? err.message : 'Erro ao carregar seus grupos.', 'error');
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    void loadGroups();
   }, []);
 
   return (
@@ -258,6 +266,8 @@ export default function GroupsPage() {
         <div className="flex items-center justify-center py-16">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
         </div>
+      ) : loadError ? (
+        <ErrorState message={loadError} onRetry={loadGroups} />
       ) : groups.length === 0 ? (
         <div className="card py-16 text-center">
           <UsersIcon className="mx-auto h-12 w-12 text-gray-300" />

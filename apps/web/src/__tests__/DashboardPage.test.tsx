@@ -225,7 +225,9 @@ describe('DashboardPage', () => {
 
     renderDashboard();
 
-    expect(screen.getByText(/nenhuma tarefa para hoje/i)).toBeInTheDocument();
+    expect(screen.getByText(/nenhuma tarefa com prazo para hoje/i)).toBeInTheDocument();
+    // Estado vazio leva direto à criação (antes só sugeria, sem botão)
+    expect(screen.getByRole('link', { name: /nova tarefa/i })).toHaveAttribute('href', '/tarefas?nova=1');
 
     // Restaura
     taskStoreMock.tasks = [makeTask()];

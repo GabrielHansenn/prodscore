@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
@@ -13,7 +13,8 @@ import RichTextPreview from './RichTextPreview';
 
 interface TaskItemProps {
   task:       Task;
-  onComplete: (id: string) => void;
+  /** Devolva a Promise da conclusão: o botão fica desabilitado até ela terminar */
+  onComplete: (id: string) => void | Promise<unknown>;
   onDelete:   (id: string) => void;
   onEdit?:    (task: Task) => void;
 }
@@ -66,6 +67,8 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   const [menuOpen,        setMenuOpen]        = useState(false);
   const [showProofUpload, setShowProofUpload] = useState(false);
   const [showDetail,      setShowDetail]      = useState(false);
+  // Conclusão em andamento — bloqueia o toque duplo (que mandava duas requisições)
+  const [completing,      setCompleting]      = useState(false);
   const description  = getDescriptionDoc(task);
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
   const isCompleted  = task.status === TaskStatus.Completed;
@@ -73,17 +76,26 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   const pointsLabel  = getPointsPreview(task);
   const priorityBadge = task.priority ? PRIORITY_BADGE[task.priority] : undefined;
 
+  const runComplete = () => {
+    if (completing) return;
+    setCompleting(true);
+    Promise.resolve(onComplete(task.id))
+      .catch(() => { /* quem chamou já mostra o erro */ })
+      .finally(() => setCompleting(false));
+  };
+
   const handleCompletePress = () => {
+    if (completing) return;
     if (task.requiresProof) {
       setShowProofUpload(true);
     } else {
-      onComplete(task.id);
+      runComplete();
     }
   };
 
   const handleProofUploaded = () => {
     setShowProofUpload(false);
-    onComplete(task.id);
+    runComplete();
   };
 
   return (
@@ -118,7 +130,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
         </View>
 
         {onEdit && (
-          <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
+          <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Mais opções da tarefa ${task.title}`}>
             <Ionicons name="ellipsis-vertical" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
@@ -149,8 +161,17 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
       </View>
 
       {isActionable && (
-        <TouchableOpacity style={styles.completeBtn} onPress={handleCompletePress} activeOpacity={0.8}>
-          <Text style={styles.completeBtnText}>Concluir tarefa</Text>
+        <TouchableOpacity
+          style={[styles.completeBtn, completing && { opacity: 0.6 }]}
+          onPress={handleCompletePress}
+          disabled={completing}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: completing, busy: completing }}
+        >
+          {completing
+            ? <ActivityIndicator size="small" color="#047857" />
+            : <Text style={styles.completeBtnText}>Concluir tarefa</Text>}
         </TouchableOpacity>
       )}
 

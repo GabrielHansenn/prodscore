@@ -29,15 +29,17 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
     );
   }
 
+  // overflow-x-auto: no celular a tabela rola de lado em vez de cortar; Nível e
+  // Sequência somem abaixo de 640px para a posição, o nome e os pontos caberem
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200">
+    <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">#</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Jogador</th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Nível</th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Sequência</th>
+            <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Nível</th>
+            <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Sequência</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">{scoreLabel}</th>
           </tr>
         </thead>
@@ -75,13 +77,13 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   </div>
                 </td>
 
-                <td className="px-4 py-3 text-center">
+                <td className="hidden px-4 py-3 text-center sm:table-cell">
                   <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                     Nível {row.level}
                   </span>
                 </td>
 
-                <td className="px-4 py-3 text-center">
+                <td className="hidden px-4 py-3 text-center sm:table-cell">
                   {row.currentStreak > 0 ? (
                     <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                       <FlameIcon className="h-3.5 w-3.5" />

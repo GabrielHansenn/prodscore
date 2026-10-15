@@ -15,6 +15,8 @@ import LandingPage        from './pages/LandingPage.js';
 import LoginPage          from './pages/LoginPage.js';
 import RegisterPage       from './pages/RegisterPage.js';
 import MfaVerifyPage      from './pages/MfaVerifyPage.js';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
+import ResetPasswordPage  from './pages/ResetPasswordPage.js';
 import PrivacyPolicyPage  from './pages/PrivacyPolicyPage.js';
 
 // Páginas privadas
@@ -128,6 +130,17 @@ export default function App() {
         />
         {/* Step-up de 2FA no login — acessível apenas com um login aal1 em andamento */}
         <Route path="/verificar-2fa" element={<MfaVerifyPage />} />
+        <Route
+          path="/esqueci-senha"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPasswordPage />
+            </PublicOnlyRoute>
+          }
+        />
+        {/* Sem PublicOnlyRoute: o link do e-mail abre uma sessão de recuperação,
+            e a página precisa aparecer mesmo assim */}
+        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
         <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
 
         {/* Rotas privadas — aninhadas sob AppLayout com sidebar */}

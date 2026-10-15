@@ -10,6 +10,7 @@ import AppTabBar from './AppTabBar';
 // Telas de autenticação
 import LoginScreen     from '../screens/LoginScreen';
 import RegisterScreen  from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import MfaVerifyScreen from '../screens/MfaVerifyScreen';
 
 // Telas principais (tab bar)
@@ -39,6 +40,8 @@ import { useThemeColors } from '../lib/useThemeColors';
 export type AuthStackParamList = {
   Login:    undefined;
   Register: undefined;
+  /** email: já preenche o campo com o que foi digitado no login */
+  ForgotPassword: { email?: string } | undefined;
 };
 
 export type TabParamList = {
@@ -116,6 +119,7 @@ function AuthStackNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login"    component={LoginScreen}    />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </AuthStack.Navigator>
   );
 }

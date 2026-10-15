@@ -27,6 +27,7 @@ import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import type { AppStackParamList } from '../navigation/index';
+import { PRIVACY_POLICY_URL, openPrivacyPolicy } from '../lib/links';
 
 // ---------------------------------------------------------------------------
 // Tipos e constantes locais
@@ -256,6 +257,16 @@ export default function ProfileScreen() {
             <Text style={styles.menuRowText}>Segurança</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
+          {PRIVACY_POLICY_URL && (
+            <>
+              <View style={styles.menuDivider} />
+              <TouchableOpacity style={styles.menuRow} onPress={openPrivacyPolicy} accessibilityRole="link">
+                <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.menuRowText}>Política de Privacidade</Text>
+                <Ionicons name="open-outline" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Aparência — alterna tema claro/escuro/sistema (espelha Sidebar.tsx do web) */}
