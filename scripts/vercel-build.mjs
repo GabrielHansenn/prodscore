@@ -39,7 +39,7 @@ await build({
   outfile:     join(fnDir, 'index.js'),
   bundle:      true,
   platform:    'node',
-  target:      'node20',
+  target:      'node22',
   format:      'cjs',
   // Usa os "paths" do tsconfig da API: @prodscore/shared → código-fonte do shared
   tsconfig:    join(root, 'packages', 'api', 'tsconfig.json'),
@@ -48,7 +48,7 @@ await build({
   logLevel:    'warning',
 });
 writeFileSync(join(fnDir, '.vc-config.json'), JSON.stringify({
-  runtime:      'nodejs20.x',
+  runtime:      'nodejs22.x',
   handler:      'index.js',
   launcherType: 'Nodejs',
   maxDuration:  30,
