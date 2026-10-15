@@ -9,3 +9,4 @@ export * from './constants/proof.js';
 export * from './constants/image.js';
 export * from './validation.js';
 export * from './richText.js';
+export * from './richTextMarkdown.js';

@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
+import { TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
 import { FlameIcon, CalendarIcon, ExclamationTriangleIcon, PencilIcon, TrashIcon } from './icons.js';
 import TaskProofUpload from './TaskProofUpload.js';
 import TaskProofViewer from './TaskProofViewer.js';
+import RichTextPreview from './RichTextPreview.js';
+import TaskDetailModal from './TaskDetailModal.js';
+import {
+  DIFFICULTY_COLORS, DIFFICULTY_LABELS, PRIORITY_BADGE, STATUS_COLORS, STATUS_LABELS,
+} from '../lib/taskLabels.js';
 
 interface TaskCardProps {
   task:        Task;
@@ -11,36 +16,6 @@ interface TaskCardProps {
   onEdit?:     (task: Task) => void;
   compact?:    boolean;
 }
-
-const DIFFICULTY_LABELS: Record<TaskDifficulty, string> = {
-  [TaskDifficulty.Easy]:   'Fácil',
-  [TaskDifficulty.Medium]: 'Médio',
-  [TaskDifficulty.Hard]:   'Difícil',
-  [TaskDifficulty.Epic]:   'Épico',
-};
-
-const DIFFICULTY_COLORS: Record<TaskDifficulty, string> = {
-  [TaskDifficulty.Easy]:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  [TaskDifficulty.Medium]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  [TaskDifficulty.Hard]:   'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-  [TaskDifficulty.Epic]:   'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
-};
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  [TaskStatus.Pending]:    'Pendente',
-  [TaskStatus.InProgress]: 'Em Andamento',
-  [TaskStatus.Completed]:  'Concluída',
-  [TaskStatus.Overdue]:    'Atrasada',
-  [TaskStatus.Abandoned]:  'Abandonada',
-};
-
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  [TaskStatus.Pending]:    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-  [TaskStatus.InProgress]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  [TaskStatus.Completed]:  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  [TaskStatus.Overdue]:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  [TaskStatus.Abandoned]:  'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-};
 
 const BASE_POINTS: Record<TaskDifficulty, number> = {
   [TaskDifficulty.Easy]:   10,
@@ -54,13 +29,6 @@ const PRIORITY_MULT: Record<TaskPriority, number> = {
   [TaskPriority.Medium]: 1.00,
   [TaskPriority.High]:   1.10,
   [TaskPriority.Urgent]: 1.25,
-};
-
-const PRIORITY_BADGE: Record<TaskPriority, { label: string; cls: string }> = {
-  [TaskPriority.Low]:    { label: 'Baixa',   cls: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'     },
-  [TaskPriority.Medium]: { label: '',         cls: ''                                                                   },
-  [TaskPriority.High]:   { label: 'Alta',     cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
-  [TaskPriority.Urgent]: { label: 'Urgente',  cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'         },
 };
 
 interface DueInfo {
@@ -109,10 +77,12 @@ function DotsVertical() {
 export default function TaskCard({ task, onComplete, onDelete, onEdit, compact = false }: TaskCardProps) {
   const [menuOpen,        setMenuOpen]        = useState(false);
   const [showProofUpload, setShowProofUpload] = useState(false);
+  const [showDetail,      setShowDetail]      = useState(false);
 
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
   const dueInfo      = task.status === TaskStatus.Completed ? null : parseDueDate(task.dueDate);
   const pointsLabel  = getPointsPreview(task);
+  const description  = getDescriptionDoc(task);
 
   /** Tarefas com requiresProof exigem a foto antes de concluir de verdade */
   const handleCompleteClick = () => {
@@ -156,14 +126,23 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
             )}
           </div>
 
-          <p className={`mt-2 font-medium leading-snug ${
-            task.status === TaskStatus.Completed ? 'line-through text-gray-400' : 'text-gray-900'
-          }`}>
+          {/* Título abre o detalhe com a descrição completa */}
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            className={`mt-2 block w-full text-left font-medium leading-snug [overflow-wrap:anywhere] hover:underline ${
+              task.status === TaskStatus.Completed ? 'line-through text-gray-400' : 'text-gray-900'
+            }`}
+          >
             {task.title}
-          </p>
+          </button>
 
-          {!compact && task.description && (
-            <p className="mt-1 line-clamp-2 text-xs text-gray-500">{task.description}</p>
+          {!compact && description && (
+            <RichTextPreview
+              doc={description}
+              onShowMore={() => setShowDetail(true)}
+              className="mt-1"
+            />
           )}
         </div>
 
@@ -247,6 +226,14 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
           taskId={task.id}
           onUploaded={handleProofUploaded}
           onCancel={() => setShowProofUpload(false)}
+        />
+      )}
+
+      {showDetail && (
+        <TaskDetailModal
+          task={task}
+          onClose={() => setShowDetail(false)}
+          {...(onEdit ? { onEdit } : {})}
         />
       )}
     </div>

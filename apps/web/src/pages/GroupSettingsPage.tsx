@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MemberRole } from '@prodscore/shared';
+import {
+  MemberRole, getDescriptionDoc, richTextToPlainText, MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc,
+} from '@prodscore/shared';
 import {
   getGroupDetail,
   getGroupMembers,
@@ -18,6 +20,8 @@ import { showToast } from '../store/toastStore.js';
 import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
 import FormFeedback from '../components/FormFeedback.js';
 import ImagePickerField from '../components/ImagePickerField.js';
+import RichText from '../components/RichText.js';
+import RichTextEditor from '../components/RichTextEditor.js';
 import { FlameIcon, CogIcon, TrashIcon, UsersIcon } from '../components/icons.js';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -101,7 +105,8 @@ function GroupInfoSection({
   const { id } = useParams<{ id: string }>();
   const userId = useAuthStore((s) => s.user?.id);
   const [name,        setName]        = useState(group.name);
-  const [description, setDescription] = useState(group.description ?? '');
+  const savedDescription = getDescriptionDoc(group);
+  const [description, setDescription] = useState<RichTextDoc | null>(savedDescription);
   const [countExternal, setCountExternal] = useState(group.countExternalTasksInMissions);
   const [saving,      setSaving]      = useState(false);
   const [feedback,    setFeedback]    = useState<{ type: 'ok' | 'err'; msg: string } | null>(null);
@@ -109,7 +114,8 @@ function GroupInfoSection({
 
   const dirty =
     name !== group.name ||
-    description !== (group.description ?? '') ||
+    // Compara o conteúdo (documento) — referência muda a cada tecla no editor
+    JSON.stringify(description) !== JSON.stringify(savedDescription) ||
     imageUpload.file !== null ||
     countExternal !== group.countExternalTasksInMissions;
 
@@ -120,6 +126,10 @@ function GroupInfoSection({
     const trimmedName = name.trim();
     if (!trimmedName) {
       setFeedback({ type: 'err', msg: 'Nome do grupo é obrigatório.' });
+      return;
+    }
+    if (description && richTextToPlainText(description).length > MAX_GROUP_DESCRIPTION_LENGTH) {
+      setFeedback({ type: 'err', msg: `A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.` });
       return;
     }
 
@@ -133,7 +143,7 @@ function GroupInfoSection({
 
       const updated = await updateGroupInfo(id, {
         name: trimmedName,
-        description: description.trim() || null,
+        descriptionRich: description,
         countExternalTasksInMissions: countExternal,
         ...(imageUrl !== undefined ? { imageUrl } : {}),
       });
@@ -167,13 +177,11 @@ function GroupInfoSection({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Opcional"
-              className="input w-full resize-none"
+            <RichTextEditor
+              initialContent={savedDescription}
+              onChange={setDescription}
+              placeholder="Descrição do grupo"
+              heightClassName="min-h-[96px] max-h-60"
             />
           </div>
           <ImagePickerField
@@ -218,7 +226,12 @@ function GroupInfoSection({
       ) : (
         <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
           <p><span className="font-medium">Nome:</span> {group.name}</p>
-          {group.description && <p><span className="font-medium">Descrição:</span> {group.description}</p>}
+          {savedDescription && (
+            <div>
+              <p className="font-medium">Descrição:</p>
+              <RichText doc={savedDescription} className="mt-1 leading-relaxed" />
+            </div>
+          )}
         </div>
       )}
     </section>

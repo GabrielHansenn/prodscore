@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import {
   MemberRole,
+  normalizeRichText,
   type Group,
   type GroupMember,
   type RankingEntry,
+  type RichTextDoc,
 } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
@@ -17,6 +19,8 @@ interface GroupRow {
   id: string;
   name: string;
   description: string | null;
+  /** Ausente em consultas com lista de colunas que não a incluem */
+  description_rich?: unknown;
   image_url: string | null;
   owner_id: string;
   invite_code: string;
@@ -52,6 +56,8 @@ function mapGroupRow(row: GroupRow): Group {
     id:          row.id,
     name:        row.name,
     description: row.description,
+    // Renormaliza na leitura: só sai documento seguro, mesmo se algo foi gravado direto no banco
+    descriptionRich: normalizeRichText(row.description_rich),
     imageUrl:    row.image_url,
     ownerId:     row.owner_id,
     inviteCode:  row.invite_code,
@@ -124,8 +130,11 @@ export async function requireMembership(
 
 export interface CreateGroupInput {
   name: string;
-  description?: string;
-  imageUrl?: string;
+  /** Texto puro — quando há descriptionRich, é a versão em texto puro dele */
+  description?: string | null | undefined;
+  /** Documento já normalizado (ver lib/richDescription.ts) */
+  descriptionRich?: RichTextDoc | null | undefined;
+  imageUrl?: string | undefined;
   ownerId: string;
 }
 
@@ -149,6 +158,7 @@ export async function createGroup(input: CreateGroupInput): Promise<Group> {
       .insert({
         name:        input.name,
         description: input.description  ?? null,
+        description_rich: input.descriptionRich ?? null,
         image_url:   input.imageUrl     ?? null,
         owner_id:    input.ownerId,
         invite_code: inviteCode,
@@ -294,7 +304,7 @@ export async function getUserGroups(userId: string): Promise<Array<Group & { rol
     .select(`
       role,
       groups (
-        id, name, description, image_url, owner_id, invite_code, created_at, updated_at
+        id, name, description, description_rich, image_url, owner_id, invite_code, created_at, updated_at
       )
     `)
     .eq('user_id', userId);
@@ -303,7 +313,9 @@ export async function getUserGroups(userId: string): Promise<Array<Group & { rol
     throw new AppError('Erro ao buscar grupos.', 500, 'BUSCA_FALHOU');
   }
 
-  const rows = (data ?? []) as Array<{
+  // O tipo inferido pelo Supabase trata `groups` como array, mas a relação
+  // group_members → groups é to-one (FK), então em runtime vem um objeto
+  const rows = (data ?? []) as unknown as Array<{
     role: string;
     groups: GroupRow;
   }>;
@@ -462,6 +474,7 @@ export async function updateGroup(
   input: {
     name?: string;
     description?: string | null;
+    descriptionRich?: RichTextDoc | null;
     imageUrl?: string | null;
     countExternalTasksInMissions?: boolean;
   },
@@ -475,6 +488,7 @@ export async function updateGroup(
   const updates: Record<string, unknown> = {};
   if (input.name        !== undefined) updates['name']        = input.name;
   if (input.description !== undefined) updates['description'] = input.description;
+  if (input.descriptionRich !== undefined) updates['description_rich'] = input.descriptionRich;
   if (input.imageUrl    !== undefined) updates['image_url']   = input.imageUrl;
   if (input.countExternalTasksInMissions !== undefined) {
     updates['count_external_tasks_in_missions'] = input.countExternalTasksInMissions;

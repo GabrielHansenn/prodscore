@@ -6,9 +6,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MemberRole, validateRequired, validateInviteCode } from '@prodscore/shared';
+import {
+  MemberRole, validateRequired, validateInviteCode, richTextToPlainText,
+  MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc,
+} from '@prodscore/shared';
 import GroupCard, { type GroupCardData } from '../components/GroupCard';
 import ImagePickerField from '../components/ImagePickerField';
+import RichTextInput from '../components/RichTextInput';
+import { markdownToRichText } from '../lib/markdownToRichText';
 import { api } from '../services/api';
 import { uploadGroupImage } from '../services/group.service';
 import { useImageUpload } from '../lib/useImageUpload';
@@ -29,6 +34,7 @@ interface MobileGroup {
   id:          string;
   name:        string;
   description: string | null;
+  descriptionRich: RichTextDoc | null;
   imageUrl:    string | null;
   inviteCode:  string;
   createdAt:   string;
@@ -41,8 +47,8 @@ async function fetchGroups(): Promise<MobileGroup[]> {
   return data.grupos;
 }
 
-async function createGroupApi(name: string, description?: string, imageUrl?: string): Promise<MobileGroup> {
-  const { data } = await api.post<{ grupo: MobileGroup }>('/groups', { name, description, imageUrl });
+async function createGroupApi(name: string, descriptionRich?: RichTextDoc, imageUrl?: string): Promise<MobileGroup> {
+  const { data } = await api.post<{ grupo: MobileGroup }>('/groups', { name, descriptionRich, imageUrl });
   return data.grupo;
 }
 
@@ -71,6 +77,11 @@ function CreateModal({ visible, onClose, onCreate }: {
   const handleCreate = async () => {
     const nameError = validateRequired(name, 'Nome do grupo');
     if (nameError) { setError(nameError); return; }
+    const descDoc = markdownToRichText(desc);
+    if (descDoc && richTextToPlainText(descDoc).length > MAX_GROUP_DESCRIPTION_LENGTH) {
+      setError(`A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -78,7 +89,7 @@ function CreateModal({ visible, onClose, onCreate }: {
       if (imagePicker.image) {
         imageUrl = await uploadGroupImage(imagePicker.image);
       }
-      const g = await createGroupApi(name.trim(), desc.trim() || undefined, imageUrl);
+      const g = await createGroupApi(name.trim(), descDoc ?? undefined, imageUrl);
       onCreate(g);
       setName(''); setDesc(''); imagePicker.clear(); onClose();
       showToast('Grupo criado com sucesso!');
@@ -100,7 +111,7 @@ function CreateModal({ visible, onClose, onCreate }: {
           <Text style={styles.fieldLabel}>Nome do grupo</Text>
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ex: Devs Produtivos" placeholderTextColor={colors.textMuted} autoFocus />
           <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Descrição (opcional)</Text>
-          <TextInput style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" placeholderTextColor={colors.textMuted} multiline />
+          <RichTextInput value={desc} onChangeText={setDesc} placeholder="Do que se trata este grupo?" />
           <View style={{ marginTop: SPACING.md }}>
             <ImagePickerField
               label="Imagem do grupo (opcional)"
@@ -216,6 +227,7 @@ export default function GroupsScreen() {
     id:          g.id,
     name:        g.name,
     description: g.description,
+    descriptionRich: g.descriptionRich,
     imageUrl:    g.imageUrl,
     memberCount: g.memberCount,
     role:        g.role,

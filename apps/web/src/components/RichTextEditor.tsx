@@ -1,17 +1,24 @@
 import { useEffect, type ReactNode } from 'react';
-import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { emptyRichTextDoc, normalizeRichText, type RichTextDoc } from '@prodscore/shared';
+import { emptyRichTextDoc, normalizeRichText, type RichTextDoc, type RichTextText } from '@prodscore/shared';
 
 interface RichTextEditorProps {
   /** Chamado a cada alteração com o documento já normalizado (null = vazio) */
   onChange: (doc: RichTextDoc | null) => void;
-  /** Enter envia; Shift+Enter quebra linha */
-  onSubmit: () => void;
+  /**
+   * Se informado, Enter envia e Shift+Enter quebra linha (chat). Sem ele,
+   * Enter cria um novo parágrafo, como num editor comum (formulários).
+   */
+  onSubmit?: () => void;
+  /** Conteúdo inicial (ex: descrição de uma tarefa sendo editada) */
+  initialContent?: RichTextDoc | null;
   placeholder?: string;
   disabled?: boolean;
   /** Muda de valor para limpar o editor depois de enviar */
   resetKey?: number;
+  /** Altura da área de edição — o padrão é o tamanho do compositor do chat */
+  heightClassName?: string;
 }
 
 function ToolbarButton({
@@ -37,7 +44,7 @@ function ToolbarButton({
 
 function Toolbar({ editor }: { editor: Editor }) {
   return (
-    <div className="flex items-center gap-0.5 border-b border-gray-100 px-2 py-1 dark:border-gray-800">
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-100 px-2 py-1 dark:border-gray-800">
       <ToolbarButton label="Negrito"  active={editor.isActive('bold')}   onClick={() => editor.chain().focus().toggleBold().run()}>
         <span className="font-bold">B</span>
       </ToolbarButton>
@@ -71,14 +78,57 @@ function Toolbar({ editor }: { editor: Editor }) {
 }
 
 /**
- * Editor de texto rico do chat de grupo (Tiptap).
+ * Converte trechos de texto do documento para o Tiptap. O "\n" dentro de um
+ * parágrafo (vindo de Shift+Enter ou de descrições antigas em texto puro)
+ * vira um nó hardBreak — `normalizeRichText` faz o caminho inverso.
+ */
+function textRunsToTiptap(nodes: RichTextText[] | undefined): JSONContent[] {
+  const out: JSONContent[] = [];
+  for (const node of nodes ?? []) {
+    node.text.split('\n').forEach((piece, i) => {
+      if (i > 0) out.push({ type: 'hardBreak' });
+      if (piece.length === 0) return;
+      out.push(node.marks
+        ? { type: 'text', text: piece, marks: node.marks.map((m) => ({ type: m })) }
+        : { type: 'text', text: piece });
+    });
+  }
+  return out;
+}
+
+/** Parágrafo vazio vai sem `content` — é assim que o próprio Tiptap representa */
+function tiptapParagraph(nodes: RichTextText[] | undefined): JSONContent {
+  const content = textRunsToTiptap(nodes);
+  return content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' };
+}
+
+function toTiptapContent(doc: RichTextDoc): JSONContent {
+  return {
+    type: 'doc',
+    content: doc.content.map((block): JSONContent => {
+      if (block.type === 'paragraph') return tiptapParagraph(block.content);
+      return {
+        type: block.type,
+        content: block.content.map((item) => ({
+          type: 'listItem',
+          content: item.content.map((p) => tiptapParagraph(p.content)),
+        })),
+      };
+    }),
+  };
+}
+
+/**
+ * Editor de texto rico (Tiptap) — usado no chat de grupo e na descrição de
+ * tarefas.
  *
  * Trabalha no formato JSON nativo do Tiptap, que é o mesmo formato aceito pelo
  * backend — a saída passa por `normalizeRichText` antes de subir, então o que
  * o componente emite já é o documento validado.
  */
 export default function RichTextEditor({
-  onChange, onSubmit, placeholder, disabled, resetKey,
+  onChange, onSubmit, initialContent, placeholder, disabled, resetKey,
+  heightClassName = 'max-h-40 min-h-[60px]',
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -91,13 +141,15 @@ export default function RichTextEditor({
         horizontalRule: false,
       }),
     ],
+    content: toTiptapContent(initialContent ?? emptyRichTextDoc()),
     editorProps: {
       attributes: {
-        class: 'prose-sm max-h-40 min-h-[60px] overflow-y-auto px-3 py-2 text-sm text-gray-900 focus:outline-none dark:text-gray-100',
+        // [overflow-wrap:anywhere] evita que uma palavra/link enorme estoure a largura do editor
+        class: `prose-sm ${heightClassName} overflow-y-auto px-3 py-2 text-sm text-gray-900 [overflow-wrap:anywhere] focus:outline-none dark:text-gray-100`,
         'aria-label': placeholder ?? 'Mensagem',
       },
       handleKeyDown: (_view, event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (onSubmit && event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
           onSubmit();
           return true;
@@ -111,9 +163,7 @@ export default function RichTextEditor({
 
   // Limpa o editor após o envio
   useEffect(() => {
-    // O tipo Content do Tiptap é mais amplo que o nosso subconjunto; o
-    // documento vazio é válido para os dois
-    if (resetKey !== undefined && editor) editor.commands.setContent(emptyRichTextDoc() as unknown as string);
+    if (resetKey !== undefined && editor) editor.commands.setContent(toTiptapContent(emptyRichTextDoc()));
   }, [resetKey, editor]);
 
   useEffect(() => {
@@ -123,7 +173,9 @@ export default function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-300 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-gray-700">
+    <div className={`overflow-hidden rounded-xl border border-gray-300 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-gray-700 ${
+      disabled ? 'opacity-50' : ''
+    }`}>
       <Toolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>

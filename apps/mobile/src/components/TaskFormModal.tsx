@@ -4,11 +4,16 @@ import {
   Modal, TextInput, ScrollView, ActivityIndicator, Pressable,
   KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
-import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task } from '@prodscore/shared';
+import {
+  TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
+  MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
+} from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
+import { markdownToRichText, richTextToMarkdown } from '../lib/markdownToRichText';
 import { showToast } from '../store/toastStore';
 import Dropdown from './Dropdown';
 import InlineFeedback from './InlineFeedback';
+import RichTextInput from './RichTextInput';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -70,8 +75,16 @@ function isoToBR(iso: string): string {
 
 export interface TaskFormData {
   title: string; difficulty: TaskDifficulty; priority: TaskPriority;
-  estimatedMinutes?: number; description?: string; dueDate?: string; requiresProof?: boolean;
+  estimatedMinutes?: number; dueDate?: string; requiresProof?: boolean;
+  /** null limpa a descrição (edição) */
+  descriptionRich?: RichTextDoc | null;
   groupId?: string;
+}
+
+/** Texto inicial do campo de descrição: o documento salvo convertido para a marcação do compositor */
+function initialDescriptionText(task: Task | null): string {
+  const doc = task ? getDescriptionDoc(task) : null;
+  return doc ? richTextToMarkdown(doc) : '';
 }
 
 interface TaskFormModalProps {
@@ -92,7 +105,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const colors = useThemeColors();
   const styles = useStyles();
   const [title,          setTitle]          = useState(task?.title ?? '');
-  const [description,    setDescription]    = useState(task?.description ?? '');
+  const [description,    setDescription]    = useState(() => initialDescriptionText(task));
   const [difficulty,     setDifficulty]     = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
   const [priority,       setPriority]       = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estMinutes,     setEstMinutes]     = useState(task?.estimatedMinutes?.toString() ?? '');
@@ -108,6 +121,12 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const handleSubmit = async () => {
     const titleError = validateRequired(title, 'Título');
     if (titleError) { setError(titleError); return; }
+
+    const descriptionDoc = markdownToRichText(description);
+    if (descriptionDoc && richTextToPlainText(descriptionDoc).length > MAX_TASK_DESCRIPTION_LENGTH) {
+      setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
 
     let dueDateISO: string | undefined;
     if (dueDateInput.trim()) {
@@ -126,7 +145,8 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
       await onSubmit({
         title: title.trim(), difficulty, priority, requiresProof,
         ...(est ? { estimatedMinutes: est } : {}),
-        ...(description.trim() ? { description: description.trim() } : {}),
+        // Na edição sempre envia (null = apagou a descrição); na criação só se preenchida
+        ...(isEdit || descriptionDoc ? { descriptionRich: descriptionDoc } : {}),
         ...(due ? { dueDate: due } : {}),
         ...(groupId ? { groupId } : {}),
       });
@@ -160,9 +180,9 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
               />
 
               <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Descrição (opcional)</Text>
-              <TextInput
-                style={[styles.input, { height: 72 }]} value={description} onChangeText={setDescription}
-                editable={!isCompleted} multiline placeholder="Descreva o que precisa ser feito..." placeholderTextColor={colors.textMuted}
+              <RichTextInput
+                value={description} onChangeText={setDescription} editable={!isCompleted}
+                placeholder="Descreva o que precisa ser feito..."
               />
 
               <View style={styles.rowFields}>

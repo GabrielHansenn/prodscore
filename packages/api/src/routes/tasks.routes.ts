@@ -1,9 +1,16 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { TaskDifficulty, TaskPriority, TaskStatus, MAX_PROOF_FILE_SIZE_BYTES } from '@prodscore/shared';
+import {
+  TaskDifficulty,
+  TaskPriority,
+  TaskStatus,
+  MAX_PROOF_FILE_SIZE_BYTES,
+  MAX_TASK_DESCRIPTION_LENGTH,
+} from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
+import { resolveRichDescription } from '../lib/richDescription.js';
 import {
   getTasksByUser,
   createTask,
@@ -46,6 +53,13 @@ function handleProofUpload(req: Request, res: Response, next: NextFunction): voi
   });
 }
 
+const DESCRIPTION_TOO_LONG = `A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`;
+
+/** Texto rico + cópia em texto puro (ver lib/richDescription.ts) */
+function resolveTaskDescription(body: { description?: string | null | undefined; descriptionRich?: unknown }) {
+  return resolveRichDescription(body, MAX_TASK_DESCRIPTION_LENGTH);
+}
+
 // ---------------------------------------------------------------------------
 // Schemas de validação (mensagens em português)
 // ---------------------------------------------------------------------------
@@ -58,8 +72,11 @@ const createTaskSchema = z.object({
 
   description: z
     .string()
-    .max(2000, { message: 'A descrição deve ter no máximo 2000 caracteres.' })
+    .max(MAX_TASK_DESCRIPTION_LENGTH, { message: DESCRIPTION_TOO_LONG })
     .optional(),
+
+  /** Documento de texto rico — validado em resolveTaskDescription */
+  descriptionRich: z.unknown().optional(),
 
   difficulty: z.nativeEnum(TaskDifficulty, {
     errorMap: () => ({
@@ -108,9 +125,11 @@ const updateTaskSchema = z
 
     description: z
       .string()
-      .max(2000, { message: 'A descrição deve ter no máximo 2000 caracteres.' })
+      .max(MAX_TASK_DESCRIPTION_LENGTH, { message: DESCRIPTION_TOO_LONG })
       .nullable()
       .optional(),
+
+    descriptionRich: z.unknown().optional(),
 
     difficulty: z
       .nativeEnum(TaskDifficulty, {
@@ -200,11 +219,13 @@ router.post('/', authGuard, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
     const body = createTaskSchema.parse(req.body);
+    const { description, descriptionRich } = resolveTaskDescription(body);
 
     const task = await createTask({
       userId:            user.id,
       title:             body.title,
-      description:       body.description,
+      description:       description ?? undefined,
+      descriptionRich,
       difficulty:        body.difficulty,
       priority:          body.priority,
       estimatedMinutes:  body.estimatedMinutes,
@@ -224,7 +245,7 @@ router.post('/', authGuard, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Atualiza campos editáveis de uma tarefa (title, description, difficulty, status, dueDate).
+ * Atualiza campos editáveis de uma tarefa (title, description/descriptionRich, difficulty, status, dueDate).
  * Não permite marcar como 'completed' — use PATCH /tasks/:id/complete para isso.
  */
 router.patch('/:id', authGuard, async (req, res) => {
@@ -237,10 +258,12 @@ router.patch('/:id', authGuard, async (req, res) => {
     }
 
     const body = updateTaskSchema.parse(req.body);
+    const { description, descriptionRich } = resolveTaskDescription(body);
 
     const task = await updateTask(taskId, user.id, {
       title:            body.title,
-      description:      body.description,
+      description,
+      descriptionRich,
       difficulty:       body.difficulty,
       priority:         body.priority,
       estimatedMinutes: body.estimatedMinutes,

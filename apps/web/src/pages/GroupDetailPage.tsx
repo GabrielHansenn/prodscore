@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MemberRole, TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
+import {
+  MemberRole, TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, richTextToPlainText,
+  MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
+} from '@prodscore/shared';
 import {
   getGroupDetail,
   getGroupMembers,
@@ -13,6 +16,10 @@ import {
 import { createGroupMission, type MissionWithParticipation } from '../services/mission.service.js';
 import { getTasks, createTask } from '../services/task.service.js';
 import GroupChat from '../components/GroupChat.js';
+import RichText from '../components/RichText.js';
+import RichTextEditor from '../components/RichTextEditor.js';
+import RichTextPreview from '../components/RichTextPreview.js';
+import TaskDetailModal from '../components/TaskDetailModal.js';
 import { validateRequired, validatePositiveNumber } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
@@ -296,7 +303,9 @@ const STATUS_STYLE: Record<TaskStatus, string> = {
 
 function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task) => void }) {
   const [completing, setCompleting] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const isDone = task.status === TaskStatus.Completed || task.status === TaskStatus.Abandoned;
+  const description = getDescriptionDoc(task);
 
   const handleComplete = async () => {
     if (isDone || completing) return;
@@ -321,11 +330,22 @@ function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task)
     }`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className={`font-medium ${isDone ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            className={`block w-full text-left font-medium [overflow-wrap:anywhere] hover:underline ${
+              isDone ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'
+            }`}
+          >
             {task.title}
-          </p>
-          {task.description && (
-            <p className="mt-0.5 line-clamp-1 text-xs text-gray-400 dark:text-gray-500">{task.description}</p>
+          </button>
+          {description && (
+            <RichTextPreview
+              doc={description}
+              onShowMore={() => setShowDetail(true)}
+              maxHeightClassName="max-h-10"
+              className="mt-0.5"
+            />
           )}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${DIFFICULTY_STYLE[task.difficulty]}`}>
@@ -361,6 +381,8 @@ function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task)
           </button>
         )}
       </div>
+
+      {showDetail && <TaskDetailModal task={task} onClose={() => setShowDetail(false)} />}
     </div>
   );
 }
@@ -378,7 +400,7 @@ function GroupTasksTab({
   const [diff,     setDiff]       = useState<TaskDifficulty>(TaskDifficulty.Medium);
   const [priority, setPriority]   = useState<TaskPriority>(TaskPriority.Medium);
   const [dueDate,  setDueDate]    = useState('');
-  const [desc,     setDesc]       = useState('');
+  const [desc,     setDesc]       = useState<RichTextDoc | null>(null);
   const [saving,   setSaving]     = useState(false);
   const [error,    setError]      = useState('');
 
@@ -386,6 +408,10 @@ function GroupTasksTab({
     e.preventDefault();
     const titleError = validateRequired(title, 'Título');
     if (titleError) { setError(titleError); return; }
+    if (desc && richTextToPlainText(desc).length > MAX_TASK_DESCRIPTION_LENGTH) {
+      setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
 
     setSaving(true);
     setError('');
@@ -395,11 +421,11 @@ function GroupTasksTab({
         difficulty: diff,
         priority,
         groupId,
-        ...(desc.trim()    ? { description: desc.trim() }           : {}),
+        ...(desc           ? { descriptionRich: desc }              : {}),
         ...(dueDate        ? { dueDate: new Date(dueDate).toISOString() } : {}),
       });
       onTaskCreated(task);
-      setTitle(''); setDesc(''); setDueDate('');
+      setTitle(''); setDesc(null); setDueDate('');
       setDiff(TaskDifficulty.Medium); setPriority(TaskPriority.Medium);
       setShowForm(false);
       showToast('Tarefa criada com sucesso!');
@@ -435,17 +461,16 @@ function GroupTasksTab({
               />
             </div>
 
-            {desc !== undefined && (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição</label>
-                <input
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  placeholder="Opcional"
-                  className="input w-full text-sm"
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição (opcional)</label>
+              <div className="bg-white dark:bg-transparent">
+                <RichTextEditor
+                  onChange={setDesc}
+                  placeholder="Descrição da tarefa"
+                  heightClassName="min-h-[72px] max-h-48"
                 />
               </div>
-            )}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -596,6 +621,7 @@ export default function GroupDetailPage() {
   // group.role já vem do getGroupDetail — confiável mesmo se members falhar
   const myRole  = group?.role;
   const isAdmin = myRole === MemberRole.Owner || myRole === MemberRole.Admin;
+  const groupDescription = group ? getDescriptionDoc(group) : null;
 
   const handleSaveMission = async (data: {
     title: string; description: string; targetValue: number; rewardPoints: number; expiresAt?: string;
@@ -679,19 +705,17 @@ export default function GroupDetailPage() {
 
       {/* Cabeçalho do grupo */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
+        {/* min-w-0: sem ele um nome longo empurra o bloco pra fora da tela */}
+        <div className="flex min-w-0 flex-1 items-center gap-4">
           {group.imageUrl ? (
-            <img src={group.imageUrl} alt="" className="h-14 w-14 rounded-2xl object-cover" />
+            <img src={group.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700">
               <UsersIcon className="h-7 w-7 text-white" />
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{group.name}</h1>
-            {group.description && (
-              <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{group.description}</p>
-            )}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 [overflow-wrap:anywhere] dark:text-white">{group.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
               <span className="flex items-center gap-1">
                 <UsersIcon className="h-3.5 w-3.5" />
@@ -745,6 +769,20 @@ export default function GroupDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Descrição completa — fora da linha do cabeçalho para ter a largura
+          toda e quebrar em várias linhas (max-w-3xl mantém as linhas legíveis) */}
+      {groupDescription && (
+        <section className="card mb-6 p-5">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            Sobre o grupo
+          </h2>
+          <RichText
+            doc={groupDescription}
+            className="max-w-3xl text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+          />
+        </section>
+      )}
 
       {/* Abas */}
       <div className="mb-5 flex gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800/50">

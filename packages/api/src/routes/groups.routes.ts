@@ -1,9 +1,10 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { MemberRole, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB } from '@prodscore/shared';
+import { MemberRole, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
+import { resolveRichDescription } from '../lib/richDescription.js';
 import {
   createGroup,
   joinGroup,
@@ -63,8 +64,11 @@ const createGroupSchema = z.object({
 
   description: z
     .string()
-    .max(500, { message: 'A descrição deve ter no máximo 500 caracteres.' })
+    .max(MAX_GROUP_DESCRIPTION_LENGTH, { message: `A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.` })
     .optional(),
+
+  /** Documento de texto rico — validado em resolveRichDescription */
+  descriptionRich: z.unknown().optional(),
 
   imageUrl: z
     .string()
@@ -122,9 +126,11 @@ const updateGroupSchema = z.object({
 
   description: z
     .string()
-    .max(500, { message: 'A descrição deve ter no máximo 500 caracteres.' })
+    .max(MAX_GROUP_DESCRIPTION_LENGTH, { message: `A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.` })
     .nullable()
     .optional(),
+
+  descriptionRich: z.unknown().optional(),
 
   imageUrl: z
     .string()
@@ -171,10 +177,12 @@ router.post('/', authGuard, async (req, res) => {
   try {
     const { user } = req as AuthenticatedRequest;
     const body = createGroupSchema.parse(req.body);
+    const { description, descriptionRich } = resolveRichDescription(body, MAX_GROUP_DESCRIPTION_LENGTH);
 
     const group = await createGroup({
       name:        body.name,
-      description: body.description,
+      description,
+      descriptionRich,
       imageUrl:    body.imageUrl,
       ownerId:     user.id,
     });
@@ -380,11 +388,14 @@ router.patch('/:id', authGuard, async (req, res) => {
     const input: {
       name?: string;
       description?: string | null;
+      descriptionRich?: RichTextDoc | null;
       imageUrl?: string | null;
       countExternalTasksInMissions?: boolean;
     } = {};
     if (body.name        !== undefined) input.name        = body.name;
-    if (body.description !== undefined) input.description = body.description;
+    const resolved = resolveRichDescription(body, MAX_GROUP_DESCRIPTION_LENGTH);
+    if (resolved.description     !== undefined) input.description     = resolved.description;
+    if (resolved.descriptionRich !== undefined) input.descriptionRich = resolved.descriptionRich;
     if (body.imageUrl    !== undefined) input.imageUrl    = body.imageUrl;
     if (body.countExternalTasksInMissions !== undefined) {
       input.countExternalTasksInMissions = body.countExternalTasksInMissions;

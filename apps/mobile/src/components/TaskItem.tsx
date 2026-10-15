@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
-import { FONT, RADIUS, SPACING, CARD_SHADOW, type ColorPalette } from '../constants/theme';
+import { TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
+import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import { DIFF_LABELS, STATUS_LABELS, getDiffColors, getPriorityBadge, getStatusColors } from '../lib/taskLabels';
 import TaskProofUpload from './TaskProofUpload';
 import TaskProofViewer from './TaskProofViewer';
+import TaskDetailModal from './TaskDetailModal';
+import RichTextPreview from './RichTextPreview';
 
 interface TaskItemProps {
   task:       Task;
@@ -15,41 +18,8 @@ interface TaskItemProps {
   onEdit?:    (task: Task) => void;
 }
 
-// Mesma convenção de cores/labels do TaskCard.tsx no web
-function getDiffColors(colors: ColorPalette): Record<TaskDifficulty, string> {
-  return {
-    [TaskDifficulty.Easy]:   colors.success,
-    [TaskDifficulty.Medium]: colors.blue,
-    [TaskDifficulty.Hard]:   colors.orange,
-    [TaskDifficulty.Epic]:   colors.primary400,
-  };
-}
-const DIFF_LABELS: Record<TaskDifficulty, string> = {
-  [TaskDifficulty.Easy]: 'Fácil', [TaskDifficulty.Medium]: 'Médio',
-  [TaskDifficulty.Hard]: 'Difícil', [TaskDifficulty.Epic]: 'Épico',
-};
-
-function getStatusColors(colors: ColorPalette): Record<TaskStatus, string> {
-  return {
-    [TaskStatus.Pending]:    colors.textMuted,
-    [TaskStatus.InProgress]: colors.blue,
-    [TaskStatus.Completed]:  colors.success,
-    [TaskStatus.Overdue]:    colors.red,
-    [TaskStatus.Abandoned]:  colors.textMuted,
-  };
-}
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  [TaskStatus.Pending]: 'Pendente', [TaskStatus.InProgress]: 'Em Andamento',
-  [TaskStatus.Completed]: 'Concluída', [TaskStatus.Overdue]: 'Atrasada', [TaskStatus.Abandoned]: 'Abandonada',
-};
-
-function getPriorityBadge(colors: ColorPalette): Partial<Record<TaskPriority, { label: string; color: string }>> {
-  return {
-    [TaskPriority.Low]:    { label: 'Baixa',   color: colors.textMuted },
-    [TaskPriority.High]:   { label: 'Alta',    color: colors.amber },
-    [TaskPriority.Urgent]: { label: 'Urgente', color: colors.red },
-  };
-}
+/** Altura máxima da prévia da descrição: ~3 linhas de fonte 12 (lineHeight 17) */
+const PREVIEW_MAX_HEIGHT = 52;
 
 const BASE_POINTS: Record<TaskDifficulty, number> = {
   [TaskDifficulty.Easy]: 10, [TaskDifficulty.Medium]: 25, [TaskDifficulty.Hard]: 50, [TaskDifficulty.Epic]: 100,
@@ -95,6 +65,8 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   const PRIORITY_BADGE = getPriorityBadge(colors);
   const [menuOpen,        setMenuOpen]        = useState(false);
   const [showProofUpload, setShowProofUpload] = useState(false);
+  const [showDetail,      setShowDetail]      = useState(false);
+  const description  = getDescriptionDoc(task);
   const isActionable = task.status === TaskStatus.Pending || task.status === TaskStatus.InProgress;
   const isCompleted  = task.status === TaskStatus.Completed;
   const dueInfo      = isCompleted ? null : parseDueDate(task.dueDate);
@@ -132,12 +104,17 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
             )}
           </View>
 
-          <Text style={[styles.title, isCompleted && styles.titleDone]} numberOfLines={2}>
-            {task.title}
-          </Text>
-          {task.description ? (
-            <Text style={styles.description} numberOfLines={2}>{task.description}</Text>
-          ) : null}
+          {/* Toque no título abre o detalhe completo; o "ver mais" da prévia também */}
+          <Pressable onPress={() => setShowDetail(true)} accessibilityRole="button" accessibilityHint="Abre os detalhes da tarefa">
+            <Text style={[styles.title, isCompleted && styles.titleDone]} numberOfLines={2}>
+              {task.title}
+            </Text>
+          </Pressable>
+          {description && (
+            <View style={styles.description}>
+              <RichTextPreview doc={description} maxHeight={PREVIEW_MAX_HEIGHT} onShowMore={() => setShowDetail(true)} />
+            </View>
+          )}
         </View>
 
         {onEdit && (
@@ -185,6 +162,14 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
         />
       )}
 
+      {showDetail && (
+        <TaskDetailModal
+          task={task}
+          onClose={() => setShowDetail(false)}
+          {...(onEdit ? { onEdit } : {})}
+        />
+      )}
+
       {/* Menu editar/excluir */}
       <Modal visible={menuOpen} transparent animationType="fade">
         <Pressable style={styles.menuOverlay} onPress={() => setMenuOpen(false)}>
@@ -229,7 +214,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '600' },
   title: { fontSize: FONT.base, fontWeight: '600', color: colors.text, marginTop: SPACING.xs, lineHeight: 20 },
   titleDone: { textDecorationLine: 'line-through', color: colors.textMuted },
-  description: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  description: { marginTop: 2 },
   menuBtn: { padding: 4 },
 
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

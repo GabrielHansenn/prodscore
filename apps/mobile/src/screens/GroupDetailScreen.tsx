@@ -6,7 +6,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole, validateRequired, validatePositiveNumber, type Task } from '@prodscore/shared';
+import { MemberRole, validateRequired, validatePositiveNumber, getDescriptionDoc, type Task } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
@@ -23,6 +23,7 @@ import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
 import TaskFormModal from '../components/TaskFormModal';
 import GroupChat from '../components/GroupChat';
+import RichTextPreview from '../components/RichTextPreview';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -95,6 +96,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     level: r.level, score: r.score, currentStreak: r.currentStreak,
   }));
 
+  const groupDescription = group ? getDescriptionDoc(group) : null;
+
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'membros', label: 'Membros', count: members.length },
     { key: 'ranking', label: 'Ranking' },
@@ -154,6 +157,21 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 </Text>
               </View>
             </TouchableOpacity>
+          )}
+
+          {/* Sobre o grupo — prévia que expande no lugar ("ver mais"/"ver menos"):
+              as abas e o chat abaixo precisam do resto da tela */}
+          {groupDescription && (
+            <View style={styles.aboutCard}>
+              <Text style={styles.aboutLabel}>SOBRE O GRUPO</Text>
+              <RichTextPreview
+                doc={groupDescription}
+                maxHeight={60}
+                expandable
+                fontSize={FONT.base}
+                color={colors.text}
+              />
+            </View>
           )}
 
           {/* Abas */}
@@ -408,6 +426,11 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: colors.textMuted, fontSize: FONT.base, textAlign: 'center', paddingVertical: SPACING.lg },
 
+  aboutCard: {
+    marginHorizontal: SPACING.md, marginBottom: SPACING.sm, padding: SPACING.sm + 4,
+    backgroundColor: colors.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.border,
+  },
+  aboutLabel: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.5, marginBottom: 4 },
   inviteRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginHorizontal: SPACING.md, marginBottom: SPACING.sm,

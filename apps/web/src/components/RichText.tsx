@@ -27,7 +27,10 @@ function TextRun({ node }: { node: RichTextText }) {
 
 export default function RichText({ doc, className }: { doc: RichTextDoc; className?: string }) {
   return (
-    <div className={`space-y-1 whitespace-pre-wrap break-words ${className ?? ''}`}>
+    // overflow-wrap:anywhere quebra até "palavras" sem espaço (links, códigos,
+    // "aaaa...") — o break-words sozinho não reduz a largura mínima do bloco
+    // dentro de flexbox, e o texto estourava o container numa linha só
+    <div className={`min-w-0 space-y-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${className ?? ''}`}>
       {doc.content.map((block, i) => {
         if (block.type === 'paragraph') {
           return (

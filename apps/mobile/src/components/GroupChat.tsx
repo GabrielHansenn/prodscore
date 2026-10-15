@@ -10,7 +10,7 @@ import {
   getGroupMessages, sendGroupMessage, uploadGroupChatImage, markGroupChatRead,
 } from '../services/groupChat.service';
 import { subscribeGroupMessages } from '../lib/realtime';
-import { markdownToRichText, toggleWrap, toggleListPrefix } from '../lib/markdownToRichText';
+import { markdownToRichText, toggleWrap, toggleListPrefix, FORMAT_BUTTONS } from '../lib/markdownToRichText';
 import { useImageUpload } from '../lib/useImageUpload';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
@@ -26,15 +26,6 @@ function dayKey(iso: string): string {
 function timeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
-
-/** Botões de formatação do compositor — espelham a barra do editor web */
-const FORMAT_BUTTONS: { label: string; wrapper: string; icon: string }[] = [
-  { label: 'Negrito',    wrapper: '**', icon: 'B' },
-  { label: 'Itálico',    wrapper: '*',  icon: 'I' },
-  { label: 'Sublinhado', wrapper: '__', icon: 'U' },
-  { label: 'Tachado',    wrapper: '~~', icon: 'S' },
-  { label: 'Código',     wrapper: '`',  icon: '</>' },
-];
 
 /** Chat do grupo — texto rico + imagem, tempo real via Supabase Realtime */
 export default function GroupChat({ groupId }: { groupId: string }) {

@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TaskDifficulty, TaskStatus, type Task } from '@prodscore/shared';
+import { TaskDifficulty, TaskPriority, TaskStatus, type Task, type RichTextDoc } from '@prodscore/shared';
 import TaskCard from '../components/TaskCard';
 
 // ---------------------------------------------------------------------------
@@ -20,13 +20,19 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     groupId:      null,
     title:        'Implementar autenticação',
     description:  null,
+    descriptionRich: null,
     difficulty:   TaskDifficulty.Medium,
     status:       TaskStatus.Pending,
+    priority:     TaskPriority.Medium,
+    estimatedMinutes: null,
+    overdueSince: null,
     dueDate:      null,
     completedAt:  null,
     pointsEarned: null,
     createdAt:    '2025-06-01T10:00:00.000Z',
     updatedAt:    '2025-06-01T10:00:00.000Z',
+    requiresProof: false,
+    hasProof:     false,
     ...overrides,
   };
 }
@@ -129,5 +135,105 @@ describe('TaskCard', () => {
     // O título deve ter classe de line-through
     const titleEl = screen.getByText(task.title);
     expect(titleEl).toHaveClass('line-through');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Descrição formatada
+// ---------------------------------------------------------------------------
+
+describe('TaskCard — descrição', () => {
+  const noop = vi.fn();
+
+  const richDoc: RichTextDoc = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: [
+        { type: 'text', text: 'Revisar', marks: ['bold'] },
+        { type: 'text', text: ' o ' },
+        { type: 'text', text: 'capítulo 3', marks: ['italic'] },
+      ] },
+      { type: 'bulletList', content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'fazer resumo' }] }] },
+      ] },
+    ],
+  };
+
+  /** Simula conteúdo maior que a caixa da prévia (o jsdom não calcula layout) */
+  function mockOverflow(scrollHeight: number, clientHeight: number) {
+    const sh = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(scrollHeight);
+    const ch = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(clientHeight);
+    return () => { sh.mockRestore(); ch.mockRestore(); };
+  }
+
+  it('renderiza a formatação em vez das marcações cruas', () => {
+    render(<TaskCard task={makeTask({ description: 'Revisar o capítulo 3\n• fazer resumo', descriptionRich: richDoc })} onComplete={noop} onDelete={noop} />);
+
+    expect(screen.getByText('Revisar')).toHaveClass('font-semibold');
+    expect(screen.getByText('capítulo 3')).toHaveClass('italic');
+    expect(screen.getByRole('listitem')).toHaveTextContent('fazer resumo');
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  });
+
+  it('tarefa antiga (só texto puro) continua aparecendo igual', () => {
+    render(<TaskCard task={makeTask({ description: 'Calcular 2*3*4', descriptionRich: null })} onComplete={noop} onDelete={noop} />);
+
+    // Asteriscos do texto antigo NÃO viram itálico
+    expect(screen.getByText('Calcular 2*3*4')).toBeInTheDocument();
+  });
+
+  it('HTML na descrição aparece como texto, nunca é interpretado', () => {
+    render(<TaskCard task={makeTask({ description: '<img src=x onerror=alert(1)>', descriptionRich: null })} onComplete={noop} onDelete={noop} />);
+
+    expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
+    expect(document.querySelector('img')).toBeNull();
+  });
+
+  it('a prévia quebra palavras longas em vez de estourar o card', () => {
+    render(<TaskCard task={makeTask({ description: 'x'.repeat(500), descriptionRich: null })} onComplete={noop} onDelete={noop} />);
+
+    const container = screen.getByText('x'.repeat(500)).closest('div');
+    expect(container).toHaveClass('[overflow-wrap:anywhere]');
+    expect(container).toHaveClass('whitespace-pre-wrap');
+  });
+
+  it('descrição curta não mostra "ver mais"', () => {
+    const restore = mockOverflow(40, 60);
+    render(<TaskCard task={makeTask({ description: 'curta', descriptionRich: null })} onComplete={noop} onDelete={noop} />);
+
+    expect(screen.queryByRole('button', { name: 'ver mais' })).not.toBeInTheDocument();
+    restore();
+  });
+
+  it('descrição longa mostra "ver mais", que abre o detalhe com o texto inteiro', async () => {
+    const restore = mockOverflow(300, 60);
+    const user = userEvent.setup();
+    render(<TaskCard task={makeTask({ description: 'texto longo', descriptionRich: richDoc })} onComplete={noop} onDelete={noop} />);
+
+    await user.click(screen.getByRole('button', { name: 'ver mais' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Revisar o capítulo 3');
+    expect(dialog).toHaveTextContent('fazer resumo');
+    restore();
+  });
+
+  it('clicar no título abre o detalhe; Esc fecha', async () => {
+    const user = userEvent.setup();
+    render(<TaskCard task={makeTask({ descriptionRich: richDoc, description: 'x' })} onComplete={noop} onDelete={noop} />);
+
+    await user.click(screen.getByRole('button', { name: 'Implementar autenticação' }));
+    expect(screen.getByRole('dialog', { name: 'Implementar autenticação' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('detalhe de tarefa sem descrição avisa "Sem descrição."', async () => {
+    const user = userEvent.setup();
+    render(<TaskCard task={makeTask()} onComplete={noop} onDelete={noop} />);
+
+    await user.click(screen.getByRole('button', { name: 'Implementar autenticação' }));
+    expect(screen.getByText('Sem descrição.')).toBeInTheDocument();
   });
 });

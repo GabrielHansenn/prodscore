@@ -1,4 +1,4 @@
-import { type Task, type TaskDifficulty, type TaskPriority, type Achievement } from '@prodscore/shared';
+import { type Task, type TaskDifficulty, type TaskPriority, type Achievement, type RichTextDoc } from '@prodscore/shared';
 import { api, callApi } from './api.js';
 
 /** Parâmetros de filtro para listagem de tarefas */
@@ -45,7 +45,7 @@ export async function createTask(input: {
   difficulty:        TaskDifficulty;
   priority?:         TaskPriority;
   estimatedMinutes?: number;
-  description?:      string;
+  descriptionRich?:  RichTextDoc | null;
   dueDate?:          string;
   groupId?:          string;
 }): Promise<Task> {
@@ -60,7 +60,7 @@ export async function createTask(input: {
  */
 export async function updateTask(
   id:      string,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate'>>,
+  updates: Partial<Pick<Task, 'title' | 'descriptionRich' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate'>>,
 ): Promise<Task> {
   return callApi(async () => {
     const { data } = await api.patch<{ tarefa: Task }>(`/tasks/${id}`, updates);

@@ -465,7 +465,8 @@ export async function createGroupMission(
     description:  string;
     targetValue:  number;
     rewardPoints: number;
-    expiresAt?:   string;
+    // `| undefined`: o Zod devolve o campo como undefined quando não é enviado
+    expiresAt?:   string | undefined;
   },
   requesterId: string,
 ): Promise<Mission> {

@@ -19,10 +19,11 @@ import request from 'supertest';
 import { TaskDifficulty } from '@prodscore/shared';
 import taskRoutes from '../routes/tasks.routes';
 import { verifySupabaseToken } from '../lib/supabase';
-import { createTask } from '../services/task.service';
+import { createTask, updateTask } from '../services/task.service';
 
 const mockVerifyToken = verifySupabaseToken as jest.Mock;
 const mockCreateTask  = createTask as jest.Mock;
+const mockUpdateTask  = updateTask as jest.Mock;
 
 function buildApp() {
   const app = express();
@@ -176,5 +177,116 @@ describe('POST /tasks', () => {
         expect.objectContaining({ userId: 'user-1', title: validTask.title }),
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Descrição com texto rico
+// ---------------------------------------------------------------------------
+
+describe('descrição com texto rico', () => {
+  const app = buildApp();
+
+  /** Documento com negrito + lista, no formato que o editor envia */
+  const richDoc = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'Revisar', marks: [{ type: 'bold' }] }, { type: 'text', text: ' o capítulo' }] },
+      { type: 'bulletList', content: [
+        { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'resumo' }] }] },
+      ] },
+    ],
+  };
+
+  function send(method: 'post' | 'patch', path: string, body: object) {
+    return request(app)[method](path)
+      .set('Authorization', 'Bearer token-valido')
+      .send(body);
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockVerifyToken.mockResolvedValue({ user: { id: 'user-1' }, error: null });
+    mockCreateTask.mockImplementation(async (input) => ({ id: 'task-1', ...input }));
+    mockUpdateTask.mockImplementation(async (_id, _userId, input) => ({ id: 'task-1', ...input }));
+  });
+
+  it('cria a tarefa com o documento normalizado e a cópia em texto puro', async () => {
+    const res = await send('post', '/tasks', { ...validTask, descriptionRich: richDoc });
+
+    expect(res.status).toBe(201);
+    expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({
+      description:     'Revisar o capítulo\n• resumo',
+      descriptionRich: {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'Revisar', marks: ['bold'] }, { type: 'text', text: ' o capítulo' }] },
+          { type: 'bulletList', content: [
+            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'resumo' }] }] },
+          ] },
+        ],
+      },
+    }));
+  });
+
+  it('descarta conteúdo fora da allowlist (ex: imagem, link) antes de gravar', async () => {
+    const malicioso = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'clique', marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }] }] },
+        { type: 'image', attrs: { src: 'https://evil.example/x.png' } },
+      ],
+    };
+
+    await send('post', '/tasks', { ...validTask, descriptionRich: malicioso });
+
+    expect(mockCreateTask).toHaveBeenCalledWith(expect.objectContaining({
+      descriptionRich: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'clique' }] }] },
+    }));
+  });
+
+  it('recusa descrição com mais de 2000 caracteres de texto', async () => {
+    const longo = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a'.repeat(2001) }] }] };
+
+    const res = await send('post', '/tasks', { ...validTask, descriptionRich: longo });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toBe('A descrição deve ter no máximo 2000 caracteres.');
+    expect(mockCreateTask).not.toHaveBeenCalled();
+  });
+
+  it('aceita texto sem espaços muito longo (dentro do limite) — o layout é que quebra a linha', async () => {
+    const semEspacos = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x'.repeat(2000) }] }] };
+
+    const res = await send('post', '/tasks', { ...validTask, descriptionRich: semEspacos });
+
+    expect(res.status).toBe(201);
+  });
+
+  it('documento vazio na edição limpa as duas colunas', async () => {
+    const vazio = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+    const res = await send('patch', '/tasks/task-1', { descriptionRich: vazio });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdateTask).toHaveBeenCalledWith('task-1', 'user-1', expect.objectContaining({
+      description: null, descriptionRich: null,
+    }));
+  });
+
+  it('cliente antigo (só texto puro) limpa o documento formatado para não ficar desatualizado', async () => {
+    await send('patch', '/tasks/task-1', { description: 'texto novo' });
+
+    expect(mockUpdateTask).toHaveBeenCalledWith('task-1', 'user-1', expect.objectContaining({
+      description: 'texto novo', descriptionRich: null,
+    }));
+  });
+
+  it('edição sem descrição não mexe nas colunas de descrição', async () => {
+    await send('patch', '/tasks/task-1', { title: 'Só o título' });
+
+    const input = mockUpdateTask.mock.calls[0]![2];
+    expect(input.description).toBeUndefined();
+    expect(input.descriptionRich).toBeUndefined();
   });
 });

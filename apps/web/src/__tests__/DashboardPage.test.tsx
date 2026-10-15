@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { TaskDifficulty, TaskStatus, type Task } from '@prodscore/shared';
+import { TaskDifficulty, TaskPriority, TaskStatus, type Task } from '@prodscore/shared';
 
 // ---------------------------------------------------------------------------
 // Dados de teste
@@ -54,13 +54,19 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     groupId:      null,
     title:        'Estudar React',
     description:  null,
+    descriptionRich: null,
     difficulty:   TaskDifficulty.Medium,
     status:       TaskStatus.Pending,
+    priority:     TaskPriority.Medium,
+    estimatedMinutes: null,
+    overdueSince: null,
     dueDate:      todayNoonLocal.toISOString(),
     completedAt:  null,
     pointsEarned: null,
     createdAt:    new Date().toISOString(),
     updatedAt:    new Date().toISOString(),
+    requiresProof: false,
+    hasProof:     false,
     ...overrides,
   };
 }

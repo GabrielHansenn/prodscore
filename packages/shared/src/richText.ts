@@ -173,3 +173,55 @@ export function richTextToPlainText(doc: RichTextDoc): string {
 export function isRichTextEmpty(doc: RichTextDoc): boolean {
   return richTextToPlainText(doc).length === 0;
 }
+
+// ---------------------------------------------------------------------------
+// Descrições (tarefas e grupos)
+// ---------------------------------------------------------------------------
+//
+// Tarefas e grupos guardam a descrição em duas colunas: `description_rich`
+// (documento) e `description` (cópia em texto puro). Registros antigos, de
+// antes do texto rico, só têm o texto puro.
+
+/** Limite da descrição de tarefa, contado sobre o texto puro */
+export const MAX_TASK_DESCRIPTION_LENGTH = 2000;
+
+/** Limite da descrição de grupo (CHECK do banco), contado sobre o texto puro */
+export const MAX_GROUP_DESCRIPTION_LENGTH = 500;
+
+/**
+ * Converte texto puro (descrições antigas, anteriores ao texto rico) num
+ * documento, preservando as quebras de linha: linhas em branco separam
+ * parágrafos e quebras simples ficam dentro do parágrafo como "\n".
+ * Nenhum caractere é interpretado como marcação — o texto aparece igual.
+ *
+ * @returns o documento, ou `null` se o texto estiver vazio
+ */
+export function plainTextToRichText(text: string): RichTextDoc | null {
+  const paragraphs = text
+    .replace(/\r\n/g, '\n')
+    .split(/\n[ \t]*\n/)
+    .map((p) => p.replace(/^\n+|\n+$/g, ''))
+    .filter((p) => p.trim().length > 0);
+
+  if (paragraphs.length === 0) return null;
+
+  return {
+    type: 'doc',
+    content: paragraphs.map((p) => ({ type: 'paragraph', content: [{ type: 'text', text: p }] })),
+  };
+}
+
+/**
+ * Documento a exibir para a descrição de uma tarefa ou grupo. Registros novos
+ * têm `descriptionRich`; os antigos só têm o texto puro em `description`, que
+ * é convertido sem alterar a aparência.
+ *
+ * @returns o documento, ou `null` se não há descrição
+ */
+export function getDescriptionDoc(item: {
+  description: string | null;
+  descriptionRich?: RichTextDoc | null | undefined;
+}): RichTextDoc | null {
+  if (item.descriptionRich) return item.descriptionRich;
+  return item.description ? plainTextToRichText(item.description) : null;
+}

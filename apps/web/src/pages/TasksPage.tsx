@@ -1,10 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { TaskDifficulty, TaskPriority, TaskStatus, validateRequired, type Task, type TaskSuggestion } from '@prodscore/shared';
+import {
+  TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
+  MAX_TASK_DESCRIPTION_LENGTH, type Task, type TaskSuggestion, type RichTextDoc,
+} from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
 import { showToast } from '../store/toastStore.js';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
 import FormFeedback from '../components/FormFeedback.js';
 import TaskCard from '../components/TaskCard.js';
+import RichTextEditor from '../components/RichTextEditor.js';
 import { ClipboardIcon, SparklesIcon } from '../components/icons.js';
 import { getTaskSuggestions } from '../services/behavioral.service.js';
 
@@ -54,7 +58,8 @@ interface TaskModalProps {
     difficulty:        TaskDifficulty;
     priority:          TaskPriority;
     estimatedMinutes?: number;
-    description?:      string;
+    /** null limpa a descrição (edição) */
+    descriptionRich?:  RichTextDoc | null;
     dueDate?:          string;
     requiresProof?:    boolean;
   }) => Promise<void>;
@@ -62,7 +67,8 @@ interface TaskModalProps {
 
 function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const [title,            setTitle]            = useState(task?.title            ?? '');
-  const [description,      setDescription]      = useState(task?.description      ?? '');
+  // Tarefas antigas (texto puro) abrem no editor convertidas, sem mudar a aparência
+  const [description,      setDescription]      = useState<RichTextDoc | null>(() => (task ? getDescriptionDoc(task) : null));
   const [difficulty,       setDifficulty]       = useState<TaskDifficulty>(task?.difficulty ?? TaskDifficulty.Medium);
   const [priority,         setPriority]         = useState<TaskPriority>(task?.priority ?? TaskPriority.Medium);
   const [estimatedMinutes, setEstimatedMinutes] = useState<string>(task?.estimatedMinutes?.toString() ?? '');
@@ -79,10 +85,13 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     e.preventDefault();
     const titleError = validateRequired(title, 'Título');
     if (titleError) { setError(titleError); return; }
+    if (description && richTextToPlainText(description).length > MAX_TASK_DESCRIPTION_LENGTH) {
+      setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      const desc     = description.trim();
       const due      = dueDate ? `${dueDate}T23:59:00.000Z` : undefined;
       const estMins  = estimatedMinutes ? parseInt(estimatedMinutes, 10) : undefined;
       await onSubmit({
@@ -91,7 +100,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
         priority,
         requiresProof,
         ...(estMins  ? { estimatedMinutes: estMins } : {}),
-        ...(desc     ? { description: desc }         : {}),
+        // Na edição sempre envia (null = apagou a descrição); na criação só se preenchida
+        ...(isEdit || description ? { descriptionRich: description } : {}),
         ...(due      ? { dueDate: due }              : {}),
       });
       onClose();
@@ -105,7 +115,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+      {/* max-h + rolagem: o editor de descrição cresce e o modal não pode sair da tela */}
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
         <h2 className="mb-5 text-lg font-semibold text-gray-900">
           {isEdit ? 'Editar Tarefa' : 'Nova Tarefa'}
         </h2>
@@ -131,13 +142,12 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Descrição (opcional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <RichTextEditor
+              initialContent={description}
+              onChange={setDescription}
               disabled={isCompleted}
-              rows={3}
-              placeholder="Descreva o que precisa ser feito..."
-              className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:opacity-50"
+              placeholder="Descrição da tarefa"
+              heightClassName="min-h-[96px] max-h-60"
             />
           </div>
 

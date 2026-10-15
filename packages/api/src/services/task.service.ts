@@ -3,9 +3,11 @@ import {
   TaskPriority,
   TaskStatus,
   PointReason,
+  normalizeRichText,
   type Task,
   type Achievement,
   type LevelReward,
+  type RichTextDoc,
 } from '@prodscore/shared';
 import { applyLatePenalty } from '@prodscore/shared/constants';
 import { supabase } from '../lib/supabase.js';
@@ -30,6 +32,8 @@ interface TaskRow {
   group_id: string | null;
   title: string;
   description: string | null;
+  /** Ausente em consultas que não pedem a coluna (ex: listas de colunas explícitas) */
+  description_rich?: unknown;
   difficulty: string;
   priority: string;
   estimated_minutes: number | null;
@@ -56,6 +60,9 @@ export function mapTaskRow(row: TaskRow): Task {
     groupId:          row.group_id,
     title:            row.title,
     description:      row.description,
+    // Renormaliza na leitura: garante que só sai documento seguro, mesmo que
+    // algo tenha sido gravado direto no banco sem passar pela API
+    descriptionRich:  normalizeRichText(row.description_rich),
     difficulty:       row.difficulty as TaskDifficulty,
     priority:         (row.priority ?? 'medium') as TaskPriority,
     estimatedMinutes: row.estimated_minutes,
@@ -94,7 +101,10 @@ export interface TaskFilters {
 export interface CreateTaskInput {
   userId:            string;
   title:             string;
+  /** Texto puro — quando há descriptionRich, é a versão em texto puro dele */
   description?:      string | undefined;
+  /** Documento já normalizado (ver resolveTaskDescription na rota) */
+  descriptionRich?:  RichTextDoc | null | undefined;
   difficulty:        TaskDifficulty;
   priority?:         TaskPriority | undefined;
   estimatedMinutes?: number | undefined;
@@ -218,6 +228,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
       group_id:          input.groupId          ?? null,
       title:             input.title,
       description:       input.description      ?? null,
+      description_rich:  input.descriptionRich  ?? null,
       difficulty:        input.difficulty,
       priority:          input.priority          ?? TaskPriority.Medium,
       estimated_minutes: input.estimatedMinutes  ?? null,
@@ -245,6 +256,7 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 export interface UpdateTaskInput {
   title?:            string | undefined;
   description?:      string | null | undefined;
+  descriptionRich?:  RichTextDoc | null | undefined;
   difficulty?:       TaskDifficulty | undefined;
   priority?:         TaskPriority | undefined;
   estimatedMinutes?: number | null | undefined;
@@ -297,6 +309,7 @@ export async function updateTask(
   const patch: Record<string, unknown> = {};
   if (updates.title            !== undefined) patch['title']             = updates.title;
   if (updates.description      !== undefined) patch['description']       = updates.description;
+  if (updates.descriptionRich  !== undefined) patch['description_rich']  = updates.descriptionRich;
   if (updates.difficulty       !== undefined) patch['difficulty']        = updates.difficulty;
   if (updates.priority         !== undefined) patch['priority']          = updates.priority;
   if (updates.estimatedMinutes !== undefined) patch['estimated_minutes'] = updates.estimatedMinutes;

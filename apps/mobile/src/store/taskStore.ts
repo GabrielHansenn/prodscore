@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Task, LevelReward, TaskPriority, Achievement } from '@prodscore/shared';
+import type { Task, LevelReward, TaskPriority, Achievement, RichTextDoc } from '@prodscore/shared';
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { api } from '../services/api';
 
@@ -33,7 +33,8 @@ interface CreateTaskInput {
   title:             string;
   difficulty:        TaskDifficulty;
   priority?:         TaskPriority;
-  description?:      string;
+  /** Descrição formatada — a API gera a cópia em texto puro. null limpa (edição) */
+  descriptionRich?:  RichTextDoc | null;
   dueDate?:          string;
   estimatedMinutes?: number;
   groupId?:          string;

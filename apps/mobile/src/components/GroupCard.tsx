@@ -1,14 +1,19 @@
 import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole } from '@prodscore/shared';
+import { MemberRole, getDescriptionDoc, type RichTextDoc } from '@prodscore/shared';
 import { FONT, RADIUS, SPACING, CARD_SHADOW, type ColorPalette } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import RichTextPreview from './RichTextPreview';
+
+/** Altura máxima da prévia da descrição: ~2 linhas de fonte 12 */
+const PREVIEW_MAX_HEIGHT = 36;
 
 export interface GroupCardData {
   id:          string;
   name:        string;
   description: string | null;
+  descriptionRich: RichTextDoc | null;
   imageUrl:    string | null;
   memberCount: number;
   role:        MemberRole;
@@ -39,6 +44,7 @@ export default function GroupCard({ group, onPress }: GroupCardProps) {
   const colors = useThemeColors();
   const styles = useStyles();
   const ROLE_COLORS = getRoleColors(colors);
+  const description = getDescriptionDoc(group);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.iconCircle}>
@@ -50,9 +56,10 @@ export default function GroupCard({ group, onPress }: GroupCardProps) {
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{group.name}</Text>
-        {group.description ? (
-          <Text style={styles.desc} numberOfLines={1}>{group.description}</Text>
-        ) : null}
+        {/* "ver mais" abre o grupo, onde a descrição aparece inteira */}
+        {description && (
+          <RichTextPreview doc={description} maxHeight={PREVIEW_MAX_HEIGHT} onShowMore={onPress} />
+        )}
         <View style={styles.meta}>
           <Text style={styles.members}>
             {group.memberCount} {group.memberCount === 1 ? 'membro' : 'membros'}
@@ -103,10 +110,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
     fontSize:   FONT.base,
     fontWeight: '700',
     color:      colors.text,
-  },
-  desc: {
-    fontSize: FONT.sm,
-    color:    colors.textMuted,
   },
   meta: {
     flexDirection: 'row',

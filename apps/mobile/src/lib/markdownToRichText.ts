@@ -1,96 +1,21 @@
-import type { RichTextDoc, RichTextBlock, RichTextListItem, RichTextMark, RichTextText } from '@prodscore/shared';
-
 /**
- * Converte o texto do compositor mobile para o mesmo documento de texto rico
- * usado pelo editor do web.
+ * Utilitários do compositor de texto rico do mobile.
  *
- * O mobile não tem um WYSIWYG equivalente ao Tiptap sem WebView, então a
- * composição usa marcação leve (a barra de atalhos envolve a seleção):
- *   **negrito**  *itálico*  __sublinhado__  ~~tachado~~  `código`
- *   linhas iniciadas por "- " viram lista com marcadores
- *   linhas iniciadas por "1. " viram lista numerada
- *
- * O resultado é o mesmo formato que o backend valida — a renderização fica
- * idêntica nas duas plataformas.
+ * A conversão marcação ↔ documento mora em @prodscore/shared
+ * (richTextMarkdown.ts) para ser testada e reaproveitada; aqui ficam só as
+ * operações de edição usadas pela barra de atalhos.
  */
 
-interface InlineRule {
-  mark: RichTextMark;
-  regex: RegExp;
-}
+export { markdownToRichText, richTextToMarkdown } from '@prodscore/shared';
 
-// Ordem importa: ** antes de *, senão "**x**" casaria como itálico duplo
-const INLINE_RULES: InlineRule[] = [
-  { mark: 'bold',      regex: /\*\*([^*]+)\*\*/ },
-  { mark: 'underline', regex: /__([^_]+)__/ },
-  { mark: 'strike',    regex: /~~([^~]+)~~/ },
-  { mark: 'code',      regex: /`([^`]+)`/ },
-  { mark: 'italic',    regex: /\*([^*]+)\*/ },
+/** Botões de formatação inline da barra de atalhos (chat e descrição de tarefa) */
+export const FORMAT_BUTTONS: { label: string; wrapper: string; icon: string }[] = [
+  { label: 'Negrito',    wrapper: '**', icon: 'B' },
+  { label: 'Itálico',    wrapper: '*',  icon: 'I' },
+  { label: 'Sublinhado', wrapper: '__', icon: 'U' },
+  { label: 'Tachado',    wrapper: '~~', icon: 'S' },
+  { label: 'Código',     wrapper: '`',  icon: '</>' },
 ];
-
-/** Divide uma linha em trechos com as marcas aplicadas. */
-function parseInline(line: string, inherited: RichTextMark[] = []): RichTextText[] {
-  for (const rule of INLINE_RULES) {
-    const match = rule.regex.exec(line);
-    if (!match || match.index === undefined) continue;
-
-    const before = line.slice(0, match.index);
-    const inner  = match[1] ?? '';
-    const after  = line.slice(match.index + match[0].length);
-
-    return [
-      ...(before ? parseInline(before, inherited) : []),
-      ...parseInline(inner, [...inherited, rule.mark]),
-      ...(after ? parseInline(after, inherited) : []),
-    ];
-  }
-
-  if (line.length === 0) return [];
-  return [inherited.length > 0 ? { type: 'text', text: line, marks: [...inherited] } : { type: 'text', text: line }];
-}
-
-function paragraphFrom(line: string) {
-  const content = parseInline(line);
-  return content.length > 0 ? { type: 'paragraph' as const, content } : { type: 'paragraph' as const };
-}
-
-/** Converte o texto do compositor num documento; `null` se não houver conteúdo. */
-export function markdownToRichText(input: string): RichTextDoc | null {
-  const lines = input.replace(/\r\n/g, '\n').split('\n');
-  const blocks: RichTextBlock[] = [];
-
-  let listType: 'bulletList' | 'orderedList' | null = null;
-  let listItems: RichTextListItem[] = [];
-
-  const flushList = () => {
-    if (listType && listItems.length > 0) blocks.push({ type: listType, content: listItems });
-    listType = null;
-    listItems = [];
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-
-    const bullet  = /^\s*[-*]\s+(.*)$/.exec(line);
-    const ordered = /^\s*\d+\.\s+(.*)$/.exec(line);
-
-    if (bullet || ordered) {
-      const type: 'bulletList' | 'orderedList' = bullet ? 'bulletList' : 'orderedList';
-      const text = (bullet ?? ordered)![1] ?? '';
-      if (listType !== type) flushList();
-      listType = type;
-      listItems.push({ type: 'listItem', content: [paragraphFrom(text)] });
-      continue;
-    }
-
-    flushList();
-    if (line.trim().length > 0) blocks.push(paragraphFrom(line));
-  }
-
-  flushList();
-
-  return blocks.length > 0 ? { type: 'doc', content: blocks } : null;
-}
 
 /**
  * Aplica (ou remove) uma marcação em torno da seleção — usado pelos botões da

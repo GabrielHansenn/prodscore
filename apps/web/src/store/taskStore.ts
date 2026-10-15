@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TaskStatus, TaskDifficulty, TaskPriority, type Task, type Achievement, type LevelReward } from '@prodscore/shared';
+import { TaskStatus, TaskDifficulty, TaskPriority, type Task, type Achievement, type LevelReward, type RichTextDoc } from '@prodscore/shared';
 import { api } from '../services/api.js';
 import { getFriendlyErrorMessage } from '../lib/errors.js';
 
@@ -49,12 +49,15 @@ interface TaskState {
     priority?:         TaskPriority;
     estimatedMinutes?: number;
     dueDate?:          string;
-    description?:      string;
+    descriptionRich?:  RichTextDoc | null;
     groupId?:          string;
     requiresProof?:    boolean;
   }) => Promise<Task>;
-  /** Atualiza campos de uma tarefa localmente e na API */
-  updateTask:    (id: string, updates: Partial<Pick<Task, 'title' | 'description' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate' | 'requiresProof'>>) => Promise<void>;
+  /**
+   * Atualiza campos de uma tarefa localmente e na API. A descrição vai como
+   * `descriptionRich` — a API gera a cópia em texto puro (`description`).
+   */
+  updateTask:    (id: string, updates: Partial<Pick<Task, 'title' | 'descriptionRich' | 'difficulty' | 'priority' | 'estimatedMinutes' | 'status' | 'dueDate' | 'requiresProof'>>) => Promise<void>;
   /** Remove uma tarefa permanentemente */
   deleteTask:    (id: string) => Promise<void>;
   /**
@@ -100,7 +103,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         priority:         input.priority,
         estimatedMinutes: input.estimatedMinutes,
         dueDate:          input.dueDate,
-        description:      input.description,
+        descriptionRich:  input.descriptionRich,
         groupId:          input.groupId,
         requiresProof:    input.requiresProof,
       });
@@ -114,7 +117,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   updateTask: async (id, updates) => {
     const body: Record<string, unknown> = {};
     if (updates.title            !== undefined) body['title']            = updates.title;
-    if (updates.description      !== undefined) body['description']      = updates.description;
+    if (updates.descriptionRich  !== undefined) body['descriptionRich']  = updates.descriptionRich;
     if (updates.difficulty       !== undefined) body['difficulty']       = updates.difficulty;
     if (updates.priority         !== undefined) body['priority']         = updates.priority;
     if (updates.estimatedMinutes !== undefined) body['estimatedMinutes'] = updates.estimatedMinutes;

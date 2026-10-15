@@ -125,8 +125,18 @@ export interface Task {
   groupId: string | null;
   /** Título descritivo da tarefa */
   title: string;
-  /** Descrição detalhada opcional */
+  /**
+   * Descrição em texto puro. Em tarefas novas é uma cópia gerada a partir de
+   * `descriptionRich` (busca, notificações, clientes antigos); em tarefas
+   * criadas antes do texto rico é a única fonte.
+   */
   description: string | null;
+  /**
+   * Descrição formatada (ver richText.ts) — null em tarefas antigas ou sem
+   * descrição. Para exibir, use `getDescriptionDoc(task)`, que cobre os
+   * dois casos.
+   */
+  descriptionRich: RichTextDoc | null;
   /** Nível de dificuldade que define a pontuação base */
   difficulty: TaskDifficulty;
   /** Estado atual da tarefa no ciclo de vida */
@@ -161,8 +171,10 @@ export interface Group {
   id: string;
   /** Nome público do grupo */
   name: string;
-  /** Descrição opcional do grupo */
+  /** Descrição em texto puro (cópia de `descriptionRich`, ou o texto de grupos antigos) */
   description: string | null;
+  /** Descrição formatada — para exibir, use `getDescriptionDoc(group)` */
+  descriptionRich: RichTextDoc | null;
   /** URL da imagem de capa do grupo */
   imageUrl: string | null;
   /** UUID do usuário que criou o grupo (owner) */

@@ -6,7 +6,9 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole, validateRequired } from '@prodscore/shared';
+import {
+  MemberRole, validateRequired, getDescriptionDoc, richTextToPlainText, MAX_GROUP_DESCRIPTION_LENGTH,
+} from '@prodscore/shared';
 import {
   getGroupDetail, getGroupMembers, updateGroupInfo, regenerateInviteCode,
   updateMemberRole, kickMember, leaveGroup, deleteGroup, uploadGroupImage,
@@ -18,6 +20,9 @@ import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
 import InlineFeedback from '../components/InlineFeedback';
 import ImagePickerField from '../components/ImagePickerField';
+import RichText from '../components/RichText';
+import RichTextInput from '../components/RichTextInput';
+import { markdownToRichText, richTextToMarkdown } from '../lib/markdownToRichText';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -32,6 +37,12 @@ const ROLE_LABELS: Record<MemberRole, string> = {
 interface Props {
   route:      { params: AppStackParamList['GroupSettings'] };
   navigation: { goBack: () => void; navigate: (screen: 'Tabs') => void };
+}
+
+/** Descrição salva do grupo na marcação do compositor (ponto de partida da edição) */
+function descriptionText(group: GroupDetails): string {
+  const doc = getDescriptionDoc(group);
+  return doc ? richTextToMarkdown(doc) : '';
 }
 
 /** Tela de configurações do grupo — espelha /grupos/:id/configuracoes no web */
@@ -63,7 +74,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
       if (detailRes.status === 'fulfilled') {
         setGroup(detailRes.value);
         setName(detailRes.value.name);
-        setDesc(detailRes.value.description ?? '');
+        setDesc(descriptionText(detailRes.value));
         setCountExternal(detailRes.value.countExternalTasksInMissions);
       }
       if (memsRes.status === 'fulfilled') setMembers(memsRes.value);
@@ -76,7 +87,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
   const isAdmin = isOwner || myRole === MemberRole.Admin;
   const dirty   = !!group && (
     name !== group.name ||
-    desc !== (group.description ?? '') ||
+    desc !== descriptionText(group) ||
     countExternal !== group.countExternalTasksInMissions ||
     imagePicker.image !== null
   );
@@ -87,6 +98,12 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
     const nameError = validateRequired(name, 'Nome do grupo');
     if (nameError) { setFeedback({ ok: false, msg: nameError }); return; }
 
+    const descDoc = markdownToRichText(desc);
+    if (descDoc && richTextToPlainText(descDoc).length > MAX_GROUP_DESCRIPTION_LENGTH) {
+      setFeedback({ ok: false, msg: `A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.` });
+      return;
+    }
+
     setSaving(true);
     setFeedback(null);
     try {
@@ -96,11 +113,14 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
       }
       const updated = await updateGroupInfo(groupId, {
         name: name.trim(),
-        description: desc.trim() || null,
+        descriptionRich: descDoc,
         countExternalTasksInMissions: countExternal,
         ...(imageUrl !== undefined ? { imageUrl } : {}),
       });
-      setGroup({ ...group, ...updated });
+      const next = { ...group, ...updated };
+      setGroup(next);
+      // Normaliza o campo para o formato salvo — senão espaços extras deixariam o form "sujo"
+      setDesc(descriptionText(next));
       imagePicker.clear();
       setFeedback({ ok: true, msg: 'Informações salvas com sucesso.' });
     } catch (err) {
@@ -243,10 +263,7 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
                 <Text style={styles.fieldLabel}>Nome</Text>
                 <TextInput style={styles.input} value={name} onChangeText={setName} maxLength={100} />
                 <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Descrição</Text>
-                <TextInput
-                  style={[styles.input, { height: 72 }]} value={desc} onChangeText={setDesc}
-                  multiline maxLength={500} placeholder="Opcional" placeholderTextColor={colors.textMuted}
-                />
+                <RichTextInput value={desc} onChangeText={setDesc} placeholder="Opcional" />
                 <View style={{ marginTop: SPACING.md }}>
                   <ImagePickerField
                     label="Imagem do grupo"
@@ -281,7 +298,12 @@ export default function GroupSettingsScreen({ route, navigation }: Props) {
             ) : (
               <>
                 <Text style={styles.readRow}><Text style={styles.readLabel}>Nome: </Text>{group.name}</Text>
-                {group.description ? <Text style={styles.readRow}><Text style={styles.readLabel}>Descrição: </Text>{group.description}</Text> : null}
+                {getDescriptionDoc(group) && (
+                  <View style={{ marginTop: SPACING.xs }}>
+                    <Text style={styles.readLabel}>Descrição:</Text>
+                    <RichText doc={getDescriptionDoc(group)!} />
+                  </View>
+                )}
               </>
             )}
           </View>

@@ -43,15 +43,24 @@ function TextRuns({ nodes, color }: { nodes: RichTextText[]; color?: string }) {
   );
 }
 
-export default function RichText({ doc, color }: { doc: RichTextDoc; color?: string }) {
+interface RichTextProps {
+  doc: RichTextDoc;
+  color?: string;
+  /** Tamanho da fonte — o padrão é FONT.base (chat, detalhe da tarefa) */
+  fontSize?: number;
+}
+
+export default function RichText({ doc, color, fontSize }: RichTextProps) {
   const styles = useStyles();
+  const sizeStyle: TextStyle | null = fontSize ? { fontSize, lineHeight: Math.round(fontSize * 1.45) } : null;
+  const colorStyle: TextStyle | null = color ? { color } : null;
 
   return (
     <View style={styles.container}>
       {doc.content.map((block, i) => {
         if (block.type === 'paragraph') {
           return (
-            <Text key={i} style={[styles.paragraph, color ? { color } : null]}>
+            <Text key={i} style={[styles.paragraph, sizeStyle, colorStyle]}>
               <TextRuns nodes={block.content ?? []} color={color} />
             </Text>
           );
@@ -61,10 +70,11 @@ export default function RichText({ doc, color }: { doc: RichTextDoc; color?: str
           <View key={i} style={styles.list}>
             {block.content.map((item, j) => (
               <View key={j} style={styles.listItem}>
-                <Text style={[styles.bullet, color ? { color } : null]}>
+                <Text style={[styles.bullet, sizeStyle, colorStyle]}>
                   {block.type === 'bulletList' ? '•' : `${j + 1}.`}
                 </Text>
-                <Text style={[styles.paragraph, styles.listItemText, color ? { color } : null]}>
+                {/* flex:1 limita a largura do item — sem isso texto longo sai da tela */}
+                <Text style={[styles.paragraph, styles.listItemText, sizeStyle, colorStyle]}>
                   {item.content.map((p, k) => (
                     <TextRuns key={k} nodes={p.content ?? []} color={color} />
                   ))}

@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { MemberRole, validateRequired, validateInviteCode } from '@prodscore/shared';
+import {
+  MemberRole, validateRequired, validateInviteCode, getDescriptionDoc, richTextToPlainText,
+  MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc,
+} from '@prodscore/shared';
 import { useNavigate } from 'react-router-dom';
 import {
   getGroups,
@@ -12,12 +15,14 @@ import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js'
 import { showToast } from '../store/toastStore.js';
 import FormFeedback from '../components/FormFeedback.js';
 import ImagePickerField from '../components/ImagePickerField.js';
+import RichTextEditor from '../components/RichTextEditor.js';
+import RichTextPreview from '../components/RichTextPreview.js';
 import { UsersIcon, UserIcon, CalendarIcon } from '../components/icons.js';
 
 function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate: (g: GroupWithMeta) => void }) {
   const userId = useAuthStore((s) => s.user?.id);
   const [name,        setName]        = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState<RichTextDoc | null>(null);
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
   const imageUpload = useImageUpload();
@@ -26,6 +31,10 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
     e.preventDefault();
     const nameError = validateRequired(name, 'Nome do grupo');
     if (nameError) { setError(nameError); return; }
+    if (description && richTextToPlainText(description).length > MAX_GROUP_DESCRIPTION_LENGTH) {
+      setError(`A descrição deve ter no máximo ${MAX_GROUP_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -36,10 +45,9 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
         imageUrl = await uploadToAvatarsBucket(userId, imageUpload.file, `group-new-${crypto.randomUUID()}`);
       }
 
-      const desc  = description.trim();
       const grupo = await createGroup({
         name: name.trim(),
-        ...(desc     ? { description: desc } : {}),
+        ...(description ? { descriptionRich: description } : {}),
         ...(imageUrl ? { imageUrl } : {}),
       });
       onCreate({ ...grupo, role: MemberRole.Owner, memberCount: 1 });
@@ -54,7 +62,8 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+      {/* max-h + rolagem: o editor de descrição cresce e o modal não pode sair da tela */}
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
         <h2 className="mb-5 text-lg font-semibold text-gray-900 dark:text-white">Criar Grupo</h2>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
@@ -70,12 +79,10 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Descrição (opcional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+            <RichTextEditor
+              onChange={setDescription}
               placeholder="Do que se trata este grupo?"
-              className="input w-full resize-none"
+              heightClassName="min-h-[96px] max-h-48"
             />
           </div>
           <ImagePickerField
@@ -164,10 +171,17 @@ const ROLE_STYLES: Record<MemberRole, string> = {
 };
 
 function GroupCard({ group, onClick }: { group: GroupWithMeta; onClick: () => void }) {
+  const description = getDescriptionDoc(group);
+
   return (
-    <button
+    // div com role=link (e não <button>): a prévia tem parágrafos/listas e o
+    // próprio botão "ver mais", que não podem ficar dentro de um <button>
+    <div
+      role="link"
+      tabIndex={0}
       onClick={onClick}
-      className="card w-full p-5 text-left transition-shadow hover:shadow-card-hover"
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
+      className="card w-full cursor-pointer p-5 text-left transition-shadow hover:shadow-card-hover"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -178,10 +192,11 @@ function GroupCard({ group, onClick }: { group: GroupWithMeta; onClick: () => vo
               <UsersIcon className="h-5 w-5 text-brand-600" />
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</h3>
-            {group.description && (
-              <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{group.description}</p>
+            {/* "ver mais" leva para a tela do grupo, onde a descrição aparece inteira */}
+            {description && (
+              <RichTextPreview doc={description} onShowMore={onClick} maxHeightClassName="max-h-10" className="mt-0.5" />
             )}
           </div>
         </div>
@@ -199,7 +214,7 @@ function GroupCard({ group, onClick }: { group: GroupWithMeta; onClick: () => vo
           {new Date(group.createdAt).toLocaleDateString('pt-BR')}
         </span>
       </div>
-    </button>
+    </div>
   );
 }
 

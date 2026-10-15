@@ -1,4 +1,4 @@
-import { type Group, MemberRole } from '@prodscore/shared';
+import { type Group, type RichTextDoc, MemberRole } from '@prodscore/shared';
 import { api, callApi } from './api.js';
 import type { MissionWithParticipation } from './mission.service.js';
 
@@ -58,9 +58,10 @@ export async function getGroups(): Promise<GroupWithMeta[]> {
  * Cria um novo grupo e define o criador como owner.
  */
 export async function createGroup(input: {
-  name:         string;
-  description?: string;
-  imageUrl?:    string;
+  name:             string;
+  /** Descrição formatada — a API gera a cópia em texto puro */
+  descriptionRich?: RichTextDoc | null;
+  imageUrl?:        string;
 }): Promise<Group> {
   return callApi(async () => {
     const { data } = await api.post<{ grupo: Group }>('/groups', input);
@@ -117,7 +118,8 @@ export async function updateGroupInfo(
   id: string,
   input: {
     name?: string;
-    description?: string | null;
+    /** null limpa a descrição */
+    descriptionRich?: RichTextDoc | null;
     imageUrl?: string | null;
     countExternalTasksInMissions?: boolean;
   },
