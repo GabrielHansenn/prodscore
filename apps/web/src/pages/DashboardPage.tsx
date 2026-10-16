@@ -12,6 +12,7 @@ import LevelProgress from '../components/LevelProgress.js';
 import StreakBadge from '../components/StreakBadge.js';
 import MissionCard from '../components/MissionCard.js';
 import PointTransactionFeed from '../components/PointTransactionFeed.js';
+import WeeklyGoalCard from '../components/WeeklyGoalCard.js';
 import Modal from '../components/Modal.js';
 import { getDismissedAlertTypes, dismissAlertType } from '../lib/dismissedAlerts.js';
 import ErrorState from '../components/ErrorState.js';
@@ -216,6 +217,9 @@ export default function DashboardPage() {
           <LevelProgress level={stats.level} totalPoints={stats.totalPoints} />
         </div>
       )}
+
+      {/* Meta da semana — gamificação adaptativa (recarrega quando os pontos mudam) */}
+      <WeeklyGoalCard {...(stats ? { refreshKey: stats.totalPoints } : {})} />
 
       {/* Alertas de procrastinação — Mecânica 10 */}
       {visibleAlerts.length > 0 && (

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NotificationType, type Notification } from '@prodscore/shared';
 import { useNotificationStore } from '../store/notificationStore.js';
-import { TrophyIcon, BoltIcon, UsersIcon, ChatIcon, BellIcon } from './icons.js';
+import { TrophyIcon, BoltIcon, UsersIcon, ChatIcon, BellIcon, FlagIcon, RocketIcon } from './icons.js';
 import Spinner from './Spinner.js';
 
 /** Ícone e cor por tipo de notificação */
@@ -11,6 +11,8 @@ const TYPE_STYLES: Record<NotificationType, { icon: (p: { className?: string }) 
   [NotificationType.GroupMessage]:  { icon: UsersIcon,  bg: 'bg-brand-100 dark:bg-brand-900/30', fg: 'text-brand-600 dark:text-brand-400' },
   [NotificationType.Achievement]:   { icon: TrophyIcon, bg: 'bg-amber-100 dark:bg-amber-900/30', fg: 'text-amber-600 dark:text-amber-400' },
   [NotificationType.LevelUp]:       { icon: BoltIcon,   bg: 'bg-lime-100 dark:bg-lime-900/30',   fg: 'text-lime-700 dark:text-lime-400' },
+  [NotificationType.WeeklyGoal]:    { icon: FlagIcon,   bg: 'bg-lime-100 dark:bg-lime-900/30',   fg: 'text-lime-700 dark:text-lime-400' },
+  [NotificationType.Comeback]:      { icon: RocketIcon, bg: 'bg-brand-100 dark:bg-brand-900/30', fg: 'text-brand-600 dark:text-brand-400' },
 };
 
 /** "agora", "há 5 min", "há 2 h", "há 3 d" — datas antigas viram data curta */
@@ -33,6 +35,8 @@ function destinationFor(n: Notification): string | null {
     case NotificationType.GroupMessage:  return n.entityId ? `/grupos/${n.entityId}?aba=chat` : '/grupos';
     case NotificationType.Achievement:   return '/conquistas';
     case NotificationType.LevelUp:       return '/estatisticas';
+    case NotificationType.WeeklyGoal:    return '/estatisticas';
+    case NotificationType.Comeback:      return '/dashboard';
   }
 }
 

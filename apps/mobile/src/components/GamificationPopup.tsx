@@ -61,6 +61,15 @@ function XpCard({
         </View>
       ))}
 
+      {payload.extraBonus?.map((b, i) => (
+        <View key={`extra-${i}`} style={styles.missionRow}>
+          <Ionicons name="sparkles" size={13} color={colors.limeText} />
+          <Text style={styles.missionText} numberOfLines={1}>
+            {b.label} <Text style={styles.missionPts}>+{b.points} pts</Text>
+          </Text>
+        </View>
+      ))}
+
       {showLevelUp && (
         <View style={styles.levelUpBanner}>
           <Ionicons name="star" size={14} color="#fff" />

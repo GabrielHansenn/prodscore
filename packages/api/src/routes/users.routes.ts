@@ -17,6 +17,7 @@ import {
   getTaskSuggestions,
   getProcrastinationAlerts,
 } from '../services/behavioral.service.js';
+import { getWeeklyGoalProgress, getWeeklyGoalHistory } from '../services/adaptive.service.js';
 
 const router = Router();
 
@@ -310,6 +311,44 @@ router.get('/me/behavioral-profile', authGuard, async (req, res) => {
     return res.status(200).json({ perfilComportamental: profile });
   } catch (err) {
     return sendError(res, err, '[usuarios/GET/me/behavioral-profile]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /users/me/weekly-goal — gamificação adaptativa
+// ---------------------------------------------------------------------------
+
+/**
+ * Meta semanal personalizada da semana atual, com o progresso.
+ * Na primeira consulta da semana a meta é calculada a partir do histórico
+ * do usuário e gravada (ver adaptive.service.ts).
+ */
+router.get('/me/weekly-goal', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const meta = await getWeeklyGoalProgress(user.id);
+    return res.status(200).json({ meta });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/GET/me/weekly-goal]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /users/me/weekly-goals/history
+// ---------------------------------------------------------------------------
+
+/**
+ * Últimas metas semanais (a atual primeiro), batidas ou não, com quantas
+ * tarefas foram concluídas em cada semana. Query: limite (1–26, padrão 8).
+ */
+router.get('/me/weekly-goals/history', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const limite = Math.min(26, Math.max(1, parseInt(String(req.query['limite'] ?? '8'), 10) || 8));
+    const metas  = await getWeeklyGoalHistory(user.id, limite);
+    return res.status(200).json({ metas });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/GET/me/weekly-goals/history]');
   }
 });
 

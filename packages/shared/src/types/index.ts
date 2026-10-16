@@ -49,6 +49,8 @@ export enum PointReason {
   AchievementBonus = 'achievement_bonus',
   FreezeShop       = 'freeze_shop',
   LevelReward      = 'level_reward',
+  WeeklyGoalReward = 'weekly_goal_reward',
+  ComebackBonus    = 'comeback_bonus',
 }
 
 /** Papel (função) de um membro dentro de um grupo */
@@ -284,6 +286,8 @@ export enum NotificationType {
   GroupMessage  = 'group_message',
   Achievement   = 'achievement',
   LevelUp       = 'level_up',
+  WeeklyGoal    = 'weekly_goal',
+  Comeback      = 'comeback',
 }
 
 /** Notificação exibida na central (sino) */
@@ -586,4 +590,46 @@ export interface ConsentRecord {
   version: string;
   /** Timestamp ISO 8601 de quando o consentimento foi registrado */
   consentedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Gamificação adaptativa — meta semanal personalizada
+// ---------------------------------------------------------------------------
+
+/** Regra que definiu o fator da meta da semana (espelha weekly_goals.reason) */
+export enum WeeklyGoalReason {
+  /** Menos de 2 semanas completas de conta: meta padrão */
+  NewUser   = 'new_user',
+  /** Fator padrão sobre a média */
+  Default   = 'default',
+  /** Bateu as 2 últimas metas: fator de desafio */
+  Challenge = 'challenge',
+  /** Não bateu a meta da semana anterior: fator 1,0 */
+  Recovery  = 'recovery',
+  /** Tag procrastinador ou iniciante limitou o fator */
+  Capped    = 'capped',
+}
+
+/** Meta de tarefas concluídas de um usuário em uma semana (segunda 00:00 UTC) */
+export interface WeeklyGoal {
+  id: string;
+  /** Segunda-feira da semana, AAAA-MM-DD (UTC) */
+  weekStart: string;
+  /** Tarefas a concluir na semana */
+  target: number;
+  /** Média semanal usada no cálculo (0 para meta padrão) */
+  baseAverage: number;
+  /** Fator aplicado sobre a média */
+  factor: number;
+  reason: WeeklyGoalReason;
+  /** Bônus creditado ao bater a meta */
+  rewardPoints: number;
+  /** Quando a meta foi batida — null se ainda não foi */
+  achievedAt: string | null;
+}
+
+/** Meta da semana com o progresso atual (GET /users/me/weekly-goal e histórico) */
+export interface WeeklyGoalProgress extends WeeklyGoal {
+  /** Tarefas concluídas na semana da meta */
+  completed: number;
 }

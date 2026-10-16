@@ -13,6 +13,8 @@ const REASON_LABELS: Record<PointReason, string> = {
   [PointReason.AchievementBonus]: 'Conquista desbloqueada',
   [PointReason.FreezeShop]:       'Compra de freeze',
   [PointReason.LevelReward]:      'Recompensa de nível',
+  [PointReason.WeeklyGoalReward]: 'Meta da semana batida',
+  [PointReason.ComebackBonus]:    'Bônus de retomada',
 };
 
 type IconComponent = React.FC<{ className?: string }>;
@@ -25,6 +27,8 @@ const REASON_ICONS: Record<PointReason, IconComponent> = {
   [PointReason.AchievementBonus]: TrophyIcon,
   [PointReason.FreezeShop]:       SnowflakeIcon,
   [PointReason.LevelReward]:      RocketIcon,
+  [PointReason.WeeklyGoalReward]: FlagIcon,
+  [PointReason.ComebackBonus]:    RocketIcon,
 };
 
 const REASON_ICON_COLORS: Record<PointReason, string> = {
@@ -35,6 +39,8 @@ const REASON_ICON_COLORS: Record<PointReason, string> = {
   [PointReason.AchievementBonus]: 'text-amber-500 dark:text-amber-400',
   [PointReason.FreezeShop]:       'text-blue-500 dark:text-blue-400',
   [PointReason.LevelReward]:      'text-brand-500 dark:text-brand-400',
+  [PointReason.WeeklyGoalReward]: 'text-lime-600 dark:text-lime-400',
+  [PointReason.ComebackBonus]:    'text-brand-500 dark:text-brand-400',
 };
 
 export default function PointTransactionFeed({ transactions }: PointTransactionFeedProps) {

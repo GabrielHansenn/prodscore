@@ -17,6 +17,8 @@ const REASON_LABELS: Record<PointReason, string> = {
   [PointReason.AchievementBonus]: 'Conquista desbloqueada',
   [PointReason.FreezeShop]:       'Compra de freeze',
   [PointReason.LevelReward]:      'Recompensa de nível',
+  [PointReason.WeeklyGoalReward]: 'Meta da semana batida',
+  [PointReason.ComebackBonus]:    'Bônus de retomada',
 };
 
 const REASON_ICONS: Record<PointReason, keyof typeof Ionicons.glyphMap> = {
@@ -27,6 +29,8 @@ const REASON_ICONS: Record<PointReason, keyof typeof Ionicons.glyphMap> = {
   [PointReason.AchievementBonus]: 'trophy',
   [PointReason.FreezeShop]:       'snow',
   [PointReason.LevelReward]:      'flash',
+  [PointReason.WeeklyGoalReward]: 'flag',
+  [PointReason.ComebackBonus]:    'rocket',
 };
 
 function getReasonColors(colors: ColorPalette): Record<PointReason, string> {
@@ -38,6 +42,8 @@ function getReasonColors(colors: ColorPalette): Record<PointReason, string> {
     [PointReason.AchievementBonus]: colors.amber,
     [PointReason.FreezeShop]:       colors.blue,
     [PointReason.LevelReward]:      colors.primary,
+    [PointReason.WeeklyGoalReward]: colors.limeText,
+    [PointReason.ComebackBonus]:    colors.primary,
   };
 }
 

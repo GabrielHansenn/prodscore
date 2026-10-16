@@ -8,6 +8,8 @@ interface CompletionGamificationResult {
   subidoDeNivel: boolean;
   missoesConcluidas?: Array<{ titulo: string; pontosGanhos: number }>;
   novasConquistas?:   Achievement[];
+  bonusRetomada?:     { pontosGanhos: number; diasInativo: number } | null;
+  metaSemanal?:       { pontosGanhos: number; meta: number } | null;
 }
 
 /**
@@ -38,6 +40,16 @@ export async function refreshStatsAndShowXpGain(result: CompletionGamificationRe
     points: m.pontosGanhos,
   }));
 
+  // Gamificação adaptativa: bônus em transações separadas dos pontos da tarefa
+  const extraBonus = [
+    ...(result.bonusRetomada
+      ? [{ label: 'Bônus de retomada (+50%)', points: result.bonusRetomada.pontosGanhos }]
+      : []),
+    ...(result.metaSemanal
+      ? [{ label: `Meta da semana batida (${result.metaSemanal.meta} tarefas)`, points: result.metaSemanal.pontosGanhos }]
+      : []),
+  ];
+
   showXpGain({
     points:              result.pontosGanhos,
     previousLevel,
@@ -46,6 +58,7 @@ export async function refreshStatsAndShowXpGain(result: CompletionGamificationRe
     newTotalPoints,
     leveledUp: result.subidoDeNivel || newLevel > previousLevel,
     ...(missionBonus.length > 0 ? { missionBonus } : {}),
+    ...(extraBonus.length > 0 ? { extraBonus } : {}),
   });
 
   for (const achievement of result.novasConquistas ?? []) {

@@ -27,6 +27,8 @@ export interface CompleteTaskResult {
   marcoStreak:       boolean;
   recompensaNivel:   LevelReward | null;
   missoesConcluidas?: CompletedMissionInfo[];
+  bonusRetomada?:     { pontosGanhos: number; diasInativo: number } | null;
+  metaSemanal?:       { pontosGanhos: number; meta: number } | null;
   novasConquistas?:   Achievement[];
 }
 

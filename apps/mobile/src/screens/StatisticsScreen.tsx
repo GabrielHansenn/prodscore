@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import StatisticsContent from '../components/StatisticsContent';
+import WeeklyGoalHistory from '../components/WeeklyGoalHistory';
 import { FONT, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -40,6 +41,7 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <StatisticsContent stats={stats} />
+          <WeeklyGoalHistory />
         </ScrollView>
       )}
     </View>

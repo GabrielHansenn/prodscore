@@ -344,6 +344,12 @@ router.patch('/:id/complete', authGuard, async (req, res) => {
         titulo:       m.title,
         pontosGanhos: m.rewardPoints,
       })),
+      bonusRetomada: result.comebackBonus
+        ? { pontosGanhos: result.comebackBonus.bonusPoints, diasInativo: result.comebackBonus.daysInactive }
+        : null,
+      metaSemanal: result.weeklyGoalReward
+        ? { pontosGanhos: result.weeklyGoalReward.rewardPoints, meta: result.weeklyGoalReward.target }
+        : null,
     });
   } catch (err) {
     return sendError(res, err, '[tarefas/complete]');

@@ -13,6 +13,13 @@ export interface XpGainPayload {
   newTotalPoints:      number;
   leveledUp:           boolean;
   missionBonus?:       XpMissionBonus[];
+  /** Bônus da gamificação adaptativa (meta semanal, retomada) — já com o texto pronto */
+  extraBonus?:         XpExtraBonus[];
+}
+
+export interface XpExtraBonus {
+  label:  string;
+  points: number;
 }
 
 export interface AchievementPayload {

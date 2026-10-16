@@ -20,6 +20,7 @@ import LevelBar  from '../components/LevelBar';
 import TaskItem  from '../components/TaskItem';
 import StreakBadge from '../components/StreakBadge';
 import PointTransactionFeed from '../components/PointTransactionFeed';
+import WeeklyGoalCard from '../components/WeeklyGoalCard';
 import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
@@ -164,6 +165,9 @@ export default function DashboardScreen() {
             <LevelBar level={stats.level} totalPoints={stats.totalPoints} />
           </View>
         )}
+
+        {/* Meta da semana — gamificação adaptativa (recarrega quando os pontos mudam) */}
+        <WeeklyGoalCard {...(stats ? { refreshKey: stats.totalPoints } : {})} />
 
         {/* Tarefas de hoje */}
         <View style={styles.section}>

@@ -38,3 +38,19 @@ export function endOfLocalDayISO(dateKey: string): string | null {
 export function isLocalToday(iso: string, now: Date = new Date()): boolean {
   return localDateKey(new Date(iso)) === localDateKey(now);
 }
+
+/**
+ * Segunda-feira 00:00 UTC da semana de `date` — o mesmo recorte do ranking
+ * semanal (date_trunc('week', now() AT TIME ZONE 'UTC')) e da meta semanal.
+ */
+export function utcWeekStart(date: Date = new Date()): Date {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const daysSinceMonday = (start.getUTCDay() + 6) % 7;
+  start.setUTCDate(start.getUTCDate() - daysSinceMonday);
+  return start;
+}
+
+/** utcWeekStart no formato AAAA-MM-DD (coluna weekly_goals.week_start) */
+export function utcWeekStartKey(date: Date = new Date()): string {
+  return utcWeekStart(date).toISOString().slice(0, 10);
+}

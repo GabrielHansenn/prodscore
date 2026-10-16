@@ -62,6 +62,18 @@ function XpCard({
         </div>
       )}
 
+      {payload.extraBonus && payload.extraBonus.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {payload.extraBonus.map((b, i) => (
+            <p key={i} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <SparklesIcon className="h-3.5 w-3.5 shrink-0 text-lime-500" />
+              {b.label}
+              <span className="font-medium text-amber-600 dark:text-amber-400">+{b.points} pts</span>
+            </p>
+          ))}
+        </div>
+      )}
+
       {showLevelUp && (
         <div className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-lime-500 px-3 py-1.5 text-sm font-bold text-white animate-pulse">
           <StarIcon className="h-4 w-4" />

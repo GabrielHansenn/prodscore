@@ -28,6 +28,8 @@ const REASON_LABELS: Record<string, string> = {
   achievement_bonus: 'Bônus de conquista',
   freeze_shop:       'Compra de freeze',
   level_reward:      'Recompensa de nível',
+  weekly_goal_reward: 'Meta da semana batida',
+  comeback_bonus:    'Bônus de retomada',
 };
 
 function LevelProgressBar({ level, totalPoints }: { level: number; totalPoints: number }) {

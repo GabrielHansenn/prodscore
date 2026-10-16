@@ -25,6 +25,8 @@ const TYPE_ICONS: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   [NotificationType.GroupMessage]:  'people',
   [NotificationType.Achievement]:   'trophy',
   [NotificationType.LevelUp]:       'flash',
+  [NotificationType.WeeklyGoal]:    'flag',
+  [NotificationType.Comeback]:      'rocket',
 };
 
 function getTypeColors(colors: ColorPalette): Record<NotificationType, string> {
@@ -33,6 +35,8 @@ function getTypeColors(colors: ColorPalette): Record<NotificationType, string> {
     [NotificationType.GroupMessage]:  colors.primary,
     [NotificationType.Achievement]:   colors.amber,
     [NotificationType.LevelUp]:       colors.limeText,
+    [NotificationType.WeeklyGoal]:    colors.limeText,
+    [NotificationType.Comeback]:      colors.primary,
   };
 }
 
@@ -84,7 +88,12 @@ export default function NotificationsScreen({ navigation }: Props) {
         navigation.navigate('Achievements');
         break;
       case NotificationType.LevelUp:
+      case NotificationType.WeeklyGoal:
         navigation.navigate('Statistics');
+        break;
+      case NotificationType.Comeback:
+        // A central abre pelo sino do Início — voltar leva de volta para lá
+        navigation.goBack();
         break;
     }
   };

@@ -48,6 +48,8 @@ const REASON_LABELS: Record<string, string> = {
   achievement_bonus: 'Bônus de conquista',
   freeze_shop:       'Compra de freeze',
   level_reward:      'Recompensa de nível',
+  weekly_goal_reward: 'Meta da semana batida',
+  comeback_bonus:    'Bônus de retomada',
 };
 
 const PROFILE_META: Record<BehavioralProfileType, { emoji: string; label: string; description: string }> = {

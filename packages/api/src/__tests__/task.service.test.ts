@@ -6,11 +6,14 @@
 
 jest.mock('../lib/supabase');
 jest.mock('../services/mission.service'); // aguardado no completeTask — mock simula "nenhuma missão concluída"
+// Gamificação adaptativa tem testes próprios (adaptive.service.test.ts) — aqui simula "nenhum bônus"
+jest.mock('../services/adaptive.service');
 
 import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
 import { completeTask, createTask } from '../services/task.service';
 import { supabase } from '../lib/supabase';
 import { checkMissionProgress } from '../services/mission.service';
+import { getLastCompletionAt, checkComebackBonus, checkWeeklyGoal } from '../services/adaptive.service';
 
 const mockFrom = supabase.from as jest.Mock;
 const mockRpc  = supabase.rpc  as jest.Mock;
@@ -162,6 +165,10 @@ describe('completeTask', () => {
       completedMissions:    [],
       unlockedAchievements: [],
     });
+    // Caso neutro da gamificação adaptativa: sem conclusão anterior, nenhum bônus
+    (getLastCompletionAt as jest.Mock).mockResolvedValue(null);
+    (checkComebackBonus  as jest.Mock).mockResolvedValue(null);
+    (checkWeeklyGoal     as jest.Mock).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -219,6 +226,43 @@ describe('completeTask', () => {
     const result = await completeTask(taskId, userId);
 
     expect(result.pointsEarned).toBe(22);
+  });
+
+  describe('gamificação adaptativa', () => {
+    it('repassa a última conclusão (lida antes desta tarefa) e os pontos da tarefa ao bônus de retomada', async () => {
+      const lastCompletion = new Date(NOW.getTime() - 4 * 86_400_000);
+      (getLastCompletionAt as jest.Mock).mockResolvedValue(lastCompletion);
+      setupCompleteMocks({ taskData: pendingTaskRow(), pointsEarned: 25, streak: 1, level: 1, totalPoints: 25 });
+
+      await completeTask(taskId, userId);
+
+      expect(checkComebackBonus).toHaveBeenCalledWith(userId, taskId, 25, lastCompletion, NOW);
+      expect(checkWeeklyGoal).toHaveBeenCalledWith(userId, NOW);
+    });
+
+    it('inclui os bônus no resultado sem alterar a pontuação base da tarefa', async () => {
+      (checkComebackBonus as jest.Mock).mockResolvedValue({ bonusPoints: 12, daysInactive: 4 });
+      (checkWeeklyGoal    as jest.Mock).mockResolvedValue({ target: 5, rewardPoints: 50 });
+      setupCompleteMocks({ taskData: pendingTaskRow(), pointsEarned: 25, streak: 1, level: 1, totalPoints: 87 });
+
+      const result = await completeTask(taskId, userId);
+
+      expect(result.pointsEarned).toBe(25);
+      expect(result.comebackBonus).toEqual({ bonusPoints: 12, daysInactive: 4 });
+      expect(result.weeklyGoalReward).toEqual({ target: 5, rewardPoints: 50 });
+    });
+
+    it('uma falha na gamificação adaptativa não impede a conclusão da tarefa', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      (checkWeeklyGoal as jest.Mock).mockRejectedValue(new Error('banco fora do ar'));
+      setupCompleteMocks({ taskData: pendingTaskRow(), pointsEarned: 25, streak: 1, level: 1, totalPoints: 25 });
+
+      const result = await completeTask(taskId, userId);
+      consoleSpy.mockRestore();
+
+      expect(result.task.status).toBe(TaskStatus.Completed);
+      expect(result.weeklyGoalReward).toBeNull();
+    });
   });
 
   it('deve lançar erro quando a tarefa não existe ou não pertence ao usuário', async () => {

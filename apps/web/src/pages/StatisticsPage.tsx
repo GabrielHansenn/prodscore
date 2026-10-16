@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useUserStore } from '../store/userStore.js';
 import StatisticsContent from '../components/StatisticsContent.js';
+import WeeklyGoalHistory from '../components/WeeklyGoalHistory.js';
 import ErrorState from '../components/ErrorState.js';
 import Spinner from '../components/Spinner.js';
 
@@ -27,7 +28,10 @@ export default function StatisticsPage() {
           <Spinner size="md" />
         </div>
       ) : (
-        <StatisticsContent stats={stats} />
+        <div className="space-y-8">
+          <StatisticsContent stats={stats} />
+          <WeeklyGoalHistory />
+        </div>
       )}
     </div>
   );

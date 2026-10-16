@@ -21,6 +21,13 @@ import {
 } from './gamification.service.js';
 import { checkMissionProgress, type CompletedMissionInfo } from './mission.service.js';
 import { purgeProofFileForTask } from './proof.service.js';
+import {
+  getLastCompletionAt,
+  checkComebackBonus,
+  checkWeeklyGoal,
+  type ComebackBonusResult,
+  type WeeklyGoalRewardResult,
+} from './adaptive.service.js';
 
 // ---------------------------------------------------------------------------
 // Tipos internos (linha do banco em snake_case)
@@ -139,6 +146,10 @@ export interface CompleteTaskResult {
   levelReward:      LevelReward | null;
   /** Missões concluídas como efeito desta tarefa (vazio se nenhuma) */
   completedMissions: CompletedMissionInfo[];
+  /** Bônus de retomada concedido nesta conclusão (null se não se aplicou) */
+  comebackBonus:    ComebackBonusResult | null;
+  /** Bônus da meta semanal, se esta tarefa fez o usuário batê-la (null se não) */
+  weeklyGoalReward: WeeklyGoalRewardResult | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -487,6 +498,10 @@ export async function completeTask(
 
   const completedAt = now.toISOString();
 
+  // Última conclusão ANTES desta tarefa — base do bônus de retomada (passo 7b).
+  // Precisa ser lida antes do passo 5, que marca esta tarefa como concluída.
+  const previousCompletedAt = await bestEffort('última conclusão', () => getLastCompletionAt(userId), null);
+
   // ── Passo 4: transação de pontos ──────────────────────────────────────────
 
   await recordTransaction(
@@ -536,6 +551,15 @@ export async function completeTask(
 
   const streakResult   = await updateStreak(userId);
   const missionResult  = await checkMissionProgress(userId);
+
+  // 7b/7c. Gamificação adaptativa (adaptive.service) — bônus em transações
+  // separadas, sem mexer em pointsEarned. Vêm antes de checkAchievements e
+  // checkLevelUp para que esses pontos já contem no nível. Como as missões,
+  // uma falha aqui não impede a conclusão da tarefa.
+  const comebackBonus    = await bestEffort('bônus de retomada', () =>
+    checkComebackBonus(userId, taskId, pointsEarned, previousCompletedAt, now), null);
+  const weeklyGoalReward = await bestEffort('meta semanal', () => checkWeeklyGoal(userId, now), null);
+
   const achievementsAfterMissions = await checkAchievements(userId);
   const levelResult    = await checkLevelUp(userId);
 
@@ -561,5 +585,17 @@ export async function completeTask(
     freezeUsed:       streakResult.freezeUsed,
     levelReward:      levelResult.levelReward,
     completedMissions: missionResult.completedMissions,
+    comebackBonus,
+    weeklyGoalReward,
   };
+}
+
+/** Executa um passo opcional da gamificação; em caso de erro registra no log e devolve o fallback */
+async function bestEffort<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`[tarefas] Erro no passo opcional (${label}):`, err);
+    return fallback;
+  }
 }

@@ -33,6 +33,8 @@ export interface CompleteTaskApiResult {
   freezeUsado?:      boolean;
   recompensaNivel?:  LevelReward | null;
   missoesConcluidas?: CompletedMissionInfo[];
+  bonusRetomada?:     { pontosGanhos: number; diasInativo: number } | null;
+  metaSemanal?:       { pontosGanhos: number; meta: number } | null;
 }
 
 interface TaskState {
