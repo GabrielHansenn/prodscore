@@ -157,7 +157,8 @@ export default function RankingScreen() {
     setIsRefreshing(true);
     try {
       await api.post('/ranking/refresh');
-      const data = await fetchTab(tab);
+      // O card de posição vem das stats — recarrega junto para bater com a tabela
+      const [data] = await Promise.all([fetchTab(tab), fetchStats()]);
       setRows(data.rows);
       setTotalAmigos(data.totalAmigos);
     } catch {

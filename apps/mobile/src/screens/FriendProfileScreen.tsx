@@ -52,7 +52,7 @@ export default function FriendProfileScreen({ route, navigation }: Props) {
           <Text style={styles.headerTitle} numberOfLines={1}>{user?.username ?? username}</Text>
           {data && (
             <Text style={styles.headerSub}>
-              Nível {data.usuario.level} · #{data.estatisticas.rankPosition} no ranking
+              Nível {data.usuario.level} · #{data.estatisticas.rankPosition > 0 ? data.estatisticas.rankPosition : '–'} no ranking
             </Text>
           )}
         </View>

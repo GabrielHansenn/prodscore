@@ -180,7 +180,7 @@ export default function DashboardPage() {
           label="Total de Pontos"
           loading={!stats}
           value={(stats?.totalPoints ?? 0).toLocaleString('pt-BR')}
-          sub={`#${stats?.rankPosition ?? '–'} no ranking`}
+          sub={`#${stats && stats.rankPosition > 0 ? stats.rankPosition : '–'} no ranking`}
           accent="text-brand-500"
           glow="stat-card-glow-purple"
         />

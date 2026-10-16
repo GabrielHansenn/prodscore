@@ -20,6 +20,7 @@ import { createGroupMission, type MissionWithParticipation } from '../services/m
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTaskStore } from '../store/taskStore';
+import { subscribeGroupLiveUpdates } from '../lib/realtime';
 import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
 import TaskFormModal from '../components/TaskFormModal';
@@ -93,6 +94,33 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   };
 
   useEffect(() => { void load(true); }, [groupId]);
+
+  // Tempo real: outro membro concluiu tarefa, missão avançou, pontos mudaram →
+  // recarrega só ranking e missões. Refaz a assinatura se membros/missões mudam.
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const membersKey  = members.map((m) => m.userId).sort().join(',');
+  const missionsKey = missions.map((m) => m.id).sort().join(',');
+  useEffect(() => {
+    if (!accessToken) return undefined;
+    const reloadRankingAndMissions = async () => {
+      const [rankRes, missRes] = await Promise.allSettled([getGroupRanking(groupId), getGroupMissions(groupId)]);
+      if (rankRes.status === 'fulfilled') setRanking(rankRes.value);
+      if (missRes.status === 'fulfilled') setMissions(missRes.value);
+      // Falha numa atualização em segundo plano não troca a tela por erro — fica o último dado
+    };
+    try {
+      return subscribeGroupLiveUpdates(
+        groupId,
+        accessToken,
+        membersKey  ? membersKey.split(',')  : [],
+        missionsKey ? missionsKey.split(',') : [],
+        () => void reloadRankingAndMissions(),
+      );
+    } catch (err) {
+      console.warn('[GroupDetail] Realtime indisponível:', err);
+      return undefined;
+    }
+  }, [groupId, accessToken, membersKey, missionsKey]);
   const { refreshing, onRefresh } = usePullToRefresh(() => load());
 
   const myRole  = group?.role;

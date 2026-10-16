@@ -163,3 +163,62 @@ export function subscribeGroupMessages(
     void supabase.removeChannel(channel);
   };
 }
+
+/** Espera esse tempo sem novos eventos antes de recarregar (uma conclusão gera vários) */
+export const GROUP_LIVE_DEBOUNCE_MS = 500;
+
+/** Limite de valores do filtro `in` do Realtime */
+const MAX_IN_FILTER_VALUES = 100;
+
+function inFilter(column: string, ids: string[]): string {
+  return `${column}=in.(${ids.slice(0, MAX_IN_FILTER_VALUES).join(',')})`;
+}
+
+/**
+ * Atualização em tempo real da tela de detalhe do grupo (ranking e missões) —
+ * espelha o useGroupLiveUpdates do web.
+ *
+ * Assina INSERT/UPDATE de tasks e missions do grupo, mission_participants das
+ * missões do grupo e profiles dos membros (pontos/sequência mudam o ranking).
+ * O payload é só gatilho: depois de GROUP_LIVE_DEBOUNCE_MS sem novos eventos,
+ * `onChange` recarrega pela API. O RLS (migration 027) garante que só membros
+ * recebem. Devolve a função que encerra a assinatura.
+ */
+export function subscribeGroupLiveUpdates(
+  groupId: string,
+  accessToken: string,
+  memberIds: string[],
+  missionIds: string[],
+  onChange: () => void,
+): () => void {
+  const supabase = getClient();
+  supabase.realtime.setAuth(accessToken);
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const schedule = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      onChange();
+    }, GROUP_LIVE_DEBOUNCE_MS);
+  };
+
+  let channel: RealtimeChannel = supabase.channel(`group_live:${groupId}:${Math.random().toString(36).slice(2)}`);
+  for (const event of ['INSERT', 'UPDATE'] as const) {
+    channel = channel
+      .on('postgres_changes', { event, schema: 'public', table: 'tasks',    filter: `group_id=eq.${groupId}` }, schedule)
+      .on('postgres_changes', { event, schema: 'public', table: 'missions', filter: `group_id=eq.${groupId}` }, schedule);
+    if (missionIds.length > 0) {
+      channel = channel.on('postgres_changes', { event, schema: 'public', table: 'mission_participants', filter: inFilter('mission_id', missionIds) }, schedule);
+    }
+  }
+  if (memberIds.length > 0) {
+    channel = channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: inFilter('id', memberIds) }, schedule);
+  }
+  channel.subscribe();
+
+  return () => {
+    if (timer) clearTimeout(timer);
+    void supabase.removeChannel(channel);
+  };
+}

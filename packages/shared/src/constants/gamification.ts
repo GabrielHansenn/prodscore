@@ -36,6 +36,20 @@ export const LATE_PENALTY_MULTIPLIER = 0.30;
 export const ON_TIME_BONUS_MULTIPLIER = 0.20;
 
 /**
+ * Pesos da pontuação multifatorial do ranking (global e de grupo):
+ *   score = total_points × 0,5 + (streak × 10) × 0,3 + consistência × 0,2
+ * O ranking global calcula a mesma fórmula em SQL (ranking_global_mv,
+ * migration 012) — mudar aqui exige mudar lá também.
+ */
+export const RANKING_SCORE_WEIGHTS = {
+  points:           0.5,
+  streak:           0.3,
+  /** Cada dia de sequência vale 10 "pontos" antes do peso */
+  streakDayValue:   10,
+  consistency:      0.2,
+} as const;
+
+/**
  * Marcos de streak (dias consecutivos) que concedem bônus de pontos ao usuário.
  * Ao atingir exatamente um desses valores, o usuário ganha STREAK_MILESTONE_BONUS pontos extras.
  */

@@ -26,7 +26,10 @@ export interface ComputedStats {
   tasksCompletedThisWeek: number;
   consistencyRate:        number;
   pointsThisWeek:         number;
+  /** Posição na tabela do ranking global; 0 = ainda não entrou na view */
   rankPosition:           number;
+  /** Pontuação multifatorial do ranking global (null = ainda não entrou na view) */
+  rankScore:              number | null;
   achievementsCount:      number;
   activeMissions:         ActiveMissionSummary[];
 }
@@ -45,7 +48,9 @@ export interface ComputedStats {
  * - tasks_completed_this_week: concluídas na semana atual (seg–dom, UTC)
  * - consistency_rate:          (concluídas / criadas nos últimos 30 dias) × 100
  * - points_this_week:          pontos ganhos na semana atual (só transações positivas)
- * - rank_position:             posição no ranking global por total_points
+ * - rank_position:             posição na tabela do ranking global (ranking_global_mv,
+ *                              fórmula multifatorial); 0 se o usuário ainda não
+ *                              entrou na view (atualizada a cada 5 min pelo pg_cron)
  * - achievements_count:        conquistas desbloqueadas
  */
 export async function computeUserStats(
@@ -93,12 +98,18 @@ export async function computeUserStats(
     supabase.from('point_transactions').select('amount')
       .eq('user_id', profile.id).gte('created_at', weekStartISO).gt('amount', 0),
 
-    supabase.from('profiles').select('*', { count: 'exact', head: true })
-      .gt('total_points', profile.totalPoints),
+    // Mesma posição da tabela do ranking global (fórmula multifatorial da
+    // ranking_global_mv), não só quem tem mais total_points
+    supabase.from('ranking_global_mv').select('position, score')
+      .eq('id', profile.id).maybeSingle(),
 
     supabase.from('user_achievements').select('*', { count: 'exact', head: true })
       .eq('user_id', profile.id),
   ]);
+
+  const rankRow = rankResult.data as { position: number; score: number | string } | null;
+  const rankPositionValue = rankRow ? Number(rankRow.position) : 0;
+  const rankScoreValue    = rankRow ? Number(rankRow.score)    : null;
 
   const total30    = tasksLast30Result.count ?? 0;
   const complete30 = tasksCompletedLast30Result.count ?? 0;
@@ -136,7 +147,8 @@ export async function computeUserStats(
     tasksCompletedThisWeek: tasksThisWeekResult.count  ?? 0,
     consistencyRate,
     pointsThisWeek,
-    rankPosition:           (rankResult.count ?? 0) + 1,
+    rankPosition:           rankPositionValue,
+    rankScore:              rankScoreValue,
     achievementsCount:      achievementsResult.count ?? 0,
     activeMissions,
   };

@@ -26,6 +26,7 @@ import { validateRequired, validatePositiveNumber } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { showToast } from '../store/toastStore.js';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain.js';
+import { useGroupLiveUpdates } from '../lib/useGroupLiveUpdates.js';
 import FormFeedback from '../components/FormFeedback.js';
 import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
@@ -635,6 +636,22 @@ export default function GroupDetailPage() {
     void loadGroup();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Tempo real: outro membro concluiu tarefa, missão avançou, pontos mudaram →
+  // recarrega só ranking e missões (o resto da tela não muda com esses eventos)
+  const reloadRankingAndMissions = async () => {
+    if (!id) return;
+    const [rankRes, missRes] = await Promise.allSettled([getGroupRanking(id), getGroupMissions(id)]);
+    if (rankRes.status === 'fulfilled') setRanking(rankRes.value);
+    if (missRes.status === 'fulfilled') setMissions(missRes.value);
+    // Falha numa atualização em segundo plano não troca a tela por erro — fica o último dado
+  };
+  useGroupLiveUpdates(
+    id,
+    members.map((m) => m.userId),
+    missions.map((m) => m.id),
+    () => void reloadRankingAndMissions(),
+  );
 
   const tabError = (t: Tab) => failedTabs.has(t)
     ? <ErrorState compact message="Não foi possível carregar esta parte do grupo." onRetry={loadGroup} />

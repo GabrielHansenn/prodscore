@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   MemberRole,
+  RANKING_SCORE_WEIGHTS,
   normalizeRichText,
   type Group,
   type GroupMember,
@@ -92,9 +93,9 @@ export function computeGroupScore(
   consistencyRate: number,
 ): number {
   return (
-    totalPoints * 0.5 +
-    currentStreak * 10 * 0.3 +
-    consistencyRate * 0.2
+    totalPoints * RANKING_SCORE_WEIGHTS.points +
+    currentStreak * RANKING_SCORE_WEIGHTS.streakDayValue * RANKING_SCORE_WEIGHTS.streak +
+    consistencyRate * RANKING_SCORE_WEIGHTS.consistency
   );
 }
 

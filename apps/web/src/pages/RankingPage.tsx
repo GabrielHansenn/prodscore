@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RANKING_SCORE_WEIGHTS } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
 import { getFriendsRanking, getGlobalRanking, getWeeklyRanking, refreshRanking, type RankingRow } from '../services/ranking.service.js';
@@ -57,7 +58,8 @@ export default function RankingPage() {
     setIsRefreshing(true);
     try {
       await refreshRanking();
-      const data = await fetchTab(tab);
+      // O card de posição vem das stats — recarrega junto para bater com a tabela
+      const [data] = await Promise.all([fetchTab(tab), fetchStats()]);
       setRows(data.rows);
       setTotalAmigos(data.totalAmigos);
     } catch {
@@ -193,9 +195,13 @@ export default function RankingPage() {
                 <>
                   Você está em <strong className="text-gray-800 dark:text-gray-200">#{stats.rankPosition}</strong>.{' '}
                   {(() => {
-                    const gap = rows[rows.length - 1]!.score - stats.totalPoints + 1;
-                    return gap > 0
-                      ? `Faltam ${gap.toLocaleString('pt-BR')} pontos para entrar no top ${rows.length}.`
+                    // A tabela ordena pela pontuação multifatorial, não por total_points:
+                    // converte a diferença de pontuação em pontos de tarefa (peso 0,5).
+                    // É uma estimativa — sequência e consistência também mexem na pontuação.
+                    const scoreGap = stats.rankScore != null ? rows[rows.length - 1]!.score - stats.rankScore : 0;
+                    const pointsNeeded = Math.floor(scoreGap / RANKING_SCORE_WEIGHTS.points) + 1;
+                    return scoreGap > 0
+                      ? `Faltam cerca de ${pointsNeeded.toLocaleString('pt-BR')} pontos para entrar no top ${rows.length}.`
                       : 'Continue completando tarefas para subir!';
                   })()}
                 </>

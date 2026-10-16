@@ -23,7 +23,10 @@ export interface UserStats {
   tasksCompletedThisWeek: number;
   consistencyRate:        number;
   pointsThisWeek:         number;
+  /** Posição na tabela do ranking global; 0 = ainda não entrou no ranking */
   rankPosition:           number;
+  /** Pontuação multifatorial no ranking global (null = ainda não entrou) */
+  rankScore?:             number | null;
   achievementsCount:      number;
   activeMissions:         ActiveMission[];
 }

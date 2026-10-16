@@ -59,7 +59,7 @@ export default function FriendProfilePage() {
                 <span>·</span>
                 <span className="flex items-center gap-1">
                   <TrophyIcon className="h-3.5 w-3.5 text-amber-500" />
-                  #{data.estatisticas.rankPosition} no ranking
+                  #{data.estatisticas.rankPosition > 0 ? data.estatisticas.rankPosition : '–'} no ranking
                 </span>
               </p>
             </div>
