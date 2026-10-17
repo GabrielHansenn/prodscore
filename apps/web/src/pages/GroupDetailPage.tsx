@@ -960,9 +960,12 @@ export default function GroupDetailPage() {
         )}
 
         {tab === 'desempenho' && id && (
-          <Suspense fallback={<div className="flex justify-center py-10"><Spinner size="md" /></div>}>
-            <GroupStatsPanel groupId={id} refreshKey={liveTick} />
-          </Suspense>
+          // O painel da aba não tem padding próprio — as outras abas aplicam o delas
+          <div className="p-4">
+            <Suspense fallback={<div className="flex justify-center py-10"><Spinner size="md" /></div>}>
+              <GroupStatsPanel groupId={id} refreshKey={liveTick} />
+            </Suspense>
+          </div>
         )}
 
         {tab === 'chat' && id && <GroupChat groupId={id} />}
