@@ -7,7 +7,6 @@ import {
   type Achievement,
   type LevelReward,
   type PointTransaction,
-  type User,
 } from '@prodscore/shared';
 import {
   POINTS_BY_DIFFICULTY,
@@ -64,13 +63,20 @@ interface AchievementRow {
 // ---------------------------------------------------------------------------
 
 /**
- * Calcula os pontos ganhos ao concluir uma tarefa.
+ * Calcula os pontos de uma tarefa concluída no prazo ou sem prazo.
  *
  * Fórmula: base × modificador_pontualidade × multiplicador_prioridade
  *
  * - base               → definida pela dificuldade (easy=10, medium=25, hard=50, epic=100)
- * - modificador_prazo  → +20% (no prazo) | -30% (atrasada) | ×1 (sem prazo)
+ * - modificador_prazo  → +20% (no prazo) | ×1 (sem prazo)
  * - multiplicador_prio → low=0.90 | medium=1.00 | high=1.10 | urgent=1.25
+ *
+ * Tarefa atrasada: o completeTask chama esta função com isOnTime = null
+ * (base × prioridade) e aplica a penalidade PROGRESSIVA por tempo de atraso,
+ * applyLatePenalty (LATE_PENALTY_TIERS em @prodscore/shared): até 12 h −10%,
+ * até 24 h −20%, até 48 h −35%, até 72 h −50%, acima disso −60%, mínimo de
+ * 1 ponto. O ramo isOnTime = false (−30% fixo, LATE_PENALTY_MULTIPLIER) é a
+ * regra antiga e não é usado pelo fluxo de conclusão.
  *
  * O resultado é arredondado para baixo (floor) para evitar frações de ponto.
  *
@@ -761,20 +767,4 @@ export async function checkAchievements(userId: string): Promise<Achievement[]> 
   }
 
   return newlyEarned;
-}
-
-// ---------------------------------------------------------------------------
-// Ranking
-// ---------------------------------------------------------------------------
-
-/**
- * Calcula o score de ranking combinando pontos totais com streak atual.
- * O streak recebe um multiplicador de 10 para valorizar consistência.
- *
- * @param user - Dados parciais do usuário
- */
-export function calculateRankingScore(
-  user: Pick<User, 'totalPoints' | 'currentStreak'>,
-): number {
-  return user.totalPoints + user.currentStreak * 10;
 }
