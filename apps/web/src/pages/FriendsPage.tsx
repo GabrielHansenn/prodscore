@@ -28,18 +28,23 @@ function Avatar({ user, size = 'md' }: { user: FriendUser; size?: 'sm' | 'md' })
 
 function UserRow({ user, right, sub }: { user: FriendUser; right: ReactNode; sub?: ReactNode }) {
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
-      <Avatar user={user} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user.username}</p>
-        <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <span>Nível {user.level}</span>
-          <span>·</span>
-          <span>{user.totalPoints.toLocaleString('pt-BR')} pts</span>
-          {sub}
-        </p>
+    // flex-wrap + basis no bloco do nome: quando nome e botões não cabem lado a
+    // lado (celular), os botões descem para a linha de baixo. Antes os botões
+    // não encolhiam e esmagavam o nome ("Nível 3" quebrava letra por letra)
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+      <div className="flex min-w-0 flex-1 basis-[11rem] items-center gap-3">
+        <Avatar user={user} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user.username}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-gray-400">
+            <span className="whitespace-nowrap">Nível {user.level}</span>
+            <span aria-hidden="true">·</span>
+            <span className="whitespace-nowrap">{user.totalPoints.toLocaleString('pt-BR')} pts</span>
+            {sub}
+          </p>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">{right}</div>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{right}</div>
     </li>
   );
 }
@@ -47,7 +52,8 @@ function UserRow({ user, right, sub }: { user: FriendUser; right: ReactNode; sub
 function SmallButton({
   children, onClick, variant = 'secondary', disabled,
 }: { children: ReactNode; onClick?: () => void; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean }) {
-  const base = 'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+  // 44px de altura no celular (área de toque); compacto do sm para cima
+  const base = 'min-h-[44px] rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0';
   const styles = {
     primary:   'bg-brand-600 text-white hover:bg-brand-700',
     secondary: 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800',

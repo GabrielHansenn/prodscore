@@ -123,6 +123,22 @@ test.describe('sem rolagem horizontal em 360px — telas logadas', () => {
     });
   }
 
+  // A conta de teste não tem amigos: a lista vem simulada (resposta da API
+  // interceptada) com um nome comprido — foi esse caso que esmagava a linha
+  test('/amigos — lista simulada com nome longo', async ({ page }) => {
+    const friendUser = (id: string, username: string) =>
+      ({ id, username, avatarUrl: null, level: 3, totalPoints: 1547, currentStreak: 2 });
+    await page.route(/\/friends(\?.*)?$/, (route) => route.fulfill({ json: { amigos: [
+      { friendshipId: 'f1', since: '2026-10-01T00:00:00Z', user: friendUser('u1', 'NomeDeUsuarioBemComprido_2026_x') },
+      { friendshipId: 'f2', since: '2026-10-02T00:00:00Z', user: friendUser('u2', 'ana') },
+    ] } }));
+    await page.route(/\/friends\/requests/, (route) => route.fulfill({ json: { pedidos: [] } }));
+    await expectNoHorizontalScroll(page, '/amigos');
+    // O nome não pode ser esmagado pelos botões (antes ficava com ~0 px)
+    const nameWidth = await page.locator('main li p.truncate').first().evaluate((el) => el.getBoundingClientRect().width);
+    expect(nameWidth, 'largura do nome do amigo').toBeGreaterThan(120);
+  });
+
   for (const tab of GROUP_TABS) {
     test(`grupo — aba ${tab}`, async ({ page }) => {
       test.skip(!groupPath, 'A conta de teste não participa de nenhum grupo.');
