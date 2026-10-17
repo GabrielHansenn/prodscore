@@ -62,6 +62,8 @@ export default function StatsReport() {
     yAxisColor:          colors.border,
     yAxisLabelWidth:     Y_AXIS_WIDTH,
     noOfSections:        4,
+    // 18000 → "18 mil": o número inteiro não cabe na largura do eixo
+    formatYLabel:        (label: string) => Number(label).toLocaleString('pt-BR', { notation: 'compact', maximumFractionDigits: 0 }),
     height:              150,
   };
 

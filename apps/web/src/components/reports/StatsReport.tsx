@@ -21,6 +21,9 @@ function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub?: str
   );
 }
 
+/** Eixo dos gráficos: 18.000 → "18 mil" (o número inteiro não cabe na largura do eixo) */
+const compactNumber = (value: number) => value.toLocaleString('pt-BR', { notation: 'compact', maximumFractionDigits: 0 });
+
 const pct = (value: number | null) => (value === null ? '—' : `${value.toLocaleString('pt-BR')}%`);
 
 /**
@@ -119,10 +122,10 @@ export default function StatsReport() {
           loading={loading} error={error} onRetry={retry} empty={noPoints}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+            <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" {...axis} minTickGap={16} />
-              <YAxis {...axis} width={48} />
+              <YAxis {...axis} width={52} tickFormatter={compactNumber} />
               <Tooltip {...tooltip} formatter={(v) => [Number(v).toLocaleString('pt-BR'), 'Saldo']} />
               <Line type="monotone" dataKey="totalPoints" stroke={colors.brand} strokeWidth={2.5} dot={false} />
             </LineChart>

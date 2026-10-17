@@ -17,7 +17,8 @@
     "build": "npm run build:shared && npm run build:api && npm run build:web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "build:vercel": "node scripts/vercel-build.mjs"
+    "build:vercel": "node scripts/vercel-build.mjs",
+    "seed:reset": "npm run build:shared && tsx scripts/reset-and-seed.mts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
