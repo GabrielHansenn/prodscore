@@ -20,7 +20,7 @@ export default function AppLayout() {
   }, [handleKeyDown]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="h-app flex overflow-hidden bg-gray-50">
       {/* P2: Backdrop com aria-hidden (é decorativo, botão de fechar existe) */}
       {open && (
         <div
@@ -56,7 +56,7 @@ export default function AppLayout() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <LogoWordmark variant="light" className="h-6 w-auto" aria-hidden="true" />
+          <LogoWordmark className="h-6 w-auto" aria-hidden="true" />
           {/* Sino também no cabeçalho do celular: a barra lateral fica escondida atrás do menu */}
           <div className="ml-auto">
             <NotificationBell variant="header" />
@@ -65,7 +65,8 @@ export default function AppLayout() {
 
         {/* Conteúdo — P5: role="main" para skip-link e a11y */}
         <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
-          <div className={isChat ? undefined : 'mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10'}>
+          {/* O chat ocupa a altura toda de <main> (h-full) e rola por dentro */}
+          <div className={isChat ? 'h-full' : 'mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10'}>
             <Outlet />
           </div>
         </main>

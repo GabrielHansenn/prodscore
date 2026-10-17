@@ -26,7 +26,7 @@ export default function PeriodFilter({ value, onChange }: { value: PeriodValue; 
     : reportRangeDays(from, to) > REPORT_MAX_RANGE_DAYS ? `O período pode ter no máximo ${REPORT_MAX_RANGE_DAYS} dias.`
     : null;
 
-  const chip = (active: boolean) => `rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+  const chip = (active: boolean) => `min-h-[44px] rounded-lg px-3 py-1.5 text-xs font-medium transition sm:min-h-0 ${
     active ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/5'
   }`;
 

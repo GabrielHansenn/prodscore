@@ -77,7 +77,7 @@ export default function StatisticsContent({ stats }: { stats: StatisticsData }) 
           <CalendarIcon className="h-3.5 w-3.5" />
           Esta Semana
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
             icon={<BoltIcon className="h-5 w-5" />}
             iconBg="bg-brand-600"
@@ -109,7 +109,7 @@ export default function StatisticsContent({ stats }: { stats: StatisticsData }) 
           <FlameIcon className="h-3.5 w-3.5" />
           Sequências
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="card p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20">
@@ -141,7 +141,7 @@ export default function StatisticsContent({ stats }: { stats: StatisticsData }) 
           <TrophyIcon className="h-3.5 w-3.5" />
           Geral
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={<CheckCircleIcon className="h-5 w-5" />}
             iconBg="bg-green-600"

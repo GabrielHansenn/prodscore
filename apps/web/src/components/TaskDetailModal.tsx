@@ -56,7 +56,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: TaskDetailMod
         aria-modal="true"
         aria-labelledby="task-detail-title"
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900"
+        className="max-h-dialog flex w-full max-w-lg flex-col rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900"
       >
         {/* Cabeçalho fixo */}
         <div className="flex items-start gap-3 border-b border-gray-100 p-5 dark:border-gray-800">

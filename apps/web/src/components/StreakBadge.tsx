@@ -110,7 +110,7 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
             onClick={() => void handleToggleArm()}
             disabled={loading || (!isArmed && balance === 0)}
             title={!isArmed && balance === 0 ? 'Você não tem freezes disponíveis' : undefined}
-            className={`mt-1 w-full rounded-lg py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`mt-1 min-h-[44px] w-full rounded-lg py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               isArmed
                 ? 'border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800'
                 : 'bg-blue-600 text-white hover:bg-blue-700'

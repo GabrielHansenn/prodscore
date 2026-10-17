@@ -49,3 +49,8 @@ coverage/
 
 # Saída do build da Vercel (npm run build:vercel) e vínculo do projeto (vercel link)
 .vercel
+
+# Artefatos dos testes Playwright (screenshots, sessão de login)
+apps/web/e2e-artifacts/
+apps/web/test-results/
+apps/web/playwright-report/

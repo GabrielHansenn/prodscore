@@ -140,8 +140,11 @@ export default function ChatPage() {
     }
   };
 
+  // h-full: ocupa exatamente a área de <main> (já descontado o cabeçalho do
+  // celular). Antes era calc(100vh - 2rem), 24 px maior que essa área no
+  // celular — o campo de digitar ficava escondido
   return (
-    <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-3xl flex-col px-4 py-4 sm:px-6">
+    <div className="mx-auto flex h-full max-w-3xl flex-col px-4 py-4 sm:px-6">
       {/* Cabeçalho */}
       <div className="mb-3 flex items-center gap-3">
         <button

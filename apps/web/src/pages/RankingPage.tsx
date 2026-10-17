@@ -150,7 +150,7 @@ export default function RankingPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition-all ${
+            className={`min-h-[44px] flex-1 rounded-lg py-2.5 text-sm font-medium transition-all ${
               tab === t.key ? 'bg-brand-600 text-white' : 'text-gray-500 hover:text-gray-700'
             }`}
           >

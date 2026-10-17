@@ -25,8 +25,11 @@ export function LogoMark({ className }: { className?: string }) {
 
 // ---------------------------------------------------------------------------
 // LogoWordmark — logo completa (ícone + texto "ProdScore")
-// variant="light" → fundo claro (ícone gradiente, "Prod" escuro, "Score" roxo)
-// variant="dark"  → fundo escuro (ícone lilás, "Prod" branco, "Score" lima)
+// variant="light" → fundo do tema (ícone gradiente, "Score" roxo; "Prod"
+//                   escuro no tema claro e branco no tema escuro — antes era
+//                   sempre escuro e sumia sobre o fundo escuro)
+// variant="dark"  → fundo sempre escuro, ex: menu lateral e painel do login
+//                   (ícone lilás, "Prod" branco, "Score" lima)
 // ---------------------------------------------------------------------------
 interface LogoWordmarkProps {
   variant?: 'light' | 'dark';
@@ -81,7 +84,8 @@ export function LogoWordmark({ variant = 'light', className }: LogoWordmarkProps
         fontSize="36"
         letterSpacing="-0.7"
       >
-        <tspan fill={prodFill}>Prod</tspan>
+        {/* Na variante light, a cor de "Prod" vem da classe (acompanha o tema escuro) */}
+        <tspan fill={prodFill} className={isDark ? undefined : 'fill-[#17153A] dark:fill-white'}>Prod</tspan>
         <tspan fill={scoreFill}>Score</tspan>
       </text>
     </svg>

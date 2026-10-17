@@ -51,7 +51,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`max-h-[90vh] overflow-y-auto ${className}`}
+        className={`max-h-dialog overflow-y-auto ${className}`}
       >
         {children}
       </div>

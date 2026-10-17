@@ -280,7 +280,7 @@ export default function GroupsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {groups.map((g) => (
             <GroupCard key={g.id} group={g} onClick={() => navigate(`/grupos/${g.id}`)} />
           ))}

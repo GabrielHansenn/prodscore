@@ -36,11 +36,11 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">#</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Jogador</th>
+            <th className="w-12 px-3 py-3 text-left text-xs font-medium text-gray-500 sm:px-4">#</th>
+            <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 sm:px-4">Jogador</th>
             <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Nível</th>
             <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Sequência</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">{scoreLabel}</th>
+            <th className="whitespace-nowrap px-3 py-3 text-right text-xs font-medium text-gray-500 sm:px-4">{scoreLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -53,7 +53,7 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   isMe ? 'bg-brand-50 hover:bg-brand-100/60 dark:bg-brand-900/20 dark:hover:bg-brand-900/30' : 'hover:bg-gray-50'
                 }`}
               >
-                <td className="px-4 py-3">
+                <td className="px-3 py-3 sm:px-4">
                   {row.pending
                     ? <span className="text-xs font-medium text-gray-400">—</span>
                     : row.position <= 3
@@ -62,18 +62,21 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   }
                 </td>
 
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
+                {/* w-full + max-w-0: a coluna do nome fica só com o espaço que sobra e o
+                    nome é truncado — antes ele alargava a tabela e a pontuação saía da tela */}
+                <td className="w-full max-w-0 px-2 py-3 sm:px-4">
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isMe ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
                       {row.avatarUrl
                         ? <img src={row.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                         : row.username.charAt(0).toUpperCase()
                       }
                     </div>
-                    <span className={`font-medium ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800'}`}>
+                    <span className={`min-w-0 truncate font-medium ${isMe ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800'}`}>
                       {row.username}
-                      {isMe && <span className="ml-1.5 text-xs text-brand-600 dark:text-brand-400">(você)</span>}
                     </span>
+                    {/* Fora do nome truncado: "(você)" nunca é cortado */}
+                    {isMe && <span className="-ml-1 shrink-0 text-xs text-brand-600 sm:-ml-1.5 dark:text-brand-400">(você)</span>}
                   </div>
                 </td>
 
@@ -94,7 +97,7 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   )}
                 </td>
 
-                <td className="px-4 py-3 text-right">
+                <td className="whitespace-nowrap px-3 py-3 text-right sm:px-4">
                   {row.pending ? (
                     <span className="text-xs italic text-gray-400">Aguardando atualização</span>
                   ) : (

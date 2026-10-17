@@ -262,7 +262,7 @@ export default function DashboardPage() {
       )}
 
       {/* Tarefas do dia + sidebar direita */}
-      <div className="mb-6 grid gap-6 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <div className="card p-5">
             <div className="mb-4 flex items-center justify-between">
@@ -320,7 +320,7 @@ export default function DashboardPage() {
       {activeMissions.length > 0 && (
         <div>
           <h2 className="mb-4 font-semibold text-gray-900">Missões Ativas</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {activeMissions.map((m) => {
               const missionData: Mission = {
                 id:           m.id,

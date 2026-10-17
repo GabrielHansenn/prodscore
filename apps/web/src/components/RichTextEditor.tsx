@@ -31,7 +31,7 @@ function ToolbarButton({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      className={`flex h-7 w-7 items-center justify-center rounded text-sm transition-colors ${
+      className={`flex h-7 w-7 items-center justify-center rounded text-sm transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 ${
         active
           ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300'
           : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200'

@@ -150,7 +150,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
           <div className="relative">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="rounded-lg p-1.5 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+              className="-m-2 flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 sm:m-0 sm:h-7 sm:w-7 dark:hover:bg-gray-700"
             >
               <DotsVertical />
             </button>
@@ -206,7 +206,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
       {isActionable && !compact && (
         <button
           onClick={handleCompleteClick}
-          className="mt-3 w-full rounded-lg bg-emerald-50 py-2 text-sm font-medium text-emerald-700 transition-all duration-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+          className="mt-3 min-h-[44px] w-full rounded-lg bg-emerald-50 py-2 text-sm font-medium text-emerald-700 transition-all duration-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
         >
           Concluir tarefa
         </button>
@@ -215,7 +215,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
       {isActionable && compact && (
         <button
           onClick={handleCompleteClick}
-          className="mt-2 w-full rounded-lg bg-emerald-50 py-1.5 text-xs font-medium text-emerald-700 transition-all duration-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+          className="mt-2 min-h-[44px] w-full rounded-lg bg-emerald-50 py-1.5 text-sm font-medium text-emerald-700 transition-all duration-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
         >
           Concluir
         </button>

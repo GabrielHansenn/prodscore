@@ -13,7 +13,11 @@ export default function LandingPage() {
         <LogoWordmark variant="light" className="h-7 w-auto sm:h-8" />
         <div className="flex items-center gap-2 sm:gap-3">
           <Link to="/login" className="btn-secondary text-sm">Entrar</Link>
-          <Link to="/cadastro" className="btn-primary text-sm">Começar grátis</Link>
+          <Link to="/cadastro" className="btn-primary whitespace-nowrap text-sm">
+            {/* Rótulo curto no celular: "Começar grátis" quebrava em duas linhas em 360px */}
+            <span className="sm:hidden">Começar</span>
+            <span className="hidden sm:inline">Começar grátis</span>
+          </Link>
         </div>
       </nav>
 
@@ -45,7 +49,7 @@ export default function LandingPage() {
         </div>
 
         {/* Feature cards */}
-        <div className="mt-14 grid w-full max-w-3xl gap-4 sm:mt-20 sm:grid-cols-3 sm:gap-6">
+        <div className="mt-14 grid grid-cols-1 w-full max-w-3xl gap-4 sm:mt-20 sm:grid-cols-3 sm:gap-6">
           {[
             {
               icon: <TrophyIcon className="h-8 w-8 text-amber-500" />,

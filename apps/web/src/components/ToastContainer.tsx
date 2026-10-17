@@ -16,7 +16,9 @@ export default function ToastContainer() {
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-6 right-6 z-50 flex flex-col gap-2"
+      // Celular: faixa com margem dos dois lados (antes uma mensagem longa
+      // passava da tela); do sm para cima, no canto inferior direito
+      className="fixed inset-x-4 bottom-4 z-50 flex flex-col gap-2 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-w-sm"
     >
       {toasts.map((toast) => {
         const isError = toast.variant === 'error';

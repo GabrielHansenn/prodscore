@@ -186,6 +186,41 @@
   .animate-in {
     animation: slide-in-up 200ms ease-out both;
   }
+
+  /* Altura da tela visível. No celular, 100vh é a altura com a barra do
+     navegador RECOLHIDA — com ela aberta, o fim do conteúdo fica escondido
+     atrás da barra. 100dvh acompanha a área visível de verdade; o 100vh
+     antes dele é o plano B de navegadores que não conhecem dvh. */
+  .h-app {
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* Altura máxima de modais pelo mesmo motivo (o rodapé com os botões não
+     pode ficar atrás da barra do navegador) */
+  .max-h-dialog {
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+}
+
+/* ============================================================
+   Campos de formulário com 16px no celular.
+   O Safari do iPhone dá zoom na página ao focar um campo com fonte menor
+   que 16px — e não desfaz sozinho. A vistoria de responsividade achou
+   campos com 14px (.input, login/cadastro, editor de texto) e 12px (filtros
+   de Tarefas). Corrigido aqui, na causa, para todos os campos de uma vez;
+   do sm (640px) para cima continua o tamanho de cada componente.
+   Fora de @layer e com !important de propósito: precisa vencer as classes
+   utilitárias de tamanho de texto (text-sm, text-xs, prose-sm) dos campos.
+   ============================================================ */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),
+  select,
+  textarea,
+  [contenteditable='true'] {
+    font-size: 16px !important;
+  }
 }
 
 /* ============================================================

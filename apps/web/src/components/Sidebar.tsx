@@ -45,7 +45,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   };
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col bg-sidebar-bg">
+    <aside className="h-app flex w-60 shrink-0 flex-col bg-sidebar-bg">
       {/* Logo + botão fechar (móvel) */}
       <div className="flex items-center gap-2.5 px-6 py-6">
         <LogoWordmark variant="dark" className="h-7 w-auto flex-1" />

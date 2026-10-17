@@ -318,7 +318,7 @@ export default function TasksPage() {
             </h2>
             <button
               onClick={() => setShowSuggestions(false)}
-              className="text-xs text-brand-500 hover:text-brand-700 dark:text-brand-400"
+              className="-mr-2 min-h-[44px] rounded-lg px-2 text-xs text-brand-500 hover:text-brand-700 dark:text-brand-400"
             >
               Fechar
             </button>
@@ -335,7 +335,7 @@ export default function TasksPage() {
                 </div>
                 <button
                   onClick={() => setViewingTask(task)}
-                  className="shrink-0 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
+                  className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 sm:min-h-[34px] sm:px-3 sm:text-xs"
                 >
                   Ver
                 </button>
@@ -347,15 +347,18 @@ export default function TasksPage() {
 
       {/* Filtros */}
       <div className="mb-6 space-y-3">
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1">
+        {/* Chips de status que quebram linha: todos visíveis sem rolagem lateral
+            (antes "Concluídas" e "Atrasadas" ficavam escondidas fora da faixa no celular) */}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por status">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setActiveStatus(tab.value)}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+              aria-pressed={activeStatus === tab.value}
+              className={`inline-flex min-h-[44px] items-center rounded-full border px-4 text-sm font-medium transition-all ${
                 activeStatus === tab.value
-                  ? 'bg-brand-600 text-white'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800'
               }`}
             >
               {tab.label}
@@ -370,7 +373,7 @@ export default function TasksPage() {
           <select
             value={activeDifficulty}
             onChange={(e) => setActiveDifficulty(e.target.value as TaskDifficulty | 'all')}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-brand-500"
+            className="min-h-[44px] flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-brand-500 sm:flex-none"
           >
             {DIFFICULTY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -379,7 +382,7 @@ export default function TasksPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 outline-none focus:border-brand-500"
+            className="min-h-[44px] flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-brand-500 sm:flex-none"
           >
             <option value="createdAt">Mais recentes</option>
             <option value="dueDate">Prazo mais próximo</option>

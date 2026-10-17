@@ -32,7 +32,10 @@ import { useGroupLiveUpdates } from '../lib/useGroupLiveUpdates.js';
 import FormFeedback from '../components/FormFeedback.js';
 import RankingTable from '../components/RankingTable.js';
 import type { RankingRow } from '../services/ranking.service.js';
-import { UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon } from '../components/icons.js';
+import {
+  UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon,
+  TrophyIcon, BoltIcon, CheckCircleIcon, ArrowTrendingUpIcon, ChatIcon,
+} from '../components/icons.js';
 import Spinner from '../components/Spinner.js';
 
 type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'desempenho' | 'chat';
@@ -725,13 +728,13 @@ export default function GroupDetailPage() {
   // Render principal
   // ---------------------------------------------------------------------------
 
-  const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: 'membros',  label: 'Membros',  count: members.length },
-    { key: 'ranking',  label: 'Ranking' },
-    { key: 'missoes',  label: 'Missões',  count: missions.length },
-    { key: 'tarefas',  label: 'Tarefas',  count: tasks.length },
-    { key: 'desempenho', label: 'Desempenho' },
-    { key: 'chat',     label: 'Chat' },
+  const TABS: { key: Tab; label: string; icon: (p: { className?: string }) => React.JSX.Element; count?: number }[] = [
+    { key: 'membros',    label: 'Membros',    icon: UsersIcon,           count: members.length },
+    { key: 'ranking',    label: 'Ranking',    icon: TrophyIcon },
+    { key: 'missoes',    label: 'Missões',    icon: BoltIcon,            count: missions.length },
+    { key: 'tarefas',    label: 'Tarefas',    icon: CheckCircleIcon,     count: tasks.length },
+    { key: 'desempenho', label: 'Desempenho', icon: ArrowTrendingUpIcon },
+    { key: 'chat',       label: 'Chat',       icon: ChatIcon },
   ];
 
   // Setas esquerda/direita, Home e End trocam de aba (padrão ARIA de abas)
@@ -755,7 +758,7 @@ export default function GroupDetailPage() {
       {/* Voltar */}
       <button
         onClick={() => navigate('/grupos')}
-        className="mb-5 flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+        className="-ml-2 mb-3 flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -765,8 +768,11 @@ export default function GroupDetailPage() {
 
       {/* Cabeçalho do grupo */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        {/* min-w-0: sem ele um nome longo empurra o bloco pra fora da tela */}
-        <div className="flex min-w-0 flex-1 items-center gap-4">
+        {/* min-w-0: sem ele um nome longo empurra o bloco pra fora da tela.
+            basis-[18rem]: largura mínima antes de quebrar — sem ela (flex-1 = base 0)
+            o nome era espremido numa coluna estreita no celular, uma palavra por
+            linha, em vez de os botões descerem para a linha de baixo */}
+        <div className="flex min-w-0 flex-1 basis-[18rem] items-center gap-4">
           {group.imageUrl ? (
             <img src={group.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
           ) : (
@@ -803,7 +809,7 @@ export default function GroupDetailPage() {
           {group.inviteCode && (
             <button
               onClick={() => void copyInviteCode()}
-              className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              className="flex min-h-[44px] items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
             >
               <span className="font-mono text-sm font-bold tracking-widest text-brand-600 dark:text-brand-400">
                 {group.inviteCode}
@@ -822,7 +828,8 @@ export default function GroupDetailPage() {
             <Link
               to={`/grupos/${id}/configuracoes`}
               title="Configurações do grupo"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:text-gray-300"
+              aria-label="Configurações do grupo"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:text-gray-300"
             >
               <CogIcon className="h-5 w-5" />
             </Link>
@@ -844,13 +851,14 @@ export default function GroupDetailPage() {
         </section>
       )}
 
-      {/* Abas — rolam de lado no celular (antes espremiam), padrão ARIA de abas
-          com setas do teclado */}
+      {/* Abas — no celular, grade 3×2 com todas visíveis (antes uma faixa com
+          rolagem lateral escondia Tarefas, Desempenho e Chat); daí em diante,
+          uma linha só do md (768px) para cima, cada aba com a largura do próprio nome. Padrão ARIA de abas com setas do teclado */}
       <div
         role="tablist"
         aria-label="Seções do grupo"
         onKeyDown={handleTabKeyDown}
-        className="mb-5 flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800/50"
+        className="mb-5 grid grid-cols-3 gap-1 rounded-xl border border-gray-200 bg-white p-1 md:flex dark:border-gray-700 dark:bg-gray-800/50"
       >
         {TABS.map((t) => (
           <button
@@ -861,20 +869,27 @@ export default function GroupDetailPage() {
             aria-controls="group-tabpanel"
             tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
-            className={`flex min-w-[6.5rem] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+            // Celular: ícone em cima e nome embaixo — lado a lado, o nome era
+            // cortado em um terço da largura ("Desemp…")
+            className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs font-medium transition-all md:min-h-[44px] md:flex-auto md:flex-row md:gap-1.5 md:px-3 md:text-sm ${
               tab === t.key
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
           >
-            {t.label}
-            {t.count !== undefined && t.count > 0 && (
-              <span className={`rounded-full px-1.5 py-0.5 text-xs leading-none ${
-                tab === t.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-              }`}>
-                {t.count}
-              </span>
-            )}
+            {/* Ícone só na grade do celular: na linha única (tablet/desktop) não cabe junto */}
+            <t.icon className="h-4 w-4 shrink-0 md:hidden" />
+            {/* Nome e contagem na mesma linha, inclusive no layout empilhado do celular */}
+            <span className="flex min-w-0 max-w-full items-center gap-1">
+              <span className="truncate">{t.label}</span>
+              {t.count !== undefined && t.count > 0 && (
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none md:text-xs ${
+                  tab === t.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                }`}>
+                  {t.count}
+                </span>
+              )}
+            </span>
           </button>
         ))}
       </div>
@@ -941,7 +956,7 @@ export default function GroupDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {missions.map((m) => <GroupMissionCard key={m.id} mission={m} />)}
               </div>
             )}
