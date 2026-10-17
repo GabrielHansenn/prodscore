@@ -38,8 +38,8 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
           <tr className="border-b border-gray-200 bg-gray-50">
             <th className="w-12 px-3 py-3 text-left text-xs font-medium text-gray-500 sm:px-4">#</th>
             <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 sm:px-4">Jogador</th>
-            <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Nível</th>
-            <th className="hidden px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Sequência</th>
+            <th className="hidden whitespace-nowrap px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Nível</th>
+            <th className="hidden whitespace-nowrap px-4 py-3 text-center text-xs font-medium text-gray-500 sm:table-cell">Sequência</th>
             <th className="whitespace-nowrap px-3 py-3 text-right text-xs font-medium text-gray-500 sm:px-4">{scoreLabel}</th>
           </tr>
         </thead>
@@ -62,7 +62,9 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   }
                 </td>
 
-                {/* w-full + max-w-0: a coluna do nome fica só com o espaço que sobra e o
+                {/* Nível e Sequência usam whitespace-nowrap: como o nome ocupa todo o espaço livre,
+                    as outras colunas ficam na largura mínima e o selo "Nível 18" quebrava em duas linhas.
+                    w-full + max-w-0: a coluna do nome fica só com o espaço que sobra e o
                     nome é truncado — antes ele alargava a tabela e a pontuação saía da tela */}
                 <td className="w-full max-w-0 px-2 py-3 sm:px-4">
                   <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -80,13 +82,13 @@ export default function RankingTable({ rows, currentUserId, scoreLabel = 'Pontua
                   </div>
                 </td>
 
-                <td className="hidden px-4 py-3 text-center sm:table-cell">
+                <td className="hidden whitespace-nowrap px-4 py-3 text-center sm:table-cell">
                   <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                     Nível {row.level}
                   </span>
                 </td>
 
-                <td className="hidden px-4 py-3 text-center sm:table-cell">
+                <td className="hidden whitespace-nowrap px-4 py-3 text-center sm:table-cell">
                   {row.currentStreak > 0 ? (
                     <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                       <FlameIcon className="h-3.5 w-3.5" />
