@@ -1,13 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
-import { pointsAtLevelStart, BehavioralProfileType, validateUsername, type BehavioralProfile } from '@prodscore/shared';
+import { pointsAtLevelStart, BehavioralProfileType, type BehavioralProfile } from '@prodscore/shared';
 import { api } from '../services/api.js';
-import { getFriendlyErrorMessage } from '../lib/errors.js';
-import { useImageUpload, uploadToAvatarsBucket } from '../lib/useImageUpload.js';
-import { showToast } from '../store/toastStore.js';
-import FormFeedback from '../components/FormFeedback.js';
-import ImagePickerField from '../components/ImagePickerField.js';
+import ProfileEditForm from '../components/profile/ProfileEditForm.js';
 import { FlameIcon } from '../components/icons.js';
 import { getBehavioralProfile } from '../services/behavioral.service.js';
 import Spinner from '../components/Spinner.js';
@@ -126,12 +122,7 @@ export default function ProfilePage() {
   const [transactions,       setTransactions]       = useState<PointTransaction[]>([]);
   const [txLoading,          setTxLoading]          = useState(true);
   const [editing,            setEditing]            = useState(false);
-  const [username,           setUsername]           = useState(user?.username ?? '');
-  const [bio,                setBio]                = useState(user?.bio ?? '');
-  const [saveError,          setSaveError]          = useState('');
-  const [saving,             setSaving]             = useState(false);
   const [behavioralProfile,  setBehavioralProfile]  = useState<BehavioralProfile | null>(null);
-  const avatarUpload = useImageUpload();
 
   useEffect(() => {
     void fetchStats();
@@ -146,53 +137,21 @@ export default function ProfilePage() {
     void getBehavioralProfile().then(setBehavioralProfile).catch(() => { /* opcional */ });
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    setUsername(user.username);
-    setBio(user.bio ?? '');
-  }, [user]);
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-    const usernameError = validateUsername(username);
-    if (usernameError) { setSaveError(usernameError); return; }
-    setSaveError('');
-    setSaving(true);
-    try {
-      let newAvatarUrl: string | undefined;
-
-      if (avatarUpload.file && user) {
-        newAvatarUrl = await uploadToAvatarsBucket(user.id, avatarUpload.file, 'avatar');
-      }
-
-      try {
-        await api.patch('/users/me', {
-          username:  username.trim(),
-          bio:       bio.trim() || null,
-          ...(newAvatarUrl !== undefined ? { avatarUrl: newAvatarUrl } : {}),
-        });
-      } catch (err) {
-        throw new Error(getFriendlyErrorMessage(err, 'Erro ao salvar perfil.'));
-      }
-
-      await loadSession();
-      avatarUpload.clear();
-      setEditing(false);
-      showToast('Perfil atualizado com sucesso!');
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar perfil.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (!user) return null;
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Meu Perfil</h1>
 
-      {/* Card de identidade */}
+      {/* No modo de edição o formulário substitui o card de identidade: sem foto
+          duplicada, e o nível/barra de XP (sem função durante a edição) voltam ao sair */}
+      {editing ? (
+        <ProfileEditForm
+          user={user}
+          onCancel={() => setEditing(false)}
+          onSaved={async () => { await loadSession(); setEditing(false); }}
+        />
+      ) : (
       <div className="card mb-6 p-6">
         <div className="flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-2xl font-bold text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
@@ -223,63 +182,12 @@ export default function ProfilePage() {
         )}
 
         <button
-          onClick={() => setEditing((v) => !v)}
+          onClick={() => setEditing(true)}
           className="btn-secondary mt-5"
         >
-          {editing ? 'Cancelar edição' : 'Editar perfil'}
+          Editar perfil
         </button>
       </div>
-
-      {/* Formulário de edição */}
-      {editing && (
-        <div className="card mb-6 p-6">
-          <h3 className="mb-4 font-semibold text-gray-900">Editar Informações</h3>
-          <form onSubmit={(e) => void handleSave(e)} className="max-w-3xl space-y-4">
-            <div>
-              <label htmlFor="profile-username" className="mb-1 block text-xs font-medium text-gray-600">Nome de usuário</label>
-              <input id="profile-username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                maxLength={30}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="profile-bio" className="mb-1 block text-xs font-medium text-gray-600">Bio (opcional)</label>
-              <textarea id="profile-bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={2}
-                maxLength={160}
-                placeholder="Conte um pouco sobre você..."
-                className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-              />
-            </div>
-            {/* Upload de avatar */}
-            <ImagePickerField
-              label="Foto de perfil (opcional)"
-              previewUrl={avatarUpload.previewUrl}
-              currentUrl={user.avatarUrl}
-              fallback={
-                <span className="text-2xl font-bold text-brand-700 dark:text-brand-300">
-                  {user.username.charAt(0).toUpperCase()}
-                </span>
-              }
-              file={avatarUpload.file}
-              inputRef={avatarUpload.inputRef}
-              onFileChange={avatarUpload.handleFileChange}
-              onClear={avatarUpload.clear}
-            />
-            {(avatarUpload.error || saveError) && <FormFeedback variant="error" message={avatarUpload.error || saveError} />}
-            <button type="submit" disabled={saving} className="btn-primary w-full">
-              {saving
-                ? avatarUpload.file ? 'Enviando foto...' : 'Salvando...'
-                : 'Salvar alterações'
-              }
-            </button>
-          </form>
-        </div>
       )}
 
       {/* Estatísticas rápidas */}

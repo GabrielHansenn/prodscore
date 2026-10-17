@@ -1,26 +1,21 @@
 import { useEffect, useState, type ComponentProps } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
-  TouchableOpacity, Alert, ActivityIndicator, TextInput,
+  TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { BehavioralProfileType, validateUsername, type BehavioralProfile, type BehavioralTag } from '@prodscore/shared';
+import { BehavioralProfileType, type BehavioralProfile, type BehavioralTag } from '@prodscore/shared';
 import { useAuthStore } from '../store/authStore';
 import { useUserStore } from '../store/userStore';
 import { useThemeStore, type Theme } from '../store/themeStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { getBehavioralProfile } from '../services/behavioral.service';
-import { uploadAvatar } from '../services/user.service';
-import { useImageUpload } from '../lib/useImageUpload';
-import { getFriendlyErrorMessage } from '../lib/errors';
-import { showToast } from '../store/toastStore';
 import AchievementBadge, { type BadgeData } from '../components/AchievementBadge';
-import ImagePickerField from '../components/ImagePickerField';
-import InlineFeedback from '../components/InlineFeedback';
 import LevelBar from '../components/LevelBar';
+import ProfileEditForm from '../components/ProfileEditForm';
 import { api } from '../services/api';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { useThemeColors } from '../lib/useThemeColors';
@@ -88,7 +83,6 @@ export default function ProfileScreen() {
   const { stats, fetchStats }    = useUserStore();
   const { theme, setTheme }      = useThemeStore();
   const unreadNotifications      = useNotificationStore((s) => s.unreadCount);
-  const avatarUpload = useImageUpload();
   const colors = useThemeColors();
   const styles = useStyles();
 
@@ -98,10 +92,6 @@ export default function ProfileScreen() {
   const [behavioral, setBehavioral] = useState<BehavioralProfile | null>(null);
 
   const [editing,  setEditing]  = useState(false);
-  const [username, setUsername] = useState(user?.username ?? '');
-  const [bio,      setBio]      = useState(user?.bio ?? '');
-  const [saving,   setSaving]   = useState(false);
-  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     void fetchStats();
@@ -126,33 +116,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    const usernameError = validateUsername(username);
-    if (usernameError) { setSaveError(usernameError); return; }
-
-    setSaving(true);
-    setSaveError('');
-    try {
-      let avatarUrl: string | undefined;
-      if (avatarUpload.image) {
-        avatarUrl = await uploadAvatar(avatarUpload.image);
-      }
-      await api.patch('/users/me', {
-        username: username.trim(),
-        bio: bio.trim() || null,
-        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
-      });
-      await loadSession();
-      avatarUpload.clear();
-      setEditing(false);
-      showToast('Perfil atualizado com sucesso!');
-    } catch (err) {
-      setSaveError(getFriendlyErrorMessage(err, 'Erro ao salvar perfil.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleLogout = () => {
     Alert.alert('Sair', 'Tem certeza que deseja sair?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -166,7 +129,15 @@ export default function ProfileScreen() {
     <View style={[styles.root, { paddingTop: insets.top, paddingLeft: isWide ? SIDEBAR_WIDTH : 0 }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header do perfil */}
+        {/* No modo de edição o formulário substitui o card de identidade: sem foto
+            duplicada, e o nível/barra de XP (sem função durante a edição) voltam ao sair */}
+        {editing ? (
+          <ProfileEditForm
+            user={user}
+            onCancel={() => setEditing(false)}
+            onSaved={async () => { await loadSession(); setEditing(false); }}
+          />
+        ) : (
         <View style={styles.identityCard}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarCircle}>
@@ -195,36 +166,15 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.editToggleBtn} onPress={() => setEditing((v) => !v)}>
-            <Text style={styles.editToggleText}>{editing ? 'Cancelar edição' : 'Editar perfil'}</Text>
+          <TouchableOpacity
+            style={styles.editToggleBtn}
+            onPress={() => setEditing(true)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.editToggleText}>Editar perfil</Text>
           </TouchableOpacity>
-
-          {editing && (
-            <View style={styles.editForm}>
-              <ImagePickerField
-                label="Foto de perfil"
-                image={avatarUpload.image}
-                currentUrl={user.avatarUrl}
-                fallbackIcon="person-outline"
-                onTakePhoto={() => void avatarUpload.takePhoto()}
-                onPickFromLibrary={() => void avatarUpload.pickFromLibrary()}
-                onClear={avatarUpload.clear}
-              />
-              {avatarUpload.error ? <InlineFeedback variant="error" message={avatarUpload.error} /> : null}
-              <Text style={[styles.fieldLabel, { marginTop: SPACING.md }]}>Nome de usuário</Text>
-              <TextInput style={styles.input} value={username} onChangeText={setUsername} maxLength={30} autoCapitalize="none" />
-              <Text style={[styles.fieldLabel, { marginTop: SPACING.sm }]}>Bio (opcional)</Text>
-              <TextInput
-                style={[styles.input, { height: 64 }]} value={bio} onChangeText={setBio}
-                multiline maxLength={160} placeholder="Conte um pouco sobre você..." placeholderTextColor={colors.textMuted}
-              />
-              {saveError ? <InlineFeedback variant="error" message={saveError} /> : null}
-              <TouchableOpacity style={[styles.btn, saving && { opacity: 0.6 }]} onPress={() => void handleSaveProfile()} disabled={saving}>
-                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.btnText}>Salvar alterações</Text>}
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
+        )}
 
         {/* Menu — telas secundárias (espelha itens da sidebar web) */}
         <View style={styles.menuCard}>
@@ -422,11 +372,6 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
 
   editToggleBtn: { marginTop: SPACING.md, borderWidth: 1, borderColor: colors.border, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center' },
   editToggleText: { fontSize: FONT.sm, fontWeight: '600', color: colors.textSecondary },
-  editForm: { marginTop: SPACING.md, gap: 4 },
-  fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
-  input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
-  btn: { backgroundColor: colors.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.sm },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: FONT.base },
 
   menuCard: { backgroundColor: colors.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: colors.borderSoft, marginBottom: SPACING.md, overflow: 'hidden', ...CARD_SHADOW },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },

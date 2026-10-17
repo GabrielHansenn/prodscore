@@ -48,7 +48,16 @@ function invalidWithSuggestion(local: string, domain: string): string {
   return `E-mail em formato inválido. Você quis dizer ${local}@${domain}?`;
 }
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
+/** Limites de tamanho do nome de usuário — os mesmos do schema de perfil da API (users.routes.ts) */
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 30;
+/** Texto de ajuda exibido abaixo do campo de nome de usuário; descreve as regras que validateUsername aplica */
+export const USERNAME_RULES_HINT = `De ${USERNAME_MIN_LENGTH} a ${USERNAME_MAX_LENGTH} caracteres: letras, números ou _ (sem espaços nem acentos).`;
+
+/** Limite da bio — o mesmo do schema de perfil da API e do CHECK de profiles.bio (migration 001) */
+export const MAX_BIO_LENGTH = 300;
+
+const USERNAME_REGEX = new RegExp(`^[a-zA-Z0-9_]{${USERNAME_MIN_LENGTH},${USERNAME_MAX_LENGTH}}$`);
 const PASSWORD_HAS_LETTER = /[a-zA-Z]/;
 const PASSWORD_HAS_NUMBER = /[0-9]/;
 
@@ -84,7 +93,7 @@ export function validateEmail(email: string): string | null {
 
 export function validateUsername(username: string): string | null {
   if (!username.trim()) return 'Nome de usuário é obrigatório.';
-  if (!USERNAME_REGEX.test(username.trim())) return 'Use 3–30 caracteres: letras, números ou _.';
+  if (!USERNAME_REGEX.test(username.trim())) return `Use ${USERNAME_MIN_LENGTH}–${USERNAME_MAX_LENGTH} caracteres: letras, números ou _.`;
   return null;
 }
 
