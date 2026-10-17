@@ -157,8 +157,15 @@ mesmo comando e veja a pasta `.vercel/output`.
 
 ### Supabase
 
-Em *Authentication → URL Configuration*, coloque o endereço do site em **Site URL** e adicione
-`https://SEU-DOMINIO/redefinir-senha` em **Redirect URLs** (link do e-mail de "Esqueci minha senha").
+Em *Authentication → URL Configuration*, coloque o endereço do site em **Site URL** e adicione em
+**Redirect URLs**:
+
+- `https://SEU-DOMINIO/redefinir-senha` — link do e-mail de "Esqueci minha senha";
+- `https://SEU-DOMINIO/email-confirmado` — link do e-mail de confirmação de cadastro (mostra se deu certo).
+
+Para testar localmente, adicione também `http://localhost:5173/redefinir-senha` e
+`http://localhost:5173/email-confirmado`. Endereço fora dessa lista é ignorado pelo Supabase, que
+manda o link para o Site URL.
 
 ### Limites da Vercel
 

@@ -52,6 +52,21 @@ describe('POST /auth/register', () => {
     usernameLookup(null);
   });
 
+  // ── Link do e-mail de confirmação ────────────────────────────────────────
+
+  it('o link de confirmação leva à página /email-confirmado do site (FRONTEND_URL)', async () => {
+    const previous = process.env['FRONTEND_URL'];
+    process.env['FRONTEND_URL'] = 'https://prodscore.exemplo.com/';
+    mockSignUp.mockResolvedValue(newUserAwaitingConfirmation());
+
+    await request(app).post('/auth/register').send(validBody);
+
+    expect(mockSignUp).toHaveBeenCalledWith(expect.objectContaining({
+      options: expect.objectContaining({ emailRedirectTo: 'https://prodscore.exemplo.com/email-confirmado' }),
+    }));
+    process.env['FRONTEND_URL'] = previous;
+  });
+
   // ── O bug ────────────────────────────────────────────────────────────────
 
   it('e-mail já cadastrado (confirmação ligada: Supabase devolve user sem identidades) → 409', async () => {

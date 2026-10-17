@@ -25,7 +25,13 @@ function EyeSlashIcon({ className }: { className?: string }) {
 }
 
 export default function LoginPage() {
-  const [email,        setEmail]        = useState('');
+  // Vindo de /redefinir-senha (senha nova salva) ou de /email-confirmado (cadastro confirmado)
+  const navState = useLocation().state as { passwordReset?: boolean; emailConfirmed?: boolean; email?: string } | null;
+  const passwordReset  = navState?.passwordReset === true;
+  const emailConfirmed = navState?.emailConfirmed === true;
+
+  // Depois de confirmar o e-mail, ele já vem preenchido
+  const [email,        setEmail]        = useState(navState?.email ?? '');
   const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error,        setError]        = useState('');
@@ -36,8 +42,6 @@ export default function LoginPage() {
 
   const { login, isLoading } = useAuthStore((s) => ({ login: s.login, isLoading: s.isLoading }));
   const navigate = useNavigate();
-  // Vindo de /redefinir-senha depois de salvar a senha nova
-  const passwordReset = (useLocation().state as { passwordReset?: boolean } | null)?.passwordReset === true;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -71,7 +75,12 @@ export default function LoginPage() {
 
   const handleResend = async () => {
     setResendStatus('sending');
-    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      // O link do e-mail leva à página que mostra se a confirmação deu certo
+      options: { emailRedirectTo: `${window.location.origin}/email-confirmado` },
+    });
     setResendStatus(resendError ? 'idle' : 'sent');
     if (resendError) setError(getFriendlyErrorMessage(resendError, 'Não foi possível reenviar o e-mail. Tente novamente.'));
   };
@@ -122,6 +131,11 @@ export default function LoginPage() {
           {passwordReset && (
             <div className="mb-6">
               <FormFeedback variant="success" message="Senha alterada. Entre com a nova senha." />
+            </div>
+          )}
+          {emailConfirmed && (
+            <div className="mb-6">
+              <FormFeedback variant="success" message="E-mail confirmado. Entre com sua senha para começar." />
             </div>
           )}
 

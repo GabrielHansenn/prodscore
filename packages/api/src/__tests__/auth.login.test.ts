@@ -68,7 +68,12 @@ describe('login e confirmação de e-mail', () => {
     expect(comConta.status).toBe(200);
     expect(semConta.status).toBe(200);
     expect(semConta.body).toEqual(comConta.body);
-    expect(mockResend).toHaveBeenCalledWith({ type: 'signup', email: 'gabriel@test.com' });
+    // O novo link também leva à página que mostra o resultado da confirmação
+    expect(mockResend).toHaveBeenCalledWith({
+      type: 'signup',
+      email: 'gabriel@test.com',
+      options: { emailRedirectTo: expect.stringMatching(/\/email-confirmado$/) },
+    });
   });
 
   it('reenvio repassa o limite de envios (429)', async () => {

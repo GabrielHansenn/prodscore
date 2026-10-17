@@ -17,6 +17,7 @@ import RegisterPage       from './pages/RegisterPage.js';
 import MfaVerifyPage      from './pages/MfaVerifyPage.js';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
 import ResetPasswordPage  from './pages/ResetPasswordPage.js';
+import EmailConfirmedPage from './pages/EmailConfirmedPage.js';
 import NotFoundPage       from './pages/NotFoundPage.js';
 import PrivacyPolicyPage  from './pages/PrivacyPolicyPage.js';
 
@@ -143,6 +144,9 @@ export default function App() {
         {/* Sem PublicOnlyRoute: o link do e-mail abre uma sessão de recuperação,
             e a página precisa aparecer mesmo assim */}
         <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+        {/* Sem PublicOnlyRoute pelo mesmo motivo: o link de confirmação de
+            cadastro abre uma sessão, que a página encerra depois de confirmar */}
+        <Route path="/email-confirmado" element={<EmailConfirmedPage />} />
         <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
 
         {/* Rotas privadas — aninhadas sob AppLayout com sidebar */}

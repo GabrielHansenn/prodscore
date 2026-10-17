@@ -8,6 +8,22 @@ import { requireSensitiveAuth } from '../middleware/sensitiveAction.js';
 
 const router = Router();
 
+/**
+ * Endereço de uma página do web (FRONTEND_URL + caminho). Usado nos links dos
+ * e-mails do Supabase — o endereço precisa estar em Authentication → URL
+ * Configuration → Redirect URLs no painel do Supabase, senão ele ignora e
+ * manda para o Site URL.
+ */
+function frontendUrl(path: string): string {
+  const base = (process.env['FRONTEND_URL'] ?? 'http://localhost:5173').replace(/\/+$/, '');
+  return `${base}${path}`;
+}
+
+/** Página do web que mostra o resultado da confirmação de e-mail do cadastro */
+function emailConfirmedRedirectUrl(): string {
+  return frontendUrl('/email-confirmado');
+}
+
 /** Extrai o JWT do cabeçalho Authorization — authGuard já garantiu que é válido */
 function extractBearerToken(req: { headers: Record<string, unknown> }): string {
   return (req.headers['authorization'] as string).slice(7).trim();
@@ -158,6 +174,9 @@ router.post('/register', async (req, res) => {
       options: {
         // O username é lido pelo trigger handle_new_user para criar o perfil
         data: { username: body.username },
+        // Link do e-mail leva à página que mostra se a confirmação deu certo
+        // (sem isso o Supabase usa o Site URL e a pessoa caía na landing sem aviso)
+        emailRedirectTo: emailConfirmedRedirectUrl(),
       },
     });
 
@@ -236,7 +255,11 @@ const resendSchema = z.object({
 router.post('/resend-confirmation', async (req, res) => {
   try {
     const { email } = resendSchema.parse(req.body);
-    const { error } = await createEphemeralAuthClient().auth.resend({ type: 'signup', email });
+    const { error } = await createEphemeralAuthClient().auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: emailConfirmedRedirectUrl() },
+    });
 
     if (error?.status === 429) {
       throw new AppError('Aguarde um minuto antes de pedir outro e-mail.', 429, 'MUITAS_TENTATIVAS');
@@ -257,8 +280,7 @@ router.post('/resend-confirmation', async (req, res) => {
 
 /** Página do web que recebe o link do e-mail e define a nova senha */
 function passwordResetRedirectUrl(): string {
-  const base = (process.env['FRONTEND_URL'] ?? 'http://localhost:5173').replace(/\/+$/, '');
-  return `${base}/redefinir-senha`;
+  return frontendUrl('/redefinir-senha');
 }
 
 /**
