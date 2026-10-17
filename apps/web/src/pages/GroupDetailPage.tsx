@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   MemberRole, TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, richTextToPlainText,
@@ -16,6 +16,8 @@ import {
 import { createGroupMission, type MissionWithParticipation } from '../services/mission.service.js';
 import { getTasks, createTask } from '../services/task.service.js';
 import GroupChat from '../components/GroupChat.js';
+// Recharts só é baixado quando a aba Desempenho abre (fica fora do bundle principal)
+const GroupStatsPanel = lazy(() => import('../components/reports/GroupStatsPanel.js'));
 import RichText from '../components/RichText.js';
 import { copyText } from '../lib/clipboard.js';
 import ErrorState from '../components/ErrorState.js';
@@ -33,8 +35,8 @@ import type { RankingRow } from '../services/ranking.service.js';
 import { UsersIcon, ClipboardDocumentIcon, FlameIcon, CogIcon } from '../components/icons.js';
 import Spinner from '../components/Spinner.js';
 
-type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'chat';
-const TAB_KEYS: Tab[] = ['membros', 'ranking', 'missoes', 'tarefas', 'chat'];
+type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'desempenho' | 'chat';
+const TAB_KEYS: Tab[] = ['membros', 'ranking', 'missoes', 'tarefas', 'desempenho', 'chat'];
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -598,6 +600,8 @@ export default function GroupDetailPage() {
   const [showForm, setShowForm] = useState(false);
   // Abas cujos dados falharam ao carregar — mostram erro, não "lista vazia"
   const [failedTabs, setFailedTabs] = useState<Set<Tab>>(new Set());
+  // Incrementa a cada evento de tempo real — o painel de Desempenho recarrega
+  const [liveTick, setLiveTick] = useState(0);
 
   const loadGroup = async () => {
     if (!id) return;
@@ -641,6 +645,7 @@ export default function GroupDetailPage() {
   // recarrega só ranking e missões (o resto da tela não muda com esses eventos)
   const reloadRankingAndMissions = async () => {
     if (!id) return;
+    setLiveTick((t) => t + 1); // painel de Desempenho recarrega junto
     const [rankRes, missRes] = await Promise.allSettled([getGroupRanking(id), getGroupMissions(id)]);
     if (rankRes.status === 'fulfilled') setRanking(rankRes.value);
     if (missRes.status === 'fulfilled') setMissions(missRes.value);
@@ -725,6 +730,7 @@ export default function GroupDetailPage() {
     { key: 'ranking',  label: 'Ranking' },
     { key: 'missoes',  label: 'Missões',  count: missions.length },
     { key: 'tarefas',  label: 'Tarefas',  count: tasks.length },
+    { key: 'desempenho', label: 'Desempenho' },
     { key: 'chat',     label: 'Chat' },
   ];
 
@@ -951,6 +957,12 @@ export default function GroupDetailPage() {
             onTaskCreated={(t) => setTasks((prev) => [t, ...prev])}
             onTaskUpdated={(updated) => setTasks((prev) => prev.map((t) => t.id === updated.id ? updated : t))}
           />
+        )}
+
+        {tab === 'desempenho' && id && (
+          <Suspense fallback={<div className="flex justify-center py-10"><Spinner size="md" /></div>}>
+            <GroupStatsPanel groupId={id} refreshKey={liveTick} />
+          </Suspense>
         )}
 
         {tab === 'chat' && id && <GroupChat groupId={id} />}

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import StatisticsContent from '../components/StatisticsContent';
 import WeeklyGoalHistory from '../components/WeeklyGoalHistory';
+import StatsReport from '../components/reports/StatsReport';
 import { FONT, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -40,6 +41,7 @@ export default function StatisticsScreen({ navigation }: { navigation: { goBack:
         <View style={styles.center}><ActivityIndicator color={colors.primary} size="large" /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <StatsReport />
           <StatisticsContent stats={stats} />
           <WeeklyGoalHistory />
         </ScrollView>

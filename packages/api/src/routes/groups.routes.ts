@@ -21,6 +21,7 @@ import {
   uploadGroupImage,
 } from '../services/group.service.js';
 import { getMissionsForGroup, createGroupMission } from '../services/mission.service.js';
+import { parseReportRange, getGroupStats } from '../services/report.service.js';
 import {
   listGroupMessages,
   sendGroupMessage,
@@ -309,6 +310,30 @@ router.get('/:id/ranking', authGuard, async (req, res) => {
     return res.status(200).json({ ranking, total: ranking.length });
   } catch (err) {
     return sendError(res, err, '[grupos/GET/:id/ranking]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /groups/:id/stats — métricas coletivas do período
+// ---------------------------------------------------------------------------
+
+/**
+ * Indicadores do grupo no período e contribuição de cada membro (tarefas do
+ * grupo concluídas e pontos dessas tarefas). Query: from, to (AAAA-MM-DD).
+ * Restrito a membros do grupo (403 para os demais).
+ */
+router.get('/:id/stats', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const groupId = req.params['id'];
+
+    if (!groupId) throw new AppError('ID do grupo é obrigatório.', 400);
+
+    const range     = parseReportRange(req.query);
+    const relatorio = await getGroupStats(groupId, user.id, range);
+    return res.status(200).json({ relatorio });
+  } catch (err) {
+    return sendError(res, err, '[grupos/GET/:id/stats]');
   }
 });
 

@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useUserStore } from '../store/userStore.js';
 import StatisticsContent from '../components/StatisticsContent.js';
 import WeeklyGoalHistory from '../components/WeeklyGoalHistory.js';
+// Recharts só é baixado quando a tela abre (fica fora do bundle principal)
+const StatsReport = lazy(() => import('../components/reports/StatsReport.js'));
 import ErrorState from '../components/ErrorState.js';
 import Spinner from '../components/Spinner.js';
 
@@ -29,6 +31,9 @@ export default function StatisticsPage() {
         </div>
       ) : (
         <div className="space-y-8">
+          <Suspense fallback={<div className="flex justify-center py-10"><Spinner size="md" /></div>}>
+            <StatsReport />
+          </Suspense>
           <StatisticsContent stats={stats} />
           <WeeklyGoalHistory />
         </div>

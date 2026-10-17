@@ -18,6 +18,7 @@ import {
   getProcrastinationAlerts,
 } from '../services/behavioral.service.js';
 import { getWeeklyGoalProgress, getWeeklyGoalHistory } from '../services/adaptive.service.js';
+import { parseReportRange, getUserStatsHistory } from '../services/report.service.js';
 
 const router = Router();
 
@@ -311,6 +312,26 @@ router.get('/me/behavioral-profile', authGuard, async (req, res) => {
     return res.status(200).json({ perfilComportamental: profile });
   } catch (err) {
     return sendError(res, err, '[usuarios/GET/me/behavioral-profile]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /users/me/stats/history — relatório de desempenho do período
+// ---------------------------------------------------------------------------
+
+/**
+ * Série (por dia ou semana) e indicadores do período para os gráficos da tela
+ * de Estatísticas. Query: from, to (AAAA-MM-DD, UTC) e granularity (day|week),
+ * todos opcionais — padrão: últimos 30 dias, por dia. Só os dados do próprio usuário.
+ */
+router.get('/me/stats/history', authGuard, async (req, res) => {
+  try {
+    const { user } = req as AuthenticatedRequest;
+    const range     = parseReportRange(req.query);
+    const relatorio = await getUserStatsHistory(user.id, user.totalPoints, range);
+    return res.status(200).json({ relatorio });
+  } catch (err) {
+    return sendError(res, err, '[usuarios/GET/me/stats/history]');
   }
 });
 

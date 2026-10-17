@@ -10,6 +10,7 @@ import {
   MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
 } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
+import { maskDateBR, parseDateBR, isoToBR } from '../lib/dateBR';
 import { markdownToRichText, richTextToMarkdown } from '../lib/markdownToRichText';
 import { showToast } from '../store/toastStore';
 import Dropdown from './Dropdown';
@@ -41,28 +42,8 @@ const PRIORITY_OPTIONS: Array<{ value: TaskPriority; label: string }> = [
 ];
 
 // ---------------------------------------------------------------------------
-// Máscara de data brasileira (DD/MM/AAAA) para o campo Prazo
+// Campo Prazo (máscara DD/MM/AAAA em lib/dateBR.ts)
 // ---------------------------------------------------------------------------
-
-/** Aplica a máscara DD/MM/AAAA conforme o usuário digita (só dígitos, insere as barras) */
-function maskDateBR(text: string): string {
-  const digits = text.replace(/\D/g, '').slice(0, 8);
-  if (digits.length > 4) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  return digits;
-}
-
-/** Converte DD/MM/AAAA (completo e válido) em AAAA-MM-DD para a API — null se incompleta/inválida */
-function parseDateBR(masked: string): string | null {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(masked);
-  if (!match) return null;
-  const [, dd, mm, yyyy] = match as unknown as [string, string, string, string];
-  const day = Number(dd), month = Number(mm), year = Number(yyyy);
-  const date = new Date(year, month - 1, day);
-  // new Date() "rola" datas inválidas (ex: 31/02 vira 03/03) — se não bater, não existe
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 /**
  * Erro do campo Prazo, ou null se vazio/válido. Só avalia a data completa
@@ -85,12 +66,6 @@ const DUE_SHORTCUTS: Array<{ label: string; days: number | null }> = [
   { label: 'Em 1 semana', days: 7 },
   { label: 'Sem prazo',   days: null },
 ];
-
-/** AAAA-MM-DD (como vem da API) → DD/MM/AAAA (como o usuário vê) */
-function isoToBR(iso: string): string {
-  const [yyyy, mm, dd] = iso.split('-');
-  return `${dd}/${mm}/${yyyy}`;
-}
 
 // ---------------------------------------------------------------------------
 // Modal de criar/editar tarefa — espelha TaskModal do web

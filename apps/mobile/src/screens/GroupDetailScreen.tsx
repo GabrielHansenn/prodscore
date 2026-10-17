@@ -25,6 +25,7 @@ import RankingItem, { type RankingRow } from '../components/RankingItem';
 import TaskItem from '../components/TaskItem';
 import TaskFormModal from '../components/TaskFormModal';
 import GroupChat from '../components/GroupChat';
+import GroupStatsPanel from '../components/reports/GroupStatsPanel';
 import RichTextPreview from '../components/RichTextPreview';
 import ErrorState from '../components/ErrorState';
 import { confirmTaskDeletion } from '../lib/confirmTaskDeletion';
@@ -33,7 +34,7 @@ import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
 
-type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'chat';
+type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'painel' | 'chat';
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   [MemberRole.Owner]:  'Dono',
@@ -72,6 +73,8 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
    * mantêm a tela e a posição da rolagem.
    */
   const [failedTabs, setFailedTabs] = useState<Set<Tab>>(new Set());
+  // Incrementa a cada evento de tempo real — a aba Painel recarrega
+  const [liveTick, setLiveTick] = useState(0);
 
   const load = async (showSpinner = false) => {
     if (showSpinner) setLoading(true);
@@ -103,6 +106,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     if (!accessToken) return undefined;
     const reloadRankingAndMissions = async () => {
+      setLiveTick((t) => t + 1); // aba Painel recarrega junto
       const [rankRes, missRes] = await Promise.allSettled([getGroupRanking(groupId), getGroupMissions(groupId)]);
       if (rankRes.status === 'fulfilled') setRanking(rankRes.value);
       if (missRes.status === 'fulfilled') setMissions(missRes.value);
@@ -145,6 +149,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     { key: 'ranking', label: 'Ranking' },
     { key: 'missoes', label: 'Missões', count: missions.length },
     { key: 'tarefas', label: 'Tarefas', count: tasks.length },
+    { key: 'painel',  label: 'Painel' },
     { key: 'chat',    label: 'Chat' },
   ];
 
@@ -247,6 +252,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
             {failedTabs.has(tab) && (
               <ErrorState message="Não foi possível carregar esta parte do grupo." onRetry={() => load()} />
             )}
+            {tab === 'painel' && <GroupStatsPanel groupId={groupId} refreshKey={liveTick} />}
             {tab === 'membros' && !failedTabs.has('membros') && (
               members.length === 0
                 ? <Text style={styles.emptyText}>Nenhum membro encontrado.</Text>
