@@ -122,7 +122,7 @@ async function seed(token) {
   created.groupId = grupo.id;
 
   for (const title of [`${TAG} Tarefa do grupo com nome comprido para conferir a quebra`, `${TAG} ${LONG_WORD}`, `${TAG} Revisar`]) {
-    const { tarefa } = await apiCall(token, 'POST', '/tasks', { title, difficulty: 'medium', priority: 'medium', groupId: grupo.id });
+    const { tarefa } = await apiCall(token, 'POST', '/tasks', { title, difficulty: 'medium', priority: 'medium', groupId: grupo.id, dueDate: new Date(Date.now() + 2 * day).toISOString() });
     created.tasks.push(tarefa.id);
   }
   await apiCall(token, 'PATCH', `/tasks/${created.tasks.at(-1)}/complete`);

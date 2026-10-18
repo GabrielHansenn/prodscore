@@ -40,6 +40,7 @@ function hoursFromNow(hours: number): string {
 const validTask = {
   title:      'Estudar para a prova',
   difficulty: TaskDifficulty.Medium,
+  dueDate:    hoursFromNow(48),
 };
 
 describe('POST /tasks', () => {
@@ -138,6 +139,15 @@ describe('POST /tasks', () => {
       expect(res.status).toBe(201);
     });
 
+    it('T5d — tarefa sem prazo deve ser recusada', async () => {
+      const { dueDate: _semPrazo, ...semPrazo } = validTask;
+      const res = await postTask(semPrazo);
+
+      expect(res.status).toBe(400);
+      expect(res.body.erro).toContain('Defina um prazo para a tarefa.');
+      expect(mockCreateTask).not.toHaveBeenCalled();
+    });
+
     it('T5c — data em formato inválido deve ser recusada', async () => {
       const res = await postTask({ ...validTask, dueDate: '31/12/2026' });
 
@@ -209,6 +219,14 @@ describe('descrição com texto rico', () => {
     mockVerifyToken.mockResolvedValue({ user: { id: 'user-1' }, error: null });
     mockCreateTask.mockImplementation(async (input) => ({ id: 'task-1', ...input }));
     mockUpdateTask.mockImplementation(async (_id, _userId, input) => ({ id: 'task-1', ...input }));
+  });
+
+  it('edição não pode remover o prazo (dueDate: null)', async () => {
+    const res = await send('patch', '/tasks/task-1', { dueDate: null });
+
+    expect(res.status).toBe(400);
+    expect(res.body.erro).toContain('A tarefa precisa ter um prazo.');
+    expect(mockUpdateTask).not.toHaveBeenCalled();
   });
 
   it('cria a tarefa com o documento normalizado e a cópia em texto puro', async () => {

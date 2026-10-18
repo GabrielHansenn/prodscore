@@ -418,6 +418,9 @@ function GroupTasksTab({
     e.preventDefault();
     const titleError = validateRequired(title, 'Título');
     if (titleError) { setError(titleError); return; }
+    // Prazo obrigatório, como nas tarefas pessoais
+    const due = dueDate ? endOfLocalDayISO(dueDate) : null;
+    if (!due) { setError('Defina um prazo para a tarefa.'); return; }
     if (desc && richTextToPlainText(desc).length > MAX_TASK_DESCRIPTION_LENGTH) {
       setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
       return;
@@ -431,9 +434,9 @@ function GroupTasksTab({
         difficulty: diff,
         priority,
         groupId,
-        ...(desc           ? { descriptionRich: desc }              : {}),
         // 23h59 do dia escolhido no fuso do usuário (new Date("AAAA-MM-DD") é meia-noite UTC = 21h da véspera)
-        ...(dueDate && endOfLocalDayISO(dueDate) ? { dueDate: endOfLocalDayISO(dueDate)! } : {}),
+        dueDate:    due,
+        ...(desc           ? { descriptionRich: desc }              : {}),
       });
       onTaskCreated(task);
       setTitle(''); setDesc(null); setDueDate('');
@@ -505,9 +508,12 @@ function GroupTasksTab({
             </div>
 
             <div>
-              <label htmlFor="group-task-due" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Prazo (opcional)</label>
+              <label htmlFor="group-task-due" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                Prazo <span className="text-red-500" aria-hidden="true">*</span>
+              </label>
               <input id="group-task-due"
                 type="date"
+                aria-required="true"
                 value={dueDate}
                 min={localDateKey()}
                 onChange={(e) => setDueDate(e.target.value)}

@@ -48,7 +48,7 @@ export async function createTask(input: {
   priority?:         TaskPriority;
   estimatedMinutes?: number;
   descriptionRich?:  RichTextDoc | null;
-  dueDate?:          string;
+  dueDate:           string;
   groupId?:          string;
 }): Promise<Task> {
   return callApi(async () => {

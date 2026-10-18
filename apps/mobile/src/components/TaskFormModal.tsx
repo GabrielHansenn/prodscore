@@ -59,12 +59,14 @@ function dueDateError(masked: string): string | null {
   return null;
 }
 
-/** Atalhos de prazo: hoje, amanhã e daqui a uma semana (dias no fuso do aparelho) */
-const DUE_SHORTCUTS: Array<{ label: string; days: number | null }> = [
+/**
+ * Atalhos de prazo: hoje, amanhã e daqui a uma semana (dias no fuso do
+ * aparelho). Não há mais "Sem prazo": o prazo é obrigatório.
+ */
+const DUE_SHORTCUTS: Array<{ label: string; days: number }> = [
   { label: 'Hoje',        days: 0 },
   { label: 'Amanhã',      days: 1 },
   { label: 'Em 1 semana', days: 7 },
-  { label: 'Sem prazo',   days: null },
 ];
 
 // ---------------------------------------------------------------------------
@@ -73,7 +75,7 @@ const DUE_SHORTCUTS: Array<{ label: string; days: number | null }> = [
 
 export interface TaskFormData {
   title: string; difficulty: TaskDifficulty; priority: TaskPriority;
-  estimatedMinutes?: number; dueDate?: string; requiresProof?: boolean;
+  estimatedMinutes?: number; dueDate: string; requiresProof?: boolean;
   /** null limpa a descrição (edição) */
   descriptionRich?: RichTextDoc | null;
   groupId?: string;
@@ -128,15 +130,15 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
       return;
     }
 
+    // Prazo obrigatório: dá senso de urgência (e vale o bônus de entrega no prazo).
     // 23h59 do dia escolhido no fuso do aparelho (antes era 23h59 UTC = 20h59 no Brasil)
-    let due: string | undefined;
-    if (dueDateInput.trim()) {
-      const parsed = parseDateBR(dueDateInput.trim());
-      const endOfDay = parsed ? endOfLocalDayISO(parsed) : null;
-      if (!endOfDay) { setError('Data de prazo inválida. Use o formato DD/MM/AAAA.'); return; }
-      if (new Date(endOfDay) <= new Date()) { setError('A data de entrega deve ser no futuro.'); return; }
-      due = endOfDay;
-    }
+    if (!dueDateInput.trim()) { setError('Defina um prazo para a tarefa.'); return; }
+    const parsed = parseDateBR(dueDateInput.trim());
+    const due = parsed ? endOfLocalDayISO(parsed) : null;
+    if (!due) { setError('Data de prazo inválida. Use o formato DD/MM/AAAA.'); return; }
+    // Na edição, um prazo que já passou pode ser mantido (a tarefa só está atrasada)
+    const unchanged = isEdit && task?.dueDate && localDateKey(new Date(task.dueDate)) === parsed;
+    if (!unchanged && new Date(due) <= new Date()) { setError('A data de entrega deve ser no futuro.'); return; }
 
     setError('');
     setLoading(true);
@@ -147,7 +149,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
         ...(est ? { estimatedMinutes: est } : {}),
         // Na edição sempre envia (null = apagou a descrição); na criação só se preenchida
         ...(isEdit || descriptionDoc ? { descriptionRich: descriptionDoc } : {}),
-        ...(due ? { dueDate: due } : {}),
+        dueDate: due,
         ...(groupId ? { groupId } : {}),
       });
       onClose();
@@ -198,7 +200,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
 
               <View style={styles.rowFields}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Prazo</Text>
+                  <Text style={styles.fieldLabel}>Prazo <Text style={{ color: colors.red }}>*</Text></Text>
                   <TextInput
                     style={[styles.input, liveDueError ? styles.inputError : null]} value={dueDateInput}
                     onChangeText={(t) => setDueDateInput(maskDateBR(t))}
@@ -221,11 +223,9 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
               {!isCompleted && (
                 <View style={styles.dueShortcuts}>
                   {DUE_SHORTCUTS.map((s) => {
-                    const value = s.days === null ? '' : (() => {
-                      const d = new Date();
-                      d.setDate(d.getDate() + s.days);
-                      return isoToBR(localDateKey(d));
-                    })();
+                    const d = new Date();
+                    d.setDate(d.getDate() + s.days);
+                    const value = isoToBR(localDateKey(d));
                     const active = dueDateInput === value;
                     return (
                       <TouchableOpacity

@@ -38,7 +38,7 @@ interface CreateTaskInput {
   priority?:         TaskPriority;
   /** Descrição formatada — a API gera a cópia em texto puro. null limpa (edição) */
   descriptionRich?:  RichTextDoc | null;
-  dueDate?:          string;
+  dueDate:           string;
   estimatedMinutes?: number;
   groupId?:          string;
   requiresProof?:    boolean;

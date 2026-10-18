@@ -97,14 +97,15 @@ const createTaskSchema = z.object({
     .min(1, { message: 'Tempo estimado deve ser de pelo menos 1 minuto.' })
     .optional(),
 
+  // Obrigatório: o prazo é o que dá senso de urgência à tarefa (e o bônus de
+  // entrega no prazo depende dele)
   dueDate: z
-    .string()
+    .string({ required_error: 'Defina um prazo para a tarefa.' })
     .datetime({ message: 'Data de entrega inválida. Use o formato ISO 8601 (ex: 2026-12-31T23:59:00Z).' })
     .refine(
       (date) => new Date(date) > new Date(),
       { message: 'A data de entrega deve ser no futuro.' },
-    )
-    .optional(),
+    ),
 
   groupId: z
     .string()
@@ -162,10 +163,10 @@ const updateTaskSchema = z
       )
       .optional(),
 
+    // Pode mudar o prazo, mas não removê-lo (null era "sem prazo")
     dueDate: z
-      .string()
+      .string({ invalid_type_error: 'A tarefa precisa ter um prazo.' })
       .datetime({ message: 'Data de entrega inválida. Use o formato ISO 8601.' })
-      .nullable()
       .optional(),
 
     requiresProof: z

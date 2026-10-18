@@ -90,6 +90,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     e.preventDefault();
     const titleError = validateRequired(title, 'Título');
     if (titleError) { setError(titleError); return; }
+    // Prazo obrigatório: dá senso de urgência (e vale o bônus de entrega no prazo)
+    if (!dueDate) { setError('Defina um prazo para a tarefa.'); return; }
     if (description && richTextToPlainText(description).length > MAX_TASK_DESCRIPTION_LENGTH) {
       setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
       return;
@@ -191,10 +193,13 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
           <div className="grid grid-cols-2 gap-4">
             {/* min-w-0: sem isso a coluna cresce com a largura mínima do campo de data */}
             <div className="min-w-0">
-              <label htmlFor="task-due" className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
+              <label htmlFor="task-due" className="mb-1 block text-xs font-medium text-gray-600">
+                Prazo <span className="text-red-500" aria-hidden="true">*</span>
+              </label>
               <input
                 id="task-due"
                 type="date"
+                aria-required="true"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 disabled={isCompleted}
