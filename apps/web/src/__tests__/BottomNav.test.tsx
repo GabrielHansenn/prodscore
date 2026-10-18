@@ -178,4 +178,34 @@ describe('BottomNav', () => {
 
     window.matchMedia = original;
   });
+
+  it('volta quando o campo focado sai da página sem focusout (modal fechado no Safari)', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(pointer: coarse)', media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+    })) as typeof window.matchMedia;
+
+    function FakeModal({ open }: { open: boolean }) {
+      return open ? <input aria-label="Título" autoFocus /> : null;
+    }
+    const ui = (open: boolean) => (
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <BottomNav />
+        <FakeModal open={open} />
+      </MemoryRouter>
+    );
+    const { rerender } = render(ui(true));
+    act(() => { fireEvent.focusIn(screen.getByLabelText('Título')); });
+    expect(screen.queryByRole('navigation', { name: 'Navegação principal' })).not.toBeInTheDocument();
+
+    // Como no WebKit: o campo some e nenhum focusout é disparado
+    const stopFocusOut = (e: Event) => e.stopImmediatePropagation();
+    document.addEventListener('focusout', stopFocusOut, true);
+    rerender(ui(false));
+    document.removeEventListener('focusout', stopFocusOut, true);
+
+    expect(await screen.findByRole('navigation', { name: 'Navegação principal' })).toBeInTheDocument();
+    window.matchMedia = original;
+  });
 });

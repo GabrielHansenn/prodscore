@@ -99,6 +99,25 @@ test('desktop 1280px: sem barra inferior, com a barra lateral de sempre', async 
   await page.context().close();
 });
 
+test('celular: a barra volta depois de fechar um modal com campo de texto focado', async ({ browser }) => {
+  const page = await openAs(browser, PHONES[1]!, 'light');
+  await page.goto('/dashboard');
+  const nav = page.getByTestId('bottom-nav');
+
+  // O "+" abre o modal e foca o título: a barra some (teclado "aberto")
+  await page.getByRole('button', { name: 'Nova tarefa' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(nav).toBeHidden();
+
+  // Fechar o modal remove o campo focado da página: a barra tem que voltar
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(nav).toBeVisible();
+  await nav.getByRole('link', { name: 'Grupos' }).click();
+  await expect(page).toHaveURL(/\/grupos$/);
+  await page.context().close();
+});
+
 test('celular: o Menu abre as outras telas e o "+" abre a nova tarefa', async ({ browser }) => {
   const page = await openAs(browser, PHONES[0]!, 'light');
   await page.goto('/dashboard');
