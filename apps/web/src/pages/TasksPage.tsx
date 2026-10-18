@@ -189,7 +189,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            {/* min-w-0: sem isso a coluna cresce com a largura mínima do campo de data */}
+            <div className="min-w-0">
               <label htmlFor="task-due" className="mb-1 block text-xs font-medium text-gray-600">Prazo</label>
               <input
                 id="task-due"

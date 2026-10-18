@@ -149,6 +149,21 @@
     min-height: 44px;
   }
 
+  /* Campo de data no iOS (Safari e Chrome usam o WebKit): o seletor nativo
+     tem largura e altura mínimas próprias e centraliza o texto, então
+     estoura a coluna do grid e fica mais alto que os campos vizinhos.
+     Tirar a aparência nativa faz ele respeitar o w-full e o padding do .input */
+  .input[type='date'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    display: block;
+  }
+  .input[type='date']::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
+
   /* ── Alertas semânticos ──────────────────────────────────────
      Substitui os blocos "border-X-200 bg-X-50 text-X-700 dark:..."
      repetidos em várias páginas (erro, aviso, confirmação, info) por
