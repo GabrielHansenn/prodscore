@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 
 interface ModalProps {
   /** Fecha o modal (Esc, clique fora). Omitir enquanto algo está sendo salvo, se não puder fechar. */
@@ -26,6 +27,7 @@ export default function Modal({
   // Sempre a versão mais recente de onClose, sem refazer o listener a cada render
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  useScrollLock();
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -51,7 +53,8 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`max-h-dialog overflow-y-auto ${className}`}
+        // overscroll-contain: ao chegar no topo/fim do modal a rolagem para aqui
+        className={`max-h-dialog overflow-y-auto overscroll-contain ${className}`}
       >
         {children}
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   MemberRole, getDescriptionDoc, richTextToPlainText, MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc,
@@ -58,6 +59,7 @@ function ConfirmModal({
   onCancel: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  useScrollLock();
 
   const handle = async () => {
     setLoading(true);
@@ -511,6 +513,7 @@ function DangerZoneSection({
 
   const [confirmLeave,  setConfirmLeave]  = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  useScrollLock(confirmDelete);
   const [deleteInput,   setDeleteInput]   = useState('');
   const [error,         setError]         = useState('');
 

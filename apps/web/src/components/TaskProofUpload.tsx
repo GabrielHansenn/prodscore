@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import {
   ACCEPTED_PROOF_MIME_TYPES,
   MAX_PROOF_FILE_SIZE_BYTES,
@@ -44,6 +45,7 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
   const [progress,      setProgress]      = useState(0);
   const [error,         setError]         = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  useScrollLock();
 
   const resetSelection = () => {
     if (preview) URL.revokeObjectURL(preview);

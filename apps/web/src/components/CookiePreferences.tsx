@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import { CookieCategory, ALL_COOKIE_CATEGORIES, type ConsentState } from '@prodscore/shared';
 import { useConsentStore } from '../store/consentStore.js';
 
@@ -78,6 +79,7 @@ export default function CookiePreferences() {
   }));
 
   const [draft, setDraft] = useState<ConsentState>(consent);
+  useScrollLock(isOpen);
 
   // Reabre sempre a partir da escolha salva atualmente, não da última edição descartada
   useEffect(() => {

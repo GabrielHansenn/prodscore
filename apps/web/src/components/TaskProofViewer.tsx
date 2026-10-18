@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import { createPortal } from 'react-dom';
 import { getTaskProofUrl } from '../services/proof.service.js';
 
@@ -26,6 +27,7 @@ export default function TaskProofViewer({ taskId }: TaskProofViewerProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const triggerRef  = useRef<HTMLButtonElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  useScrollLock(lightboxOpen);
 
   useEffect(() => {
     let active = true;

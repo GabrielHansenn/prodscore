@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
@@ -39,6 +40,7 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  useScrollLock();
 
   // Foco no primeiro item, Esc fecha e o foco volta para o botão "Menu"
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-menu-title"
-        className="max-h-dialog w-full max-w-[480px] overflow-y-auto rounded-t-3xl border-t border-gray-200 bg-white px-4 pt-3 shadow-2xl animate-in pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#1c1b32]"
+        className="max-h-dialog w-full max-w-[480px] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-gray-200 bg-white px-4 pt-3 shadow-2xl animate-in pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#1c1b32]"
       >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-gray-300 dark:bg-white/20" aria-hidden="true" />
 

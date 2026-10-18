@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useScrollLock } from '../lib/useScrollLock.js';
 import { TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
 import RichText from './RichText.js';
 import { CalendarIcon, ClockIcon, CameraIcon, CheckCircleIcon, PencilIcon } from './icons.js';
@@ -35,6 +36,7 @@ function InfoRow({ icon, label, children }: { icon: ReactNode; label: string; ch
  */
 export default function TaskDetailModal({ task, onClose, onEdit }: TaskDetailModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  useScrollLock();
   const description = getDescriptionDoc(task);
   const priority = PRIORITY_BADGE[task.priority];
   const isCompleted = task.status === TaskStatus.Completed;
@@ -97,7 +99,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }: TaskDetailMod
         </div>
 
         {/* Corpo com rolagem própria — descrições longas não empurram o modal pra fora da tela */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5">
           <section>
             <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">Descrição</h3>
             {description ? (
