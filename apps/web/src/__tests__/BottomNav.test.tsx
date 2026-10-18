@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent, act } from '@testing-library/react';
+import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -134,6 +134,25 @@ describe('BottomNav', () => {
     await userEvent.click(within(sheet).getByRole('link', { name: 'Conquistas' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/conquistas');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('arrastar o menu para baixo fecha; um toque curto não', async () => {
+    renderAt('/dashboard');
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    const handle = document.querySelector('[data-drag-handle]')!;
+
+    // Movimento curto (menos que um arraste): continua aberto
+    fireEvent.touchStart(handle, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(handle, { touches: [{ clientY: 112 }] });
+    fireEvent.touchEnd(handle);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Arrastou bastante para baixo: fecha
+    fireEvent.touchStart(handle, { touches: [{ clientY: 100 }] });
+    fireEvent.touchMove(handle, { touches: [{ clientY: 180 }] });
+    fireEvent.touchMove(handle, { touches: [{ clientY: 260 }] });
+    fireEvent.touchEnd(handle);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('Esc fecha o menu', async () => {

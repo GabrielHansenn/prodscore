@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useScrollLock } from '../lib/useScrollLock.js';
+import { useDragToClose } from '../lib/useDragToClose.js';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.js';
 import { useUserStore } from '../store/userStore.js';
@@ -28,7 +29,8 @@ const THEMES: ReadonlyArray<{ value: Theme; label: string; icon: (p: { className
 /**
  * Menu do celular: folha que sobe do rodapé com as telas que não cabem na
  * barra inferior, o tema, as configurações de cookies e o Sair (o que antes
- * ficava no menu lateral). Fecha com Esc, toque fora ou ao escolher uma tela.
+ * ficava no menu lateral). Fecha com Esc, toque fora, arrastando para baixo
+ * ou ao escolher uma tela.
  */
 export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: () => void; unreadMessages: number }) {
   const { pathname } = useLocation();
@@ -38,9 +40,11 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
   const { theme, setTheme } = useThemeStore();
   const resetConsent = useConsentStore((s) => s.resetConsent);
   const panelRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useScrollLock();
+  useDragToClose(sheetRef, panelRef, () => onCloseRef.current());
 
   // Foco no primeiro item, Esc fecha e o foco volta para o botão "Menu"
   useEffect(() => {
@@ -65,14 +69,20 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[1px] lg:hidden"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCloseRef.current(); }}
     >
+      {/* Camada que acompanha o dedo ao arrastar. Separada do painel porque a
+          animação de entrada (animate-in) prende o transform do painel */}
+      <div ref={sheetRef} className="w-full max-w-[480px]">
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-menu-title"
-        className="max-h-dialog w-full max-w-[480px] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-gray-200 bg-white px-4 pt-3 shadow-2xl animate-in pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#1c1b32]"
+        className="max-h-dialog w-full overflow-y-auto overscroll-contain rounded-t-3xl border-t border-gray-200 bg-white px-4 pt-3 shadow-2xl animate-in pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#1c1b32]"
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-gray-300 dark:bg-white/20" aria-hidden="true" />
+        {/* Puxador: área de toque maior que o tracinho, para arrastar e fechar */}
+        <div data-drag-handle className="-mx-4 -mt-3 mb-1 flex touch-none justify-center pb-2 pt-3" aria-hidden="true">
+          <div className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-white/20" />
+        </div>
 
         {/* Quem está logado */}
         <div className="mb-4 flex items-center gap-3 px-1">
@@ -158,6 +168,7 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
             Sair
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
