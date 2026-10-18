@@ -144,8 +144,9 @@ export default function RichTextEditor({
     content: toTiptapContent(initialContent ?? emptyRichTextDoc()),
     editorProps: {
       attributes: {
-        // [overflow-wrap:anywhere] evita que uma palavra/link enorme estoure a largura do editor
-        class: `prose-sm ${heightClassName} overflow-y-auto px-3 py-2 text-sm text-gray-900 [overflow-wrap:anywhere] focus:outline-none dark:text-gray-100`,
+        // [overflow-wrap:anywhere] evita que uma palavra/link enorme estoure a largura do editor.
+        // rich-editor (index.css) dá aparência às listas e ao código enquanto se digita
+        class: `rich-editor ${heightClassName} overflow-y-auto px-3 py-2 text-sm text-gray-900 [overflow-wrap:anywhere] focus:outline-none dark:text-gray-100`,
         'aria-label': placeholder ?? 'Mensagem',
       },
       handleKeyDown: (_view, event) => {

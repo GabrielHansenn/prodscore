@@ -7,7 +7,7 @@ import type { RichTextDoc, RichTextBlock, RichTextListItem, RichTextMark, RichTe
  * composição usa marcação leve (a barra de atalhos envolve a seleção):
  *   **negrito**  *itálico*  ***negrito e itálico***
  *   __sublinhado__  ~~tachado~~  `código`
- *   linhas iniciadas por "- " viram lista com marcadores
+ *   linhas iniciadas por "• " (ou "- " / "* ") viram lista com marcadores
  *   linhas iniciadas por "1. " viram lista numerada
  *
  * O resultado é o mesmo formato que o backend valida — a renderização fica
@@ -81,7 +81,9 @@ export function markdownToRichText(input: string): RichTextDoc | null {
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
 
-    const bullet  = /^\s*[-*]\s+(.*)$/.exec(line);
+    // "•" é o marcador que o compositor do celular mostra; "-" e "*" são
+    // aceitos para quem digita a marcação à mão
+    const bullet  = /^\s*(?:[-*]\s+|•\s*)(.*)$/.exec(line);
     const ordered = /^\s*\d+\.\s+(.*)$/.exec(line);
 
     if (bullet || ordered) {
@@ -140,7 +142,7 @@ export function richTextToMarkdown(doc: RichTextDoc): string {
       continue;
     }
     block.content.forEach((item, i) => {
-      const prefix = block.type === 'bulletList' ? '- ' : `${i + 1}. `;
+      const prefix = block.type === 'bulletList' ? '• ' : `${i + 1}. `;
       const text = item.content.map((p) => runsToMarkdown(p.content)).join(' ').replace(/\n/g, ' ');
       lines.push(`${prefix}${text}`);
     });

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FORMAT_BUTTONS, toggleWrap, toggleListPrefix } from '../lib/markdownToRichText';
+import { FORMAT_BUTTONS, toggleWrap, toggleListPrefix, continueList } from '../lib/markdownToRichText';
 import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 
 interface RichTextInputProps {
-  /** Texto em marcação leve (**negrito**, - lista...) — converta com markdownToRichText ao salvar */
+  /** Texto em marcação leve (**negrito**, • lista...) — converta com markdownToRichText ao salvar */
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -67,7 +67,12 @@ export default function RichTextInput({ value, onChangeText, placeholder, editab
       <TextInput
         style={styles.input}
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={(text) => {
+          // Enter dentro de uma lista: já começa o próximo item
+          const listEdit = continueList(value, text, selection.start);
+          if (listEdit) apply(listEdit);
+          else onChangeText(text);
+        }}
         onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
         selection={selection}
         editable={editable}

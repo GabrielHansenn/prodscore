@@ -149,6 +149,17 @@
     min-height: 44px;
   }
 
+  /* Área de digitação do editor de texto rico (Tiptap).
+     O reset do Tailwind tira os marcadores e o recuo de <ul>/<ol> — sem isso a
+     lista existia no documento, mas aparecia como texto comum enquanto se
+     digitava. Mesmo visual do RichText.tsx, que mostra o texto salvo. */
+  .rich-editor ul { @apply list-disc pl-5; }
+  .rich-editor ol { @apply list-decimal pl-5; }
+  .rich-editor li + li { @apply mt-0.5; }
+  .rich-editor > * + * { @apply mt-1; }
+  .rich-editor li::marker { @apply text-gray-500 dark:text-gray-400; }
+  .rich-editor code { @apply rounded bg-black/10 px-1 py-0.5 font-mono text-[0.9em] dark:bg-white/10; }
+
   /* Campo de data no iOS (Safari e Chrome usam o WebKit): o seletor nativo
      tem largura e altura mínimas próprias e centraliza o texto, então
      estoura a coluna do grid e fica mais alto que os campos vizinhos.
@@ -235,7 +246,7 @@
    de Tarefas). Corrigido aqui, na causa, para todos os campos de uma vez;
    do sm (640px) para cima continua o tamanho de cada componente.
    Fora de @layer e com !important de propósito: precisa vencer as classes
-   utilitárias de tamanho de texto (text-sm, text-xs, prose-sm) dos campos.
+   utilitárias de tamanho de texto (text-sm, text-xs) dos campos.
    ============================================================ */
 @media (max-width: 639px) {
   input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),

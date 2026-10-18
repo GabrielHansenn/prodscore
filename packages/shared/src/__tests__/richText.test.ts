@@ -137,6 +137,12 @@ describe('markdownToRichText', () => {
     const doc = markdownToRichText('Passos:\n- abrir\n- fechar\n1. um\n2. dois');
     expect(doc!.content.map((b) => b.type)).toEqual(['paragraph', 'bulletList', 'orderedList']);
   });
+
+  it('"• " (marcador do compositor do celular) vira lista com marcadores', () => {
+    const doc = markdownToRichText('• abrir\n• fechar');
+    expect(doc!.content).toHaveLength(1);
+    expect(doc!.content[0]).toMatchObject({ type: 'bulletList', content: [{ type: 'listItem' }, { type: 'listItem' }] });
+  });
 });
 
 describe('richTextToMarkdown (ida e volta)', () => {
@@ -146,7 +152,8 @@ describe('richTextToMarkdown (ida e volta)', () => {
     ['negrito + itálico',  '***urgente***'],
     ['sublinhado/tachado', '__sublinhado__ e ~~riscado~~'],
     ['código',             'rodar `npm test`'],
-    ['listas',             'Passos:\n- abrir o projeto\n- rodar os testes\n1. primeiro\n2. segundo'],
+    ['listas',             'Passos:\n• abrir o projeto\n• rodar os testes\n1. primeiro\n2. segundo'],
+    ['listas com "- "',    'Passos:\n- abrir o projeto\n- rodar os testes\n1. primeiro\n2. segundo'],
   ];
 
   it.each(casos)('%s: documento → marcação → documento não muda', (_nome, markdown) => {

@@ -10,7 +10,7 @@ import {
   getGroupMessages, sendGroupMessage, uploadGroupChatImage, markGroupChatRead,
 } from '../services/groupChat.service';
 import { subscribeGroupMessages } from '../lib/realtime';
-import { markdownToRichText, toggleWrap, toggleListPrefix, FORMAT_BUTTONS } from '../lib/markdownToRichText';
+import { markdownToRichText, toggleWrap, toggleListPrefix, continueList, FORMAT_BUTTONS } from '../lib/markdownToRichText';
 import { useImageUpload } from '../lib/useImageUpload';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { showToast } from '../store/toastStore';
@@ -256,7 +256,12 @@ export default function GroupChat({ groupId }: { groupId: string }) {
           <TextInput
             style={styles.input}
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={(text) => {
+              // Enter dentro de uma lista: já começa o próximo item
+              const listEdit = continueList(draft, text, selection.start);
+              if (listEdit) { setDraft(listEdit.text); setSelection(listEdit.selection); }
+              else setDraft(text);
+            }}
             onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
             selection={selection}
             placeholder="Escreva uma mensagem para o grupo…"
