@@ -196,6 +196,14 @@
     height: 100dvh;
   }
 
+  /* Espaço que a barra de navegação inferior ocupa (definido pelo BottomNav
+     enquanto ela está visível). No desktop é sempre 0: o !important vence o
+     valor que o componente coloca no estilo inline do <html>. */
+  :root { --bottom-nav-height: 0px; }
+  @media (min-width: 1024px) {
+    :root { --bottom-nav-height: 0px !important; }
+  }
+
   /* Altura máxima de modais pelo mesmo motivo (o rodapé com os botões não
      pode ficar atrás da barra do navegador) */
   .max-h-dialog {

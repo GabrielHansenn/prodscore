@@ -17,8 +17,9 @@ export default function ToastContainer() {
       aria-live="polite"
       aria-atomic="false"
       // Celular: faixa com margem dos dois lados (antes uma mensagem longa
-      // passava da tela); do sm para cima, no canto inferior direito
-      className="fixed inset-x-4 bottom-4 z-50 flex flex-col gap-2 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:max-w-sm"
+      // passava da tela); do sm para cima, no canto inferior direito.
+      // --bottom-nav-height: fica acima da barra de navegação inferior do celular
+      className="fixed inset-x-4 bottom-[calc(1rem+var(--bottom-nav-height,0px))] z-50 flex flex-col gap-2 sm:inset-x-auto sm:bottom-[calc(1.5rem+var(--bottom-nav-height,0px))] sm:right-6 sm:max-w-sm"
     >
       {toasts.map((toast) => {
         const isError = toast.variant === 'error';

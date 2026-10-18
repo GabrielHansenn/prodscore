@@ -24,7 +24,7 @@ export default function CookieBanner() {
       role="dialog"
       aria-label="Consentimento de cookies"
       aria-describedby="cookie-banner-description"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900 sm:p-6"
+      className="fixed inset-x-0 bottom-[var(--bottom-nav-height,0px)] z-40 border-t border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900 sm:p-6"
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p id="cookie-banner-description" className="text-sm text-gray-600 dark:text-gray-300">

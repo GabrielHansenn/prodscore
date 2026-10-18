@@ -283,7 +283,7 @@ function authScreens(groupId, width) {
   const g = groupId ? `/grupos/${groupId}` : null;
   return [
     { name: 'dashboard', path: '/dashboard' },
-    ...(mobileNav ? [{ name: 'dashboard-menu-aberto', path: '/dashboard', act: clickByRole('button', 'Abrir menu de navegação') }] : []),
+    ...(mobileNav ? [{ name: 'dashboard-menu-aberto', path: '/dashboard', act: clickByRole('button', /^Menu/) }] : []),
     // No celular há dois sinos: o do cabeçalho e o do menu lateral fechado (fora da tela)
     { name: 'dashboard-notificacoes', path: '/dashboard', act: async (p) => {
       await p.locator(`${mobileNav ? 'header' : 'aside'} button[aria-label^="Notificações"]`).first().click();

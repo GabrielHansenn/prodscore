@@ -271,6 +271,12 @@ export default function TasksPage() {
     void getTaskSuggestions().then(setSuggestions).catch(() => { /* opcional */ });
   }, []);
 
+  // O "+" da barra inferior navega para ?nova=1 também quando já se está em Tarefas
+  // (o useState acima só lê o endereço na primeira vez)
+  useEffect(() => {
+    if (searchParams.get('nova') === '1') setShowCreateModal(true);
+  }, [searchParams]);
+
   let filtered = tasks;
   if (activeStatus !== 'all')     filtered = filtered.filter((t) => t.status === activeStatus);
   if (activeDifficulty !== 'all') filtered = filtered.filter((t) => t.difficulty === activeDifficulty);

@@ -1,76 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 import Sidebar from './Sidebar.js';
+import BottomNav from './BottomNav.js';
 import { LogoWordmark } from './Logo.js';
 import NotificationBell from './NotificationBell.js';
 
+/**
+ * Layout das telas logadas.
+ *
+ * - Desktop (a partir de 1024px): barra lateral fixa à esquerda.
+ * - Celular e tablet (abaixo de 1024px): cabeçalho com logo e sino, e a barra
+ *   de navegação inferior (BottomNav) — no lugar do antigo menu lateral com
+ *   botão ☰, ruim de usar com uma mão só.
+ */
 export default function AppLayout() {
-  const [open, setOpen] = useState(false);
   // Chat tem altura calculada e coluna estreita próprias — fica fora do container padrão
   const isChat = useMatch('/amigos/:id/chat') !== null;
 
-  // P2/P9: fechar sidebar com Escape (teclado)
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && open) setOpen(false);
-  }, [open]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
   return (
     <div className="h-app flex overflow-hidden bg-gray-50">
-      {/* P2: Backdrop com aria-hidden (é decorativo, botão de fechar existe) */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] lg:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar: drawer no mobile, estático no desktop */}
-      {/* P7: ease-out ao entrar, ease-in ao sair */}
-      <div
-        className={`fixed inset-y-0 left-0 z-50 lg:static lg:translate-x-0 ${
-          open
-            ? 'translate-x-0 transition-transform duration-300 ease-out'
-            : '-translate-x-full transition-transform duration-200 ease-in lg:transition-none'
-        }`}
-      >
-        <Sidebar onClose={() => setOpen(false)} />
+      {/* Barra lateral: só no desktop */}
+      <div className="hidden lg:flex">
+        <Sidebar />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Barra superior móvel */}
+        {/* Cabeçalho do celular: logo e notificações (a navegação fica na barra inferior) */}
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 lg:hidden">
-          <button
-            onClick={() => setOpen(true)}
-            aria-label="Abrir menu de navegação"
-            aria-expanded={open}
-            aria-controls="sidebar"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 transition-colors duration-150 hover:bg-gray-100 active:bg-gray-200"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
           <LogoWordmark className="h-6 w-auto" aria-hidden="true" />
-          {/* Sino também no cabeçalho do celular: a barra lateral fica escondida atrás do menu */}
           <div className="ml-auto">
             <NotificationBell variant="header" />
           </div>
         </header>
 
-        {/* Conteúdo — P5: role="main" para skip-link e a11y */}
-        <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
+        {/* Conteúdo — P5: role="main" para skip-link e a11y.
+            pb com --bottom-nav-height: o fim da página não fica atrás da barra inferior
+            (a variável é 0 no desktop, no chat e com o teclado aberto) */}
+        <main id="main-content" className="flex-1 overflow-y-auto pb-[var(--bottom-nav-height,0px)]" tabIndex={-1}>
           {/* O chat ocupa a altura toda de <main> (h-full) e rola por dentro */}
           <div className={isChat ? 'h-full' : 'mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10'}>
             <Outlet />
           </div>
         </main>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

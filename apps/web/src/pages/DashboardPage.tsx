@@ -32,7 +32,7 @@ const LEVEL_BADGE_EMOJI: Record<string, string> = {
 };
 
 function StatCard({
-  label, value, sub, accent, glow, loading = false,
+  label, value, sub, accent, glow, loading = false, to,
 }: {
   label:  string;
   value:  string | number;
@@ -41,9 +41,12 @@ function StatCard({
   glow?:  string;
   /** Enquanto os dados não chegam: esqueleto no lugar de números zerados */
   loading?: boolean;
+  /** Card clicável (ex: pontos → Ranking, que no celular fica dentro do Menu) */
+  to?: string;
 }) {
-  return (
-    <div className={`card p-5 transition-all hover:shadow-card-hover ${glow ?? ''}`} aria-busy={loading}>
+  const className = `card block p-5 transition-all hover:shadow-card-hover ${glow ?? ''}`;
+  const content = (
+    <>
       <p className="text-xs font-medium text-gray-500">{label}</p>
       {loading ? (
         <>
@@ -57,8 +60,11 @@ function StatCard({
           {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
         </>
       )}
-    </div>
+    </>
   );
+  return to
+    ? <Link to={to} className={className} aria-busy={loading}>{content}</Link>
+    : <div className={className} aria-busy={loading}>{content}</div>;
 }
 
 export default function DashboardPage() {
@@ -178,6 +184,7 @@ export default function DashboardPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total de Pontos"
+          to="/ranking"
           loading={!stats}
           value={(stats?.totalPoints ?? 0).toLocaleString('pt-BR')}
           sub={`#${stats && stats.rankPosition > 0 ? stats.rankPosition : '–'} no ranking`}
