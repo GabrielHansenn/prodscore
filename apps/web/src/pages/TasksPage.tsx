@@ -121,8 +121,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   return (
     // Modal padrão: Esc e clique fora fecham; max-h com rolagem para o editor de descrição
-    <Modal onClose={onClose} labelledBy="task-modal-title" className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
-        <h2 id="task-modal-title" className="mb-5 text-lg font-semibold text-gray-900">
+    <Modal onClose={onClose} labelledBy="task-modal-title" className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+        <h2 id="task-modal-title" className="mb-5 pr-10 text-lg font-semibold text-gray-900">
           {isEdit ? 'Editar Tarefa' : 'Nova Tarefa'}
         </h2>
 
@@ -247,6 +247,19 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
             </button>
           </div>
         </form>
+
+        {/* Botão X no canto: no fim do HTML de propósito, para o Modal continuar
+            levando o foco para o campo Título ao abrir (e não para o X) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
     </Modal>
   );
 }

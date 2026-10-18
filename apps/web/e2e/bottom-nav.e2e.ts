@@ -130,5 +130,11 @@ test('celular: o Menu abre as outras telas e o "+" abre a nova tarefa', async ({
   await page.getByRole('button', { name: 'Nova tarefa' }).click();
   await expect(page).toHaveURL(/\/tarefas/);
   await expect(page.getByRole('dialog').getByText('Nova Tarefa')).toBeVisible();
+  // O foco continua indo para o Título (o X fica no fim do HTML do modal)
+  await expect(page.locator('#task-title')).toBeFocused();
+
+  // O X no canto fecha o modal
+  await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
   await page.context().close();
 });
