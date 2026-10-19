@@ -17,7 +17,7 @@ jest.mock('../lib/supabase', () => ({
 
 import express from 'express';
 import request from 'supertest';
-import authRoutes from '../routes/auth.routes';
+import authRoutes, { registerLimiter } from '../routes/auth.routes';
 
 function buildApp() {
   const app = express();
@@ -50,6 +50,7 @@ describe('POST /auth/register', () => {
     jest.clearAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     usernameLookup(null);
+    registerLimiter.reset();
   });
 
   // ── Link do e-mail de confirmação ────────────────────────────────────────
@@ -176,14 +177,48 @@ describe('POST /auth/register', () => {
     expect(JSON.stringify(res.body)).not.toContain('Database');
   });
 
-  it('limite de tentativas do Supabase → 429', async () => {
+  // ── Limites de tentativas ────────────────────────────────────────────────
+
+  it('limite do SUPABASE (vale para todos) → 503 sem culpar a pessoa, e o código vai para o log', async () => {
     mockSignUp.mockResolvedValue({
       data:  { user: null, session: null },
-      error: { message: 'email rate limit exceeded', status: 429 },
+      error: { message: 'email rate limit exceeded', status: 429, code: 'over_email_send_rate_limit' },
     });
 
     const res = await request(app).post('/auth/register').send(validBody);
 
-    expect(res.status).toBe(429);
+    expect(res.status).toBe(503);
+    expect(res.body.codigo).toBe('CADASTRO_INDISPONIVEL');
+    expect(res.body.erro).not.toMatch(/muitas tentativas/i);
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), 'over_email_send_rate_limit', 'email rate limit exceeded');
+  });
+
+  it('cada pessoa (IP) tem o próprio limite: quem repete é barrado, outra pessoa não', async () => {
+    mockSignUp.mockResolvedValue(newUserAwaitingConfirmation());
+    const from = (ip: string, n: number) =>
+      request(app).post('/auth/register').set('X-Forwarded-For', ip).send({ ...validBody, email: `p${n}@test.com` });
+
+    for (let i = 0; i < registerLimiter.maxAttempts; i++) {
+      expect((await from('203.0.113.1', i)).status).toBe(201);
+    }
+
+    const repeated = await from('203.0.113.1', 99);
+    expect(repeated.status).toBe(429);
+    expect(repeated.body.codigo).toBe('MUITAS_TENTATIVAS');
+    expect(repeated.body.erro).toMatch(/muitas vezes seguidas/);
+
+    // Primeira tentativa de outra pessoa passa normalmente
+    expect((await from('198.51.100.7', 100)).status).toBe(201);
+  });
+
+  it('erros de validação não gastam tentativa (corrigir o formulário não bloqueia)', async () => {
+    for (let i = 0; i < registerLimiter.maxAttempts + 3; i++) {
+      await request(app).post('/auth/register').set('X-Forwarded-For', '203.0.113.9').send({ ...validBody, email: 'invalido' });
+    }
+    mockSignUp.mockResolvedValue(newUserAwaitingConfirmation());
+
+    const res = await request(app).post('/auth/register').set('X-Forwarded-For', '203.0.113.9').send(validBody);
+
+    expect(res.status).toBe(201);
   });
 });

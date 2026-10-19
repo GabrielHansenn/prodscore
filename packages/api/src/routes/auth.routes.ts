@@ -5,6 +5,7 @@ import { supabase, createUserScopedClient, createEphemeralAuthClient } from '../
 import { sendError, AppError } from '../lib/errors.js';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { requireSensitiveAuth } from '../middleware/sensitiveAction.js';
+import { AttemptLimiter, clientIp } from '../lib/attemptLimiter.js';
 
 const router = Router();
 
@@ -53,6 +54,13 @@ function translateMfaError(rawMessage: string | undefined): string {
 // ---------------------------------------------------------------------------
 
 const EMAIL_TAKEN_MESSAGE = 'Este e-mail já está cadastrado. Tente fazer login.';
+
+/**
+ * Cadastros por pessoa (IP): 5 a cada 15 minutos. Dá para uma família na
+ * mesma rede se cadastrar e para errar e tentar de novo; barra quem repete
+ * em sequência. Exportado para os testes zerarem entre um caso e outro.
+ */
+export const registerLimiter = new AttemptLimiter(5, 15 * 60_000);
 
 const registerSchema = z.object({
   // Mesmas regras do formulário (validateEmail do @prodscore/shared) — inclui
@@ -167,6 +175,16 @@ router.post('/register', async (req, res) => {
       throw new AppError('Este nome de usuário já está em uso.', 409, REGISTER_ERROR_CODES.usernameTaken);
     }
 
+    // Limite POR PESSOA: só quem repete o cadastro várias vezes é barrado.
+    // Fica depois das validações — corrigir um campo errado não gasta tentativa.
+    if (!registerLimiter.tryAttempt(clientIp(req))) {
+      throw new AppError(
+        'Você tentou criar uma conta muitas vezes seguidas. Aguarde alguns minutos e tente novamente.',
+        429,
+        'MUITAS_TENTATIVAS',
+      );
+    }
+
     // Cliente descartável — signUp abre sessão e não pode contaminar o singleton service role
     const { data, error } = await createEphemeralAuthClient().auth.signUp({
       email:    body.email,
@@ -187,7 +205,17 @@ router.post('/register', async (req, res) => {
         throw new AppError(EMAIL_TAKEN_MESSAGE, 409, REGISTER_ERROR_CODES.emailTaken);
       }
       if (error.status === 429) {
-        throw new AppError('Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente.', 429, 'MUITAS_TENTATIVAS');
+        // Limite do SUPABASE, não da pessoa: vale para o projeto inteiro (envio
+        // de e-mails) ou para o IP do nosso servidor (todos os cadastros saem
+        // dele). Não é culpa de quem está se cadastrando — a mensagem não pode
+        // dizer "muitas tentativas". O código exato vai para o log para saber
+        // qual limite estourou (ex: over_email_send_rate_limit).
+        console.error('[auth/register] Limite do Supabase Auth atingido:', error.code ?? 'sem código', error.message);
+        throw new AppError(
+          'Muita gente se cadastrando agora e não conseguimos concluir o seu cadastro. Tente novamente em alguns minutos.',
+          503,
+          'CADASTRO_INDISPONIVEL',
+        );
       }
       // Mensagem crua do Supabase/banco fica só no log — não vai para o cliente
       console.error('[auth/register] Erro do Supabase no signUp:', error.message);
