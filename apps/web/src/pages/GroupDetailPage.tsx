@@ -312,10 +312,13 @@ const STATUS_STYLE: Record<TaskStatus, string> = {
   [TaskStatus.Abandoned]:  'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
 };
 
-function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task) => void }) {
+export function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task) => void }) {
   const [completing, setCompleting] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const myId = useAuthStore((s) => s.user?.id);
   const isDone = task.status === TaskStatus.Completed || task.status === TaskStatus.Abandoned;
+  // Todos os membros veem as tarefas do grupo, mas só o dono conclui (os pontos são dele)
+  const isMine = task.userId === myId;
   const description = getDescriptionDoc(task);
 
   const handleComplete = async () => {
@@ -370,14 +373,18 @@ function GroupTaskCard({ task, onComplete }: { task: Task; onComplete: (t: Task)
                 {new Date(task.dueDate).toLocaleDateString('pt-BR')}
               </span>
             )}
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {isMine ? 'por você' : `por @${task.author?.username ?? 'membro do grupo'}`}
+            </span>
           </div>
         </div>
 
-        {!isDone && (
+        {!isDone && isMine && (
           <button
             onClick={() => void handleComplete()}
             disabled={completing}
             title="Concluir tarefa"
+            aria-label={`Concluir ${task.title}`}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:border-lime-400 hover:bg-lime-50 hover:text-lime-600 disabled:opacity-50 dark:border-gray-700 dark:hover:border-lime-600 dark:hover:bg-lime-900/20 dark:hover:text-lime-400"
           >
             {completing ? (

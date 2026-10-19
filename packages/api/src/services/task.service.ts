@@ -20,6 +20,7 @@ import {
   checkAchievements,
 } from './gamification.service.js';
 import { checkMissionProgress, type CompletedMissionInfo } from './mission.service.js';
+import { requireMembership } from './group.service.js';
 import { purgeProofFileForTask } from './proof.service.js';
 import {
   getLastCompletionAt,
@@ -167,13 +168,20 @@ export async function getTasksByUser(
   userId: string,
   filters?: TaskFilters,
 ): Promise<Task[]> {
+  // Tarefas de um grupo são compartilhadas: qualquer membro vê as de todos
+  // (antes o filtro por user_id valia sempre, e cada um só via as próprias).
+  // Só quem é membro pode listar; concluir/editar continua sendo do dono.
+  const groupId = filters?.groupId;
+  if (groupId !== undefined) await requireMembership(groupId, userId);
+
   let query = supabase
     .from('tasks')
     // Embed de task_proofs(id) via FK — usado só para computar hasProof,
     // sem precisar de uma query separada por tarefa.
     .select('*, task_proofs(id)')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false });
+
+  if (groupId === undefined) query = query.eq('user_id', userId);
 
   if (filters?.status !== undefined) {
     query = query.eq('status', filters.status);
@@ -197,7 +205,32 @@ export async function getTasksByUser(
     throw new AppError('Erro ao buscar tarefas.', 500, 'BUSCA_FALHOU');
   }
 
-  return (data as TaskRow[]).map(mapTaskRow);
+  const tasks = (data as TaskRow[]).map(mapTaskRow);
+  return groupId === undefined ? tasks : withAuthors(tasks);
+}
+
+/**
+ * Anexa quem criou cada tarefa (nome e foto), para a lista do grupo mostrar
+ * "por @fulano". tasks.user_id aponta para auth.users, então o perfil vem
+ * numa segunda consulta (uma só, para todos os autores).
+ */
+async function withAuthors(tasks: Task[]): Promise<Task[]> {
+  const ids = [...new Set(tasks.map((t) => t.userId))];
+  if (ids.length === 0) return tasks;
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .in('id', ids);
+
+  const byId = new Map((data ?? []).map((p) => {
+    const row = p as { id: string; username: string; avatar_url: string | null };
+    return [row.id, { id: row.id, username: row.username, avatarUrl: row.avatar_url }];
+  }));
+  return tasks.map((t) => {
+    const author = byId.get(t.userId);
+    return author ? { ...t, author } : t;
+  });
 }
 
 // ---------------------------------------------------------------------------

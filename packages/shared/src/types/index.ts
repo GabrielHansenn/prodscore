@@ -123,6 +123,11 @@ export interface Task {
   id: string;
   /** UUID do usuário dono da tarefa */
   userId: string;
+  /**
+   * Quem criou a tarefa — só vem na lista de tarefas de um grupo, onde todos
+   * os membros veem as tarefas de todos.
+   */
+  author?: { id: string; username: string; avatarUrl: string | null };
   /** UUID do grupo ao qual pertence (nulo se for tarefa individual) */
   groupId: string | null;
   /** Título descritivo da tarefa */

@@ -13,10 +13,15 @@ import RichTextPreview from './RichTextPreview';
 
 interface TaskItemProps {
   task:       Task;
-  /** Devolva a Promise da conclusão: o botão fica desabilitado até ela terminar */
-  onComplete: (id: string) => void | Promise<unknown>;
+  /**
+   * Devolva a Promise da conclusão: o botão fica desabilitado até ela terminar.
+   * Sem ele não há botão "Concluir" (tarefa de outro membro, na lista do grupo).
+   */
+  onComplete?: (id: string) => void | Promise<unknown>;
   onDelete:   (id: string) => void;
   onEdit?:    (task: Task) => void;
+  /** Quem criou, na lista do grupo (ex: "por você", "por @ana") */
+  authorLabel?: string;
 }
 
 /** Altura máxima da prévia da descrição: ~3 linhas de fonte 12 (lineHeight 17) */
@@ -55,7 +60,7 @@ function getPointsPreview(task: Task): string {
 }
 
 /** Card de tarefa — espelha TaskCard.tsx no web (badges, prazo, pontos, menu editar/excluir) */
-export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskItemProps) {
+export default function TaskItem({ task, onComplete, onDelete, onEdit, authorLabel }: TaskItemProps) {
   const colors = useThemeColors();
   const styles = useStyles();
   const DIFF_COLORS = getDiffColors(colors);
@@ -74,7 +79,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
   const priorityBadge = task.priority ? PRIORITY_BADGE[task.priority] : undefined;
 
   const runComplete = () => {
-    if (completing) return;
+    if (completing || !onComplete) return;
     setCompleting(true);
     Promise.resolve(onComplete(task.id))
       .catch(() => { /* quem chamou já mostra o erro */ })
@@ -119,6 +124,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
               {task.title}
             </Text>
           </Pressable>
+          {!!authorLabel && <Text style={styles.author}>{authorLabel}</Text>}
           {description && (
             <View style={styles.description}>
               <RichTextPreview doc={description} maxHeight={PREVIEW_MAX_HEIGHT} onShowMore={() => setShowDetail(true)} />
@@ -157,7 +163,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
         </View>
       </View>
 
-      {isActionable && (
+      {isActionable && onComplete && (
         <TouchableOpacity
           style={[styles.completeBtn, completing && { opacity: 0.6 }]}
           onPress={handleCompletePress}
@@ -215,6 +221,7 @@ export default function TaskItem({ task, onComplete, onDelete, onEdit }: TaskIte
 }
 
 const useStyles = createThemedStyles((colors) => StyleSheet.create({
+  author: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   card: {
     backgroundColor: colors.card,
     borderRadius:    RADIUS.lg,

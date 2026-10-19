@@ -344,23 +344,27 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 </TouchableOpacity>
                 {tasks.length === 0 ? (
                   <Text style={styles.emptyText}>Nenhuma tarefa neste grupo ainda.</Text>
-                ) : tasks.map((t) => (
+                ) : tasks.map((t) => {
+                  // Todos os membros veem as tarefas do grupo; só o dono conclui (os pontos são dele)
+                  const isMine = t.userId === user?.id;
+                  return (
                   <TaskItem
                     key={t.id}
                     task={t}
-                    onComplete={(id) =>
+                    authorLabel={isMine ? 'por você' : `por @${t.author?.username ?? 'membro do grupo'}`}
+                    {...(isMine ? { onComplete: (id: string) =>
                       completeTask(id).then((result) => {
                         void load();
                         void refreshStatsAndShowXpGain(result);
                       }).catch((err: unknown) => {
                         showToast(getFriendlyErrorMessage(err, 'Não foi possível concluir a tarefa.'), 'error');
-                      })
-                    }
+                      }) } : {})}
                     onDelete={(id) => confirmTaskDeletion(() =>
                       deleteTask(id).then(() => setTasks((prev) => prev.filter((x) => x.id !== id))),
                     )}
                   />
-                ))}
+                  );
+                })}
               </>
             )}
           </ScrollView>
