@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
-  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, type Task, type TaskSuggestion, type RichTextDoc,
+  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, calculateTaskPoints, POINTS_BY_DIFFICULTY,
+  PRIORITY_MULTIPLIERS, type Task, type TaskSuggestion, type RichTextDoc,
 } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
 import { showToast } from '../store/toastStore.js';
@@ -33,20 +34,6 @@ const DIFFICULTY_OPTIONS: Array<{ value: TaskDifficulty | 'all'; label: string }
   { value: TaskDifficulty.Hard,   label: 'Difícil' },
   { value: TaskDifficulty.Epic,   label: 'Épico'  },
 ];
-
-const BASE_POINTS: Record<TaskDifficulty, number> = {
-  [TaskDifficulty.Easy]:   10,
-  [TaskDifficulty.Medium]: 25,
-  [TaskDifficulty.Hard]:   50,
-  [TaskDifficulty.Epic]:   100,
-};
-
-const PRIORITY_MULT: Record<TaskPriority, number> = {
-  [TaskPriority.Low]:    0.90,
-  [TaskPriority.Medium]: 1.00,
-  [TaskPriority.High]:   1.10,
-  [TaskPriority.Urgent]: 1.25,
-};
 
 const PRIORITY_LABELS: Record<TaskPriority, string> = {
   [TaskPriority.Low]:    'Baixa',
@@ -84,7 +71,8 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   const isEdit      = task !== null;
   const isCompleted = task?.status === TaskStatus.Completed;
-  const pts         = Math.floor(BASE_POINTS[difficulty] * PRIORITY_MULT[priority]);
+  // Valor real se entregue no prazo (mesma conta da conclusão, no shared)
+  const pts         = calculateTaskPoints(difficulty, priority, { kind: 'on_time' });
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -234,13 +222,12 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
           </label>
 
           <div className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-300">
-            Esta tarefa vale <strong>{pts} pontos</strong>
+            Entregue no prazo, esta tarefa vale <strong>{pts} pontos</strong>
             {priority !== TaskPriority.Medium && (
               <span className="ml-1 text-brand-500">
-                ({PRIORITY_MULT[priority] > 1 ? '+' : ''}{Math.round((PRIORITY_MULT[priority] - 1) * 100)}% prioridade)
+                ({PRIORITY_MULTIPLIERS[priority] > 1 ? '+' : ''}{Math.round((PRIORITY_MULTIPLIERS[priority] - 1) * 100)}% prioridade)
               </span>
             )}
-            {dueDate && ` · +${Math.floor(pts * 0.2)} pts se entregue no prazo`}
           </div>
 
           {error && <FormFeedback variant="error" message={error} />}
@@ -302,7 +289,7 @@ export default function TasksPage() {
 
   filtered = [...filtered].sort((a, b) => {
     if (sortBy === 'dueDate') return (a.dueDate ?? '9').localeCompare(b.dueDate ?? '9');
-    if (sortBy === 'points')  return BASE_POINTS[b.difficulty] - BASE_POINTS[a.difficulty];
+    if (sortBy === 'points')  return POINTS_BY_DIFFICULTY[b.difficulty] - POINTS_BY_DIFFICULTY[a.difficulty];
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 

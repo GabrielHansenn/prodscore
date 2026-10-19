@@ -8,12 +8,12 @@ import {
   type Achievement,
   type LevelReward,
   type RichTextDoc,
+  calculateTaskPoints,
+  type TaskDelivery,
 } from '@prodscore/shared';
-import { applyLatePenalty } from '@prodscore/shared/constants';
 import { supabase } from '../lib/supabase.js';
 import { AppError } from '../lib/errors.js';
 import {
-  calculatePoints,
   recordTransaction,
   updateStreak,
   checkLevelUp,
@@ -473,28 +473,25 @@ export async function completeTask(
 
   // ── Passo 3: cálculo de pontos ────────────────────────────────────────────
   //
-  // Para tarefas entregues no prazo ou sem prazo: usa calculatePoints diretamente.
-  // Para tarefas atrasadas: aplica penalidade PROGRESSIVA baseada em quanto tempo
-  // está overdue (substituindo a penalidade fixa de -30%).
+  // calculateTaskPoints (@prodscore/shared) é a fonte única da conta — a mesma
+  // que a calculadora da página de Ajuda usa. Atrasada: penalidade PROGRESSIVA
+  // pelo tempo overdue (desde overdue_since; fallback: desde a due_date).
 
   const priority = (taskRow.priority ?? 'medium') as TaskPriority;
 
-  let pointsEarned: number;
-  if (isOnTime !== false) {
-    // Sem due_date (null) ou entregue antes do prazo (true)
-    pointsEarned = calculatePoints(taskRow.difficulty as TaskDifficulty, isOnTime, priority);
+  let delivery: TaskDelivery;
+  if (isOnTime === null) {
+    delivery = { kind: 'no_deadline' };
+  } else if (isOnTime) {
+    delivery = { kind: 'on_time' };
   } else {
-    // Atrasada: base × prioridade, sem modificador de prazo
-    const baseWithPriority = calculatePoints(taskRow.difficulty as TaskDifficulty, null, priority);
-
-    // Horas desde que ficou overdue (fallback: desde a due_date)
     const overdueRef = taskRow.overdue_since
       ? new Date(taskRow.overdue_since)
       : new Date(taskRow.due_date!);
-    const hoursOverdue = Math.max(0, (now.getTime() - overdueRef.getTime()) / 3_600_000);
-
-    pointsEarned = applyLatePenalty(baseWithPriority, hoursOverdue);
+    delivery = { kind: 'late', hoursLate: Math.max(0, (now.getTime() - overdueRef.getTime()) / 3_600_000) };
   }
+
+  const pointsEarned = calculateTaskPoints(taskRow.difficulty as TaskDifficulty, priority, delivery);
 
   const completedAt = now.toISOString();
 

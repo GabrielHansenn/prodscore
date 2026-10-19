@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
+import { TaskPriority, TaskStatus, getDescriptionDoc, calculateTaskPoints, taskPointsBreakdown, type Task } from '@prodscore/shared';
 import { FlameIcon, CalendarIcon, ExclamationTriangleIcon, PencilIcon, TrashIcon } from './icons.js';
 import TaskProofUpload from './TaskProofUpload.js';
 import TaskProofViewer from './TaskProofViewer.js';
@@ -16,20 +16,6 @@ interface TaskCardProps {
   onEdit?:     (task: Task) => void;
   compact?:    boolean;
 }
-
-const BASE_POINTS: Record<TaskDifficulty, number> = {
-  [TaskDifficulty.Easy]:   10,
-  [TaskDifficulty.Medium]: 25,
-  [TaskDifficulty.Hard]:   50,
-  [TaskDifficulty.Epic]:   100,
-};
-
-const PRIORITY_MULT: Record<TaskPriority, number> = {
-  [TaskPriority.Low]:    0.90,
-  [TaskPriority.Medium]: 1.00,
-  [TaskPriority.High]:   1.10,
-  [TaskPriority.Urgent]: 1.25,
-};
 
 interface DueInfo {
   label:     string;
@@ -57,13 +43,17 @@ function getPointsPreview(task: Task): string {
   if (task.status === TaskStatus.Completed && task.pointsEarned !== null) {
     return `+${task.pointsEarned} pts`;
   }
-  const base     = BASE_POINTS[task.difficulty];
-  const prio     = task.priority ?? TaskPriority.Medium;
-  const withPrio = Math.floor(base * PRIORITY_MULT[prio]);
-  if (!task.dueDate) return `+${withPrio} pts`;
-  const isOverdue = new Date(task.dueDate) < new Date();
-  if (isOverdue) return `+${Math.floor(withPrio * 0.7)} pts (−30% atraso)`;
-  return `+${withPrio} pts (→ +${Math.floor(withPrio * 1.2)} no prazo)`;
+  // Mesma conta da conclusão (calculateTaskPoints, @prodscore/shared)
+  const prio = task.priority ?? TaskPriority.Medium;
+  if (!task.dueDate) return `+${calculateTaskPoints(task.difficulty, prio, { kind: 'no_deadline' })} pts`;
+
+  const msLate = Date.now() - new Date(task.dueDate).getTime();
+  if (msLate > 0) {
+    // Estimativa: o sistema conta o atraso a partir de quando a tarefa foi marcada como atrasada
+    const late = taskPointsBreakdown(task.difficulty, prio, { kind: 'late', hoursLate: msLate / 3_600_000 });
+    return `+${late.total} pts (−${Math.round(late.latePenaltyFraction * 100)}% atraso)`;
+  }
+  return `+${calculateTaskPoints(task.difficulty, prio, { kind: 'on_time' })} pts no prazo`;
 }
 
 function DotsVertical() {

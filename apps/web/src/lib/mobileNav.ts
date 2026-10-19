@@ -10,7 +10,7 @@ export type MobileTab = 'inicio' | 'tarefas' | 'grupos' | 'menu';
 
 /** Telas que ficam dentro do Menu (folha que abre de baixo para cima) */
 export const MENU_ROUTES = [
-  '/ranking', '/perfil', '/amigos', '/conquistas', '/estatisticas', '/configuracoes/seguranca',
+  '/ranking', '/perfil', '/amigos', '/conquistas', '/estatisticas', '/configuracoes/seguranca', '/ajuda',
 ] as const;
 
 const startsWithRoute = (pathname: string, route: string) =>

@@ -7,8 +7,8 @@
  *   pontos da tarefa → sequência (updateStreak) → missões (checkMissionProgress)
  *   → bônus de retomada → meta semanal → conquistas → nível (checkLevelUp)
  *
- * Os cálculos usam as funções e constantes do sistema (calculatePoints,
- * applyLatePenalty, levelThreshold, STREAK_MILESTONES, FREEZE_*,
+ * Os cálculos usam as funções e constantes do sistema (calculateTaskPoints,
+ * levelThreshold, STREAK_MILESTONES, FREEZE_*,
  * calculateWeeklyGoal, countCompleteWeeks, isComebackEligible,
  * calculateComebackBonus). As partes que no sistema gravam no banco com a
  * data de AGORA (updateStreak, checkLevelUp, checkAchievements, missões) são
@@ -33,9 +33,9 @@ import {
   normalizeRichText,
   richTextToPlainText,
   type RichTextDoc,
+  calculateTaskPoints,
+  type TaskDelivery,
 } from '@prodscore/shared';
-import { applyLatePenalty } from '@prodscore/shared/constants';
-import { calculatePoints } from '../services/gamification.service.js';
 import {
   calculateWeeklyGoal,
   countCompleteWeeks,
@@ -617,16 +617,18 @@ export function simulate(input: SimInput): SimOutput {
     const ms = task.completedAt!;
     const previousCompletionAt = u.lastCompletionAt;
 
-    // Passo 3 do completeTask: pontos (no prazo/sem prazo ou com penalidade progressiva)
-    let points: number;
-    if (task.dueAt === null || ms <= task.dueAt) {
-      points = calculatePoints(task.row.difficulty, task.dueAt === null ? null : true, task.row.priority);
+    // Passo 3 do completeTask: pontos pela mesma função do sistema (calculateTaskPoints)
+    let delivery: TaskDelivery;
+    if (task.dueAt === null) {
+      delivery = { kind: 'no_deadline' };
+    } else if (ms <= task.dueAt) {
+      delivery = { kind: 'on_time' };
     } else {
       const overdueSince = ms >= nextFullHour(task.dueAt) ? nextFullHour(task.dueAt) : null;
       task.row.overdue_since = overdueSince === null ? null : iso(overdueSince);
-      const base = calculatePoints(task.row.difficulty, null, task.row.priority);
-      points = applyLatePenalty(base, Math.max(0, (ms - (overdueSince ?? task.dueAt)) / HOUR));
+      delivery = { kind: 'late', hoursLate: Math.max(0, (ms - (overdueSince ?? task.dueAt)) / HOUR) };
     }
+    const points = calculateTaskPoints(task.row.difficulty, task.row.priority, delivery);
     tx(u, points, PointReason.TaskCompleted, task.row.id, ms);
     task.row.status = 'completed';
     task.row.completed_at = iso(ms);

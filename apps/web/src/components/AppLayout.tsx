@@ -3,6 +3,7 @@ import Sidebar from './Sidebar.js';
 import BottomNav from './BottomNav.js';
 import { LogoWordmark } from './Logo.js';
 import NotificationBell from './NotificationBell.js';
+import { HelpHeaderButton } from './HelpLink.js';
 
 /**
  * Layout das telas logadas.
@@ -27,7 +28,8 @@ export default function AppLayout() {
         {/* Cabeçalho do celular: logo e notificações (a navegação fica na barra inferior) */}
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 lg:hidden">
           <LogoWordmark className="h-6 w-auto" aria-hidden="true" />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center">
+            <HelpHeaderButton />
             <NotificationBell variant="header" />
           </div>
         </header>

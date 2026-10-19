@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskDifficulty, TaskStatus, type Task, type TaskSuggestion } from '@prodscore/shared';
+import { TaskDifficulty, TaskStatus, POINTS_BY_DIFFICULTY, type Task, type TaskSuggestion } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore';
 import { getTaskSuggestions } from '../services/behavioral.service';
 import { getFriendlyErrorMessage } from '../lib/errors';
@@ -17,7 +17,7 @@ import TaskItem from '../components/TaskItem';
 import TaskDetailModal from '../components/TaskDetailModal';
 import ErrorState from '../components/ErrorState';
 import Dropdown from '../components/Dropdown';
-import TaskFormModal, { BASE_POINTS } from '../components/TaskFormModal';
+import TaskFormModal from '../components/TaskFormModal';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
@@ -87,7 +87,7 @@ export default function TasksScreen() {
   if (activeDifficulty !== 'all') filtered = filtered.filter((t) => t.difficulty === activeDifficulty);
   filtered = [...filtered].sort((a, b) => {
     if (sortBy === 'dueDate') return (a.dueDate ?? '9').localeCompare(b.dueDate ?? '9');
-    if (sortBy === 'points')  return BASE_POINTS[b.difficulty] - BASE_POINTS[a.difficulty];
+    if (sortBy === 'points')  return POINTS_BY_DIFFICULTY[b.difficulty] - POINTS_BY_DIFFICULTY[a.difficulty];
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 

@@ -6,6 +6,7 @@ import { getWeeklyGoal } from '../services/adaptive.service';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import { HelpLink } from './HelpButton';
 
 interface WeeklyGoalCardProps {
   /**
@@ -48,7 +49,10 @@ export default function WeeklyGoalCard({ refreshKey }: WeeklyGoalCardProps) {
             <Ionicons name={achieved ? 'checkmark-circle' : 'flag'} size={18} color="#fff" />
           </View>
           <View>
-            <Text style={styles.title}>Meta da semana</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.title}>Meta da semana</Text>
+              <HelpLink section="meta-semanal" topic="meta semanal" />
+            </View>
             <Text style={styles.sub}>
               {achieved
                 ? `Batida! +${goal.rewardPoints} pts creditados`

@@ -37,6 +37,7 @@ import {
   TrophyIcon, BoltIcon, CheckCircleIcon, ArrowTrendingUpIcon, ChatIcon,
 } from '../components/icons.js';
 import Spinner from '../components/Spinner.js';
+import { HelpLink } from '../components/HelpLink.js';
 
 type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'desempenho' | 'chat';
 const TAB_KEYS: Tab[] = ['membros', 'ranking', 'missoes', 'tarefas', 'desempenho', 'chat'];
@@ -929,6 +930,10 @@ export default function GroupDetailPage() {
         {tab === 'missoes' && tabError('missoes')}
         {tab === 'missoes' && !failedTabs.has('missoes') && (
           <div className="p-4">
+            <p className="mb-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <HelpLink section="missoes" topic="como as missões funcionam" />
+              Como as missões funcionam?
+            </p>
             {/* Formulário de criação (admin) */}
             {isAdmin && showForm && (
               <CreateMissionForm

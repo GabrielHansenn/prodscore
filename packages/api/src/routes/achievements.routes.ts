@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { LevelReward } from '@prodscore/shared';
 import { supabase } from '../lib/supabase.js';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
@@ -71,7 +72,8 @@ router.get('/me', authGuard, async (req, res) => {
     }
 
     const conquistas = (data ?? []).map((row) => {
-      const a = row.achievements as {
+      // O Supabase tipa o join como lista; para esta relação (N:1) vem um objeto só
+      const a = row.achievements as unknown as {
         id: string; name: string; description: string; icon: string;
         reward_points: number; criteria: unknown; created_at: string;
       };
@@ -91,6 +93,39 @@ router.get('/me', authGuard, async (req, res) => {
     return res.status(200).json({ conquistas, total: conquistas.length });
   } catch (err) {
     return sendError(res, err, '[conquistas/GET/me]');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /achievements/level-rewards
+// ---------------------------------------------------------------------------
+
+/**
+ * Recompensas dos níveis marco, direto da tabela level_rewards — a página de
+ * Ajuda mostra estes valores (e não uma cópia), para acompanhar o banco.
+ */
+router.get('/level-rewards', authGuard, async (_req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('level_rewards')
+      .select('level, bonus_points, bonus_freezes, badge_key, description')
+      .order('level', { ascending: true });
+
+    if (error) {
+      throw new AppError('Erro ao buscar as recompensas de nível.', 500);
+    }
+
+    const recompensas: LevelReward[] = (data ?? []).map((row) => ({
+      level:        row.level,
+      bonusPoints:  row.bonus_points,
+      bonusFreezes: row.bonus_freezes,
+      badgeKey:     row.badge_key,
+      description:  row.description,
+    }));
+
+    return res.status(200).json({ recompensas, total: recompensas.length });
+  } catch (err) {
+    return sendError(res, err, '[conquistas/GET/level-rewards]');
   }
 });
 

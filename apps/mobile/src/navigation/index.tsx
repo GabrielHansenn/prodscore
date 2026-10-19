@@ -30,8 +30,10 @@ import FriendsScreen        from '../screens/FriendsScreen';
 import FriendProfileScreen  from '../screens/FriendProfileScreen';
 import ChatScreen           from '../screens/ChatScreen';
 import NotificationsScreen  from '../screens/NotificationsScreen';
+import HelpScreen           from '../screens/HelpScreen';
 
 import { useThemeColors } from '../lib/useThemeColors';
+import type { HelpSectionId } from '@prodscore/shared';
 
 // ---------------------------------------------------------------------------
 // Tipos de navegação
@@ -63,6 +65,8 @@ export type AppStackParamList = {
   FriendProfile:  { userId: string; username: string };
   Chat:           { userId: string; username: string };
   Notifications:  undefined;
+  /** section: abre a Ajuda já nessa seção (atalhos "?" dos cards) */
+  Help:           { section?: HelpSectionId } | undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -106,6 +110,7 @@ function AppStackNavigator() {
       <AppStack.Screen name="FriendProfile" component={FriendProfileScreen} />
       <AppStack.Screen name="Chat"          component={ChatScreen} />
       <AppStack.Screen name="Notifications" component={NotificationsScreen} />
+      <AppStack.Screen name="Help"          component={HelpScreen} />
     </AppStack.Navigator>
   );
 }

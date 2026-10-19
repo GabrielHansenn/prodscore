@@ -7,7 +7,7 @@ import { LogoWordmark } from './Logo.js';
 import NotificationBell from './NotificationBell.js';
 import {
   HomeIcon, TaskIcon, TrophyIcon, FriendsIcon, GroupIcon, StarIcon, ChartIcon,
-  UserIcon, LockIcon, LogoutIcon, SunIcon, MoonIcon, DesktopIcon,
+  UserIcon, LockIcon, LogoutIcon, SunIcon, MoonIcon, DesktopIcon, HelpIcon,
 } from './navIcons.js';
 
 const THEME_OPTIONS: ReadonlyArray<{
@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { to: '/estatisticas', label: 'Estatísticas',  icon: ChartIcon },
   { to: '/perfil',       label: 'Perfil',        icon: UserIcon },
   { to: '/configuracoes/seguranca', label: 'Segurança', icon: LockIcon },
+  { to: '/ajuda',        label: 'Ajuda',         icon: HelpIcon },
 ];
 
 interface SidebarProps {

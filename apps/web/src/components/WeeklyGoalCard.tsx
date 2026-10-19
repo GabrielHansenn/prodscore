@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { explainWeeklyGoal, type WeeklyGoalProgress } from '@prodscore/shared';
 import { getWeeklyGoal } from '../services/adaptive.service.js';
 import { FlagIcon, CheckCircleIcon } from './icons.js';
+import { HelpLink } from './HelpLink.js';
 
 interface WeeklyGoalCardProps {
   /**
@@ -41,7 +42,10 @@ export default function WeeklyGoalCard({ refreshKey }: WeeklyGoalCardProps) {
             {achieved ? <CheckCircleIcon className="h-5 w-5" /> : <FlagIcon className="h-5 w-5" />}
           </div>
           <div>
-            <p className="font-semibold text-gray-900">Meta da semana</p>
+            <p className="flex items-center gap-2 font-semibold text-gray-900">
+              Meta da semana
+              <HelpLink section="meta-semanal" topic="meta semanal" />
+            </p>
             <p className="text-xs text-gray-500">
               {achieved
                 ? `Batida! +${goal.rewardPoints} pts creditados`

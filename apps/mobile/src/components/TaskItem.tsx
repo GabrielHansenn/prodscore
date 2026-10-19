@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
+import { TaskPriority, TaskStatus, getDescriptionDoc, calculateTaskPoints, taskPointsBreakdown, type Task } from '@prodscore/shared';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
@@ -21,13 +21,6 @@ interface TaskItemProps {
 
 /** Altura máxima da prévia da descrição: ~3 linhas de fonte 12 (lineHeight 17) */
 const PREVIEW_MAX_HEIGHT = 52;
-
-const BASE_POINTS: Record<TaskDifficulty, number> = {
-  [TaskDifficulty.Easy]: 10, [TaskDifficulty.Medium]: 25, [TaskDifficulty.Hard]: 50, [TaskDifficulty.Epic]: 100,
-};
-const PRIORITY_MULT: Record<TaskPriority, number> = {
-  [TaskPriority.Low]: 0.9, [TaskPriority.Medium]: 1, [TaskPriority.High]: 1.1, [TaskPriority.Urgent]: 1.25,
-};
 
 interface DueInfo { label: string; isOverdue: boolean; isToday: boolean }
 
@@ -49,12 +42,16 @@ function parseDueDate(dueDate: string | null): DueInfo | null {
 
 function getPointsPreview(task: Task): string {
   if (task.status === TaskStatus.Completed && task.pointsEarned !== null) return `+${task.pointsEarned} pts`;
-  const base = BASE_POINTS[task.difficulty];
-  const withPrio = Math.floor(base * PRIORITY_MULT[task.priority ?? TaskPriority.Medium]);
-  if (!task.dueDate) return `+${withPrio} pts`;
-  const isOverdue = new Date(task.dueDate) < new Date();
-  if (isOverdue) return `+${Math.floor(withPrio * 0.7)} pts (−30% atraso)`;
-  return `+${withPrio} pts`;
+  // Mesma conta da conclusão (calculateTaskPoints, @prodscore/shared)
+  const prio = task.priority ?? TaskPriority.Medium;
+  if (!task.dueDate) return `+${calculateTaskPoints(task.difficulty, prio, { kind: 'no_deadline' })} pts`;
+  const msLate = Date.now() - new Date(task.dueDate).getTime();
+  if (msLate > 0) {
+    // Estimativa: o sistema conta o atraso a partir de quando a tarefa foi marcada como atrasada
+    const late = taskPointsBreakdown(task.difficulty, prio, { kind: 'late', hoursLate: msLate / 3_600_000 });
+    return `+${late.total} pts (−${Math.round(late.latePenaltyFraction * 100)}% atraso)`;
+  }
+  return `+${calculateTaskPoints(task.difficulty, prio, { kind: 'on_time' })} pts no prazo`;
 }
 
 /** Card de tarefa — espelha TaskCard.tsx no web (badges, prazo, pontos, menu editar/excluir) */

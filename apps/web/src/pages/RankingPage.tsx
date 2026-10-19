@@ -8,6 +8,7 @@ import RankingTable from '../components/RankingTable.js';
 import { FlameIcon, UsersIcon } from '../components/icons.js';
 import ErrorState from '../components/ErrorState.js';
 import Spinner from '../components/Spinner.js';
+import { HelpLink } from '../components/HelpLink.js';
 
 type Tab = 'global' | 'semanal' | 'amigos';
 
@@ -74,7 +75,10 @@ export default function RankingPage() {
       {/* Cabeçalho */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ranking</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+            Ranking
+            <HelpLink section="rankings" topic="como os rankings funcionam" />
+          </h1>
           <p className="mt-0.5 text-sm text-gray-500">Compare sua produtividade com outros jogadores</p>
         </div>
         {tab !== 'semanal' && (

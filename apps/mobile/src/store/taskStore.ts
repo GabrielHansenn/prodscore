@@ -1,16 +1,9 @@
 import { create } from 'zustand';
 import type { Task, LevelReward, TaskPriority, Achievement, RichTextDoc } from '@prodscore/shared';
-import { TaskDifficulty, TaskStatus } from '@prodscore/shared';
+import { TaskDifficulty, TaskStatus, POINTS_BY_DIFFICULTY } from '@prodscore/shared';
 import { api } from '../services/api';
 import { getFriendlyErrorMessage } from '../lib/errors';
 
-// Pontuação base por dificuldade (espelho do backend)
-const BASE_POINTS: Record<TaskDifficulty, number> = {
-  [TaskDifficulty.Easy]:   10,
-  [TaskDifficulty.Medium]: 25,
-  [TaskDifficulty.Hard]:   50,
-  [TaskDifficulty.Epic]:   100,
-};
 
 export interface CompletedMissionInfo {
   missaoId:     string;
@@ -110,7 +103,7 @@ export const useTaskStore = create<TaskStoreState>((set, get) => ({
     const snapshot = get().tasks;
     set((state) => ({
       tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, status: TaskStatus.Completed, pointsEarned: BASE_POINTS[t.difficulty] } : t,
+        t.id === id ? { ...t, status: TaskStatus.Completed, pointsEarned: POINTS_BY_DIFFICULTY[t.difficulty] } : t,
       ),
     }));
     try {

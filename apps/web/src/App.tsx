@@ -32,6 +32,7 @@ import AchievementsPage from './pages/AchievementsPage.js';
 import StatisticsPage   from './pages/StatisticsPage.js';
 import ProfilePage      from './pages/ProfilePage.js';
 import SecurityPage     from './pages/SecurityPage.js';
+import HelpPage         from './pages/HelpPage.js';
 import FriendsPage      from './pages/FriendsPage.js';
 import FriendProfilePage from './pages/FriendProfilePage.js';
 import ChatPage         from './pages/ChatPage.js';
@@ -164,6 +165,7 @@ export default function App() {
           <Route path="/estatisticas"   element={<StatisticsPage />} />
           <Route path="/perfil"         element={<ProfilePage />} />
           <Route path="/configuracoes/seguranca" element={<SecurityPage />} />
+          <Route path="/ajuda"          element={<HelpPage />} />
         </Route>
 
         {/* Aliases em inglês → PT-BR */}
@@ -175,6 +177,7 @@ export default function App() {
         <Route path="/profile"      element={<Navigate to="/perfil"     replace />} />
         <Route path="/security"     element={<Navigate to="/configuracoes/seguranca" replace />} />
         <Route path="/privacy-policy" element={<Navigate to="/politica-de-privacidade" replace />} />
+        <Route path="/help"         element={<Navigate to="/ajuda" replace />} />
 
         {/* 404 */}
         {/* Endereço inexistente: avisa em vez de voltar à landing sem explicação */}

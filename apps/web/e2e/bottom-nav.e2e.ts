@@ -10,7 +10,7 @@ import { test, expect, type Browser, type BrowserContext, type Page } from '@pla
 
 const ROUTES = [
   '/dashboard', '/tarefas', '/grupos', '/ranking', '/conquistas',
-  '/estatisticas', '/perfil', '/amigos', '/configuracoes/seguranca',
+  '/estatisticas', '/perfil', '/amigos', '/configuracoes/seguranca', '/ajuda',
 ];
 
 const PHONES = [
@@ -76,7 +76,9 @@ for (const viewport of PHONES) {
       const page = await openAs(browser, viewport, theme);
       for (const route of ROUTES) {
         await page.goto(route, { waitUntil: 'load' });
-        await page.waitForTimeout(1200);
+        // Espera as chamadas à API terminarem (gráficos, listas): medir antes dava falso alarme
+        await page.waitForLoadState('networkidle').catch(() => {});
+        await page.waitForTimeout(500);
         await expect(page.getByTestId('bottom-nav'), `barra em ${route}`).toBeVisible();
         await expect(page.locator('aside'), `menu lateral em ${route}`).toBeHidden();
         const { lastBottom, barTop } = await contentClearsBar(page);

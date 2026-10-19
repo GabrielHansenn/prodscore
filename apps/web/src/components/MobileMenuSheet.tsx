@@ -8,7 +8,7 @@ import { useThemeStore, type Theme } from '../store/themeStore.js';
 import { useConsentStore } from '../store/consentStore.js';
 import {
   TrophyIcon, UserIcon, FriendsIcon, StarIcon, ChartIcon, LockIcon,
-  LogoutIcon, SunIcon, MoonIcon, DesktopIcon,
+  LogoutIcon, SunIcon, MoonIcon, DesktopIcon, HelpIcon,
 } from './navIcons.js';
 
 const ITEMS = [
@@ -18,6 +18,7 @@ const ITEMS = [
   { to: '/conquistas',              label: 'Conquistas',   icon: StarIcon },
   { to: '/estatisticas',            label: 'Estatísticas', icon: ChartIcon },
   { to: '/configuracoes/seguranca', label: 'Segurança',    icon: LockIcon },
+  { to: '/ajuda',                   label: 'Ajuda',        icon: HelpIcon },
 ] as const;
 
 const THEMES: ReadonlyArray<{ value: Theme; label: string; icon: (p: { className?: string }) => React.JSX.Element }> = [
@@ -111,7 +112,8 @@ export default function MobileMenuSheet({ onClose, unreadMessages }: { onClose: 
                 onClick={onClose}
                 aria-current={current ? 'page' : undefined}
                 aria-label={badge > 0 ? `${label}, ${badge} ${badge === 1 ? 'mensagem não lida' : 'mensagens não lidas'}` : undefined}
-                className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border text-xs font-medium transition-colors ${
+                // last:: o último item (Ajuda) sobra sozinho na grade de 3 — ocupa a linha toda, em formato de faixa
+                className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border text-xs font-medium transition-colors last:col-span-3 last:min-h-[52px] last:flex-row last:gap-2 ${
                   current
                     ? 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-700/60 dark:bg-brand-900/30 dark:text-brand-300'
                     : 'border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-white/5 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10'

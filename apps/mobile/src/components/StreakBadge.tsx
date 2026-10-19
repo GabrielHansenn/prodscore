@@ -8,6 +8,7 @@ import { showToast } from '../store/toastStore';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import { HelpLink } from './HelpButton';
 
 interface StreakBadgeProps {
   currentStreak:  number;
@@ -69,6 +70,9 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
           <Text style={[styles.value, { color: isActive ? colors.amber : colors.textMuted }]}>
             {currentStreak} <Text style={styles.unit}>{currentStreak === 1 ? 'dia' : 'dias'}</Text>
           </Text>
+        </View>
+        <View style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
+          <HelpLink section="sequencia" topic="sequência de dias e freeze" />
         </View>
       </View>
 

@@ -205,6 +205,12 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.menuDivider} />
+          <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Help')}>
+            <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
+            <Text style={styles.menuRowText}>Ajuda: como funcionam os pontos</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.menuDivider} />
           <TouchableOpacity style={styles.menuRow} onPress={() => navigation.navigate('Security')}>
             <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.menuRowText}>Segurança</Text>

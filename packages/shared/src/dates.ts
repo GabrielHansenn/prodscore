@@ -50,6 +50,24 @@ export function utcWeekStart(date: Date = new Date()): Date {
   return start;
 }
 
+/**
+ * Horário local em que o "dia do sistema" vira. Sequência, meta semanal e
+ * ranking semanal contam o dia em UTC: no Brasil (UTC-3) o dia vira às 21h,
+ * não à meia-noite. A página de Ajuda usa isto para avisar o usuário sem
+ * escrever o horário à mão (e acerta para quem está em outro fuso).
+ *
+ * @returns hora e minuto locais da meia-noite UTC, e `previousDay` = true quando
+ *          isso acontece na véspera local (fusos a oeste de UTC, como o Brasil)
+ */
+export function utcMidnightLocalTime(now: Date = new Date()): { hour: number; minute: number; previousDay: boolean } {
+  const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return {
+    hour:        utcMidnight.getHours(),
+    minute:      utcMidnight.getMinutes(),
+    previousDay: utcMidnight.getDate() !== utcMidnight.getUTCDate(),
+  };
+}
+
 /** utcWeekStart no formato AAAA-MM-DD (coluna weekly_goals.week_start) */
 export function utcWeekStartKey(date: Date = new Date()): string {
   return utcWeekStart(date).toISOString().slice(0, 10);

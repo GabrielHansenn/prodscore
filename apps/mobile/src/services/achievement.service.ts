@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { LevelReward } from '@prodscore/shared';
 
 /** Conquista do catálogo com critérios de desbloqueio */
 export interface AchievementItem {
@@ -26,4 +27,13 @@ export async function getAchievements(): Promise<AchievementItem[]> {
 export async function getUserAchievements(): Promise<UserAchievementItem[]> {
   const { data } = await api.get<{ conquistas: UserAchievementItem[] }>('/achievements/me');
   return data.conquistas;
+}
+
+/**
+ * Recompensas dos níveis marco (tabela level_rewards) — a tela de Ajuda
+ * mostra os valores do banco, não uma cópia.
+ */
+export async function getLevelRewards(): Promise<LevelReward[]> {
+  const { data } = await api.get<{ recompensas: LevelReward[] }>('/achievements/level-rewards');
+  return data.recompensas;
 }

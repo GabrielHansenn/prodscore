@@ -119,10 +119,106 @@ export const LATE_PENALTY_TIERS: ReadonlyArray<{ maxHours: number; fraction: num
  * @param hoursOverdue - Horas desde que a tarefa se tornou overdue (≥ 0)
  */
 export function applyLatePenalty(points: number, hoursOverdue: number): number {
+  return Math.max(MIN_TASK_POINTS, Math.floor(points * (1 - latePenaltyFraction(hoursOverdue))));
+}
+
+/** Menor valor de uma tarefa concluída, mesmo com atraso máximo — completar sempre vale algo */
+export const MIN_TASK_POINTS = 1;
+
+/** Fração descontada para um atraso de `hoursOverdue` horas (faixa de LATE_PENALTY_TIERS) */
+export function latePenaltyFraction(hoursOverdue: number): number {
   const tier = LATE_PENALTY_TIERS.find((t) => hoursOverdue <= t.maxHours)
     ?? LATE_PENALTY_TIERS[LATE_PENALTY_TIERS.length - 1]!;
-  return Math.max(1, Math.floor(points * (1 - tier.fraction)));
+  return tier.fraction;
 }
+
+// ---------------------------------------------------------------------------
+// Cálculo de pontos de uma tarefa — fonte única
+// ---------------------------------------------------------------------------
+
+/**
+ * Como a tarefa foi entregue:
+ * - on_time:     dentro do prazo (ganha o bônus de pontualidade)
+ * - no_deadline: tarefa antiga, criada quando o prazo ainda era opcional
+ * - late:        depois do prazo, com `hoursLate` horas de atraso
+ */
+export type TaskDelivery =
+  | { kind: 'on_time' }
+  | { kind: 'no_deadline' }
+  | { kind: 'late'; hoursLate: number };
+
+/** Cada etapa da conta — a página de Ajuda usa para explicar o resultado */
+export interface TaskPointsBreakdown {
+  /** Pontos da dificuldade */
+  base: number;
+  /** Pontos extras por entregar no prazo (0 se não for no prazo) */
+  onTimeBonus: number;
+  /** Multiplicador da prioridade */
+  priorityMultiplier: number;
+  /** Fração descontada pelo atraso (0 se não atrasou) */
+  latePenaltyFraction: number;
+  /** Pontos que a tarefa vale */
+  total: number;
+}
+
+/**
+ * Pontos de uma tarefa concluída, etapa por etapa. É a MESMA conta usada ao
+ * concluir a tarefa (completeTask na API), no seed de demonstração e na
+ * calculadora da página de Ajuda — mudar uma regra aqui muda tudo junto.
+ *
+ * - no prazo:   (base + bônus de prazo) × prioridade, arredondado para baixo
+ * - sem prazo:  base × prioridade
+ * - atrasada:   base × prioridade, menos a faixa de atraso (mínimo 1 ponto)
+ */
+export function taskPointsBreakdown(
+  difficulty: TaskDifficulty,
+  priority: TaskPriority,
+  delivery: TaskDelivery,
+): TaskPointsBreakdown {
+  const base = POINTS_BY_DIFFICULTY[difficulty];
+  const priorityMultiplier = PRIORITY_MULTIPLIERS[priority];
+
+  if (delivery.kind === 'on_time') {
+    return {
+      base,
+      onTimeBonus: base * ON_TIME_BONUS_MULTIPLIER,
+      priorityMultiplier,
+      latePenaltyFraction: 0,
+      // Mesma ordem de contas da regra original: base × (1 + bônus) × prioridade
+      total: Math.floor(base * (1 + ON_TIME_BONUS_MULTIPLIER) * priorityMultiplier),
+    };
+  }
+
+  const withPriority = Math.floor(base * priorityMultiplier);
+  if (delivery.kind === 'no_deadline') {
+    return { base, onTimeBonus: 0, priorityMultiplier, latePenaltyFraction: 0, total: withPriority };
+  }
+
+  const hours = Math.max(0, delivery.hoursLate);
+  return {
+    base,
+    onTimeBonus: 0,
+    priorityMultiplier,
+    latePenaltyFraction: latePenaltyFraction(hours),
+    total: applyLatePenalty(withPriority, hours),
+  };
+}
+
+/** Atalho para quando só o total interessa */
+export function calculateTaskPoints(
+  difficulty: TaskDifficulty,
+  priority: TaskPriority,
+  delivery: TaskDelivery,
+): number {
+  return taskPointsBreakdown(difficulty, priority, delivery).total;
+}
+
+/**
+ * De quanto em quanto tempo o ranking global é recalculado.
+ * ATENÇÃO: o agendamento real fica no banco (cron 'refresh-ranking-global',
+ * migration 027, '*\/5 * * * *') — mudar aqui exige mudar lá também.
+ */
+export const RANKING_GLOBAL_REFRESH_MINUTES = 5;
 
 /**
  * Calcula a quantidade de pontos totais necessários para atingir um nível.

@@ -8,6 +8,7 @@ import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
   localDateKey, endOfLocalDayISO,
   MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
+  calculateTaskPoints,
 } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { maskDateBR, parseDateBR, isoToBR } from '../lib/dateBR';
@@ -19,13 +20,6 @@ import RichTextInput from './RichTextInput';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
-
-export const BASE_POINTS: Record<TaskDifficulty, number> = {
-  [TaskDifficulty.Easy]: 10, [TaskDifficulty.Medium]: 25, [TaskDifficulty.Hard]: 50, [TaskDifficulty.Epic]: 100,
-};
-const PRIORITY_MULT: Record<TaskPriority, number> = {
-  [TaskPriority.Low]: 0.9, [TaskPriority.Medium]: 1, [TaskPriority.High]: 1.1, [TaskPriority.Urgent]: 1.25,
-};
 
 const DIFFICULTY_OPTIONS: Array<{ value: TaskDifficulty; label: string }> = [
   { value: TaskDifficulty.Easy,   label: 'Fácil'   },
@@ -118,7 +112,8 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const isEdit      = task !== null;
   const liveDueError = dueDateError(dueDateInput);
   const isCompleted = task?.status === TaskStatus.Completed;
-  const pts         = Math.floor(BASE_POINTS[difficulty] * PRIORITY_MULT[priority]);
+  // Valor real se entregue no prazo (mesma conta da conclusão, no shared)
+  const pts         = calculateTaskPoints(difficulty, priority, { kind: 'on_time' });
 
   const handleSubmit = async () => {
     const titleError = validateRequired(title, 'Título');
@@ -255,7 +250,7 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
 
               <View style={styles.ptsPreview}>
                 <Text style={styles.ptsText}>
-                  Esta tarefa vale <Text style={{ fontWeight: '700' }}>{pts} pontos</Text>
+                  Entregue no prazo, esta tarefa vale <Text style={{ fontWeight: '700' }}>{pts} pontos</Text>
                 </Text>
               </View>
 

@@ -25,6 +25,7 @@ import ResponsiveContainer from '../components/ResponsiveContainer';
 import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import NotificationBell from '../components/NotificationBell';
+import { HelpHeaderButton } from '../components/HelpButton';
 import FriendsShortcut from '../components/FriendsShortcut';
 import ProcrastinationAlerts from '../components/ProcrastinationAlerts';
 import ErrorState from '../components/ErrorState';
@@ -110,6 +111,7 @@ export default function DashboardScreen() {
           {/* Amigos ao lado do sino: no app ficava escondido no menu do Perfil */}
           <View style={styles.headerActions}>
             <FriendsShortcut />
+            <HelpHeaderButton />
             <NotificationBell />
           </View>
         </View>

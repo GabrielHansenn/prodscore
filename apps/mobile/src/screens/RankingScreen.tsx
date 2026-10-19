@@ -18,6 +18,7 @@ import { useResponsive, SIDEBAR_WIDTH } from '../lib/useResponsive';
 import { FONT, RADIUS, SPACING } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
+import { HelpLink } from '../components/HelpButton';
 
 type Tab = 'global' | 'semanal' | 'amigos';
 
@@ -182,7 +183,10 @@ export default function RankingScreen() {
       {/* Cabeçalho */}
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Ranking</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.headerTitle}>Ranking</Text>
+            <HelpLink section="rankings" topic="como os rankings funcionam" />
+          </View>
           <Text style={styles.headerSub}>Compare sua produtividade com outros jogadores</Text>
         </View>
         {tab !== 'semanal' && (

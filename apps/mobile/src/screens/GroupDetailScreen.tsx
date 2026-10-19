@@ -33,6 +33,7 @@ import { FONT, RADIUS, SPACING, CARD_SHADOW } from '../constants/theme';
 import { useThemeColors } from '../lib/useThemeColors';
 import { createThemedStyles } from '../lib/createThemedStyles';
 import type { AppStackParamList } from '../navigation/index';
+import { HelpLink } from '../components/HelpButton';
 
 type Tab = 'membros' | 'ranking' | 'missoes' | 'tarefas' | 'painel' | 'chat';
 
@@ -294,6 +295,10 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
             {tab === 'missoes' && !failedTabs.has('missoes') && (
               <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <HelpLink section="missoes" topic="como as missões funcionam" />
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>Como as missões funcionam?</Text>
+                </View>
                 {isAdmin && (
                   <TouchableOpacity
                     style={styles.addBtn}

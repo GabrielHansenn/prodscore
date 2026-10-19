@@ -4,6 +4,7 @@ import {
   PointReason,
   NotificationType,
   FreezeEventType,
+  calculateTaskPoints,
   type Achievement,
   type LevelReward,
   type PointTransaction,
@@ -12,7 +13,6 @@ import {
   POINTS_BY_DIFFICULTY,
   PRIORITY_MULTIPLIERS,
   LATE_PENALTY_MULTIPLIER,
-  ON_TIME_BONUS_MULTIPLIER,
   STREAK_MILESTONES,
   STREAK_MILESTONE_BONUS,
   FREEZE_PER_MILESTONE,
@@ -89,19 +89,13 @@ export function calculatePoints(
   isOnTime: boolean | null,
   priority: TaskPriority = TaskPriority.Medium,
 ): number {
-  const base     = POINTS_BY_DIFFICULTY[difficulty];
-  const prioMult = PRIORITY_MULTIPLIERS[priority];
+  // No prazo / sem prazo: a conta oficial, de @prodscore/shared (calculateTaskPoints)
+  if (isOnTime === true) return calculateTaskPoints(difficulty, priority, { kind: 'on_time' });
+  if (isOnTime === null) return calculateTaskPoints(difficulty, priority, { kind: 'no_deadline' });
 
-  let timeModified: number;
-  if (isOnTime === true) {
-    timeModified = base * (1 + ON_TIME_BONUS_MULTIPLIER);
-  } else if (isOnTime === false) {
-    timeModified = base * (1 - LATE_PENALTY_MULTIPLIER);
-  } else {
-    timeModified = base;
-  }
-
-  return Math.floor(timeModified * prioMult);
+  // Regra antiga (−30% fixo), mantida só por compatibilidade — a conclusão de
+  // tarefa usa a penalidade progressiva de calculateTaskPoints
+  return Math.floor(POINTS_BY_DIFFICULTY[difficulty] * (1 - LATE_PENALTY_MULTIPLIER) * PRIORITY_MULTIPLIERS[priority]);
 }
 
 // ---------------------------------------------------------------------------

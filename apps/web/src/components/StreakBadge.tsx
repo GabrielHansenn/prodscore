@@ -3,6 +3,7 @@ import type { FreezeState } from '@prodscore/shared';
 import { getFreezeState, armFreeze, disarmFreeze } from '../services/freeze.service.js';
 import { showToast } from '../store/toastStore.js';
 import { FlameIcon, MoonIcon, TrophyIcon, SnowflakeIcon } from './icons.js';
+import { HelpLink } from './HelpLink.js';
 
 interface StreakBadgeProps {
   currentStreak:  number;
@@ -67,6 +68,9 @@ export default function StreakBadge({ currentStreak, longestStreak, streakFreeze
           <p className={`text-3xl font-bold ${isActive ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
             {currentStreak} <span className="text-base font-normal">{currentStreak === 1 ? 'dia' : 'dias'}</span>
           </p>
+        </div>
+        <div className="ml-auto self-start">
+          <HelpLink section="sequencia" topic="sequência de dias e freeze" />
         </div>
       </div>
 
