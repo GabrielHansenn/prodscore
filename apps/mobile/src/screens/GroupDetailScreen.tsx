@@ -7,7 +7,7 @@ import { usePullToRefresh } from '../lib/usePullToRefresh';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MemberRole, validateRequired, validatePositiveNumber, getDescriptionDoc, type Task } from '@prodscore/shared';
+import { MemberRole, validateRequired, validatePositiveNumber, getDescriptionDoc, maxMissionReward, type Task } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { refreshStatsAndShowXpGain } from '../lib/xpGain';
 import { showToast } from '../store/toastStore';
@@ -422,6 +422,8 @@ function CreateMissionForm({ onSave, onCancel }: {
   const [reward, setReward] = useState('50');
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
+  // A recompensa vai para TODOS os membros: o teto acompanha a meta (regra do shared, conferida na API)
+  const rewardMax = maxMissionReward(Number(target));
 
   const handleSave = async () => {
     const titleError  = validateRequired(title, 'Título');
@@ -429,7 +431,9 @@ function CreateMissionForm({ onSave, onCancel }: {
     const rewardNum   = Number(reward);
     const rewardError = !reward.trim() || !Number.isFinite(rewardNum) || rewardNum < 0
       ? 'Recompensa precisa ser um número maior ou igual a zero.'
-      : null;
+      : rewardNum > rewardMax
+        ? `Para essa meta, a recompensa pode ser de no máximo ${rewardMax.toLocaleString('pt-BR')} pontos.`
+        : null;
     const firstError = titleError ?? targetError ?? rewardError;
     if (firstError) { setError(firstError); return; }
 
@@ -456,7 +460,8 @@ function CreateMissionForm({ onSave, onCancel }: {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.fieldLabel}>Recompensa (pts)</Text>
-          <TextInput style={styles.input} value={reward} onChangeText={setReward} keyboardType="number-pad" />
+          <TextInput style={styles.input} value={reward} onChangeText={setReward} keyboardType="number-pad" maxLength={6} />
+          <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>Máximo: {rewardMax.toLocaleString('pt-BR')} pts</Text>
         </View>
       </View>
       {error ? <InlineFeedback variant="error" message={error} /> : null}

@@ -8,7 +8,7 @@ import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
   localDateKey, endOfLocalDayISO,
   MAX_TASK_DESCRIPTION_LENGTH, type Task, type RichTextDoc,
-  calculateTaskPoints,
+  calculateTaskPoints, TASK_ESTIMATE_MAX_MINUTES, TASK_DUE_DATE_MAX_DAYS, maxDateFromNow,
 } from '@prodscore/shared';
 import { getFriendlyErrorMessage } from '../lib/errors';
 import { maskDateBR, parseDateBR, isoToBR } from '../lib/dateBR';
@@ -50,6 +50,7 @@ function dueDateError(masked: string): string | null {
   const endOfDay = parsed ? endOfLocalDayISO(parsed) : null;
   if (!endOfDay) return 'Essa data não existe.';
   if (new Date(endOfDay) <= new Date()) return 'A data de entrega deve ser hoje ou depois.';
+  if (new Date(endOfDay) > maxDateFromNow(TASK_DUE_DATE_MAX_DAYS)) return `O prazo pode ser de no máximo ${TASK_DUE_DATE_MAX_DAYS} dias.`;
   return null;
 }
 
@@ -110,8 +111,11 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
   const [loading,        setLoading]        = useState(false);
 
   const isEdit      = task !== null;
-  const liveDueError = dueDateError(dueDateInput);
   const isCompleted = task?.status === TaskStatus.Completed;
+  // Tarefa que já passou do prazo: o prazo não pode ser adiado (a API recusa —
+  // senão a conclusão viraria "no prazo" e ganharia bônus em vez de penalidade)
+  const isPastDue   = isEdit && !!task?.dueDate && (task.status === TaskStatus.Overdue || new Date(task.dueDate) < new Date());
+  const liveDueError = isPastDue ? null : dueDateError(dueDateInput);
   // Valor real se entregue no prazo (mesma conta da conclusão, no shared)
   const pts         = calculateTaskPoints(difficulty, priority, { kind: 'on_time' });
 
@@ -134,6 +138,14 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
     // Na edição, um prazo que já passou pode ser mantido (a tarefa só está atrasada)
     const unchanged = isEdit && task?.dueDate && localDateKey(new Date(task.dueDate)) === parsed;
     if (!unchanged && new Date(due) <= new Date()) { setError('A data de entrega deve ser no futuro.'); return; }
+    if (!unchanged && new Date(due) > maxDateFromNow(TASK_DUE_DATE_MAX_DAYS)) {
+      setError(`O prazo pode ser de no máximo ${TASK_DUE_DATE_MAX_DAYS} dias a partir de hoje.`);
+      return;
+    }
+    if (estMinutes && Number(estMinutes) > TASK_ESTIMATE_MAX_MINUTES) {
+      setError(`O tempo estimado pode ser de no máximo ${TASK_ESTIMATE_MAX_MINUTES.toLocaleString('pt-BR')} minutos (uma semana).`);
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -199,23 +211,28 @@ export default function TaskFormModal({ task, groupId, onClose, onSubmit }: Task
                   <TextInput
                     style={[styles.input, liveDueError ? styles.inputError : null]} value={dueDateInput}
                     onChangeText={(t) => setDueDateInput(maskDateBR(t))}
-                    editable={!isCompleted} keyboardType="number-pad" maxLength={10}
+                    editable={!isCompleted && !isPastDue} keyboardType="number-pad" maxLength={10}
                     placeholder="DD/MM/AAAA" placeholderTextColor={colors.textMuted}
                     accessibilityLabel="Prazo, no formato dia, mês e ano"
                   />
                   <FieldError msg={liveDueError ?? undefined} />
+                  {isPastDue && <Text style={styles.hint}>Já passou do prazo: não dá para adiar.</Text>}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Tempo estimado (min)</Text>
                   <TextInput
-                    style={styles.input} value={estMinutes} onChangeText={setEstMinutes} editable={!isCompleted}
+                    style={styles.input} value={estMinutes} editable={!isCompleted}
+                    // Só dígitos e no máximo o tamanho do teto (antes aceitava qualquer
+                    // quantidade de dígitos, que estourava o banco)
+                    onChangeText={(t) => setEstMinutes(t.replace(/D/g, ''))}
+                    maxLength={String(TASK_ESTIMATE_MAX_MINUTES).length}
                     keyboardType="number-pad" placeholder="Ex: 60" placeholderTextColor={colors.textMuted}
                   />
                 </View>
               </View>
 
               {/* Atalhos de prazo: um toque em vez de digitar a data */}
-              {!isCompleted && (
+              {!isCompleted && !isPastDue && (
                 <View style={styles.dueShortcuts}>
                   {DUE_SHORTCUTS.map((s) => {
                     const d = new Date();
@@ -286,6 +303,7 @@ const useStyles = createThemedStyles((colors) => StyleSheet.create({
   warnBox: { backgroundColor: colors.amberDim, borderRadius: RADIUS.md, padding: SPACING.sm, marginBottom: SPACING.md },
   warnText: { fontSize: 12, color: colors.amberText },
   fieldLabel: { fontSize: FONT.sm, fontWeight: '500', color: colors.textSecondary, marginBottom: 4 },
+  hint: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   input: { backgroundColor: colors.input, borderRadius: RADIUS.md, borderWidth: 1, borderColor: colors.inputBorder, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT.base, color: colors.text },
   inputError: { borderColor: colors.red },
   dueShortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginTop: SPACING.sm },

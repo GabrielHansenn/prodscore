@@ -326,7 +326,7 @@ export async function updateTask(
   // Busca a tarefa verificando ownership em uma única query
   const { data: existing, error: fetchError } = await supabase
     .from('tasks')
-    .select('id, status, user_id')
+    .select('id, status, user_id, due_date')
     .eq('id', taskId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -339,7 +339,7 @@ export async function updateTask(
     throw new AppError('Tarefa não encontrada.', 404, 'TAREFA_NAO_ENCONTRADA');
   }
 
-  const row = existing as Pick<TaskRow, 'id' | 'status' | 'user_id'>;
+  const row = existing as Pick<TaskRow, 'id' | 'status' | 'user_id' | 'due_date'>;
 
   if (row.status === 'completed') {
     throw new AppError(
@@ -347,6 +347,23 @@ export async function updateTask(
       409,
       'TAREFA_JA_CONCLUIDA',
     );
+  }
+
+  // Mudança de prazo — conferida com a hora do SERVIDOR (a do aparelho pode
+  // ser alterada). Antes dava para adiar o prazo de uma tarefa atrasada e
+  // concluí-la "no prazo": trocava a penalidade de atraso pelo bônus.
+  // O mesmo prazo de antes (o formulário sempre reenvia) não conta como mudança.
+  const newDue = updates.dueDate ?? null;
+  const dueChanged = newDue !== null
+    && (row.due_date === null || new Date(newDue).getTime() !== new Date(row.due_date).getTime());
+  if (dueChanged) {
+    const now = new Date();
+    if (row.status === 'overdue' || (row.due_date !== null && new Date(row.due_date) < now)) {
+      throw new AppError('Esta tarefa já passou do prazo, então o prazo dela não pode ser alterado.', 409, 'PRAZO_VENCIDO');
+    }
+    if (new Date(newDue!) <= now) {
+      throw new AppError('A data de entrega deve ser no futuro.', 400, 'PRAZO_NO_PASSADO');
+    }
   }
 
   // Monta o objeto de atualização apenas com os campos presentes
@@ -358,7 +375,7 @@ export async function updateTask(
   if (updates.priority         !== undefined) patch['priority']          = updates.priority;
   if (updates.estimatedMinutes !== undefined) patch['estimated_minutes'] = updates.estimatedMinutes;
   if (updates.status           !== undefined) patch['status']            = updates.status;
-  if (updates.dueDate          !== undefined) patch['due_date']          = updates.dueDate;
+  if (dueChanged)                             patch['due_date']          = updates.dueDate;
   if (updates.requiresProof    !== undefined) patch['requires_proof']    = updates.requiresProof;
 
   const { data, error } = await supabase

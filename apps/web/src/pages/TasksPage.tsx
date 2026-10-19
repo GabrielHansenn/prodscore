@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   TaskDifficulty, TaskPriority, TaskStatus, validateRequired, getDescriptionDoc, richTextToPlainText,
   MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, calculateTaskPoints, POINTS_BY_DIFFICULTY,
-  PRIORITY_MULTIPLIERS, type Task, type TaskSuggestion, type RichTextDoc,
+  PRIORITY_MULTIPLIERS, TASK_ESTIMATE_MAX_MINUTES, TASK_DUE_DATE_MAX_DAYS, maxDateFromNow, type Task, type TaskSuggestion, type RichTextDoc,
 } from '@prodscore/shared';
 import { useTaskStore } from '../store/taskStore.js';
 import { showToast } from '../store/toastStore.js';
@@ -71,6 +71,10 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   const isEdit      = task !== null;
   const isCompleted = task?.status === TaskStatus.Completed;
+  // Tarefa que já passou do prazo: o prazo não pode ser adiado (a API recusa —
+  // senão a conclusão viraria "no prazo" e ganharia bônus em vez de penalidade)
+  const isPastDue   = isEdit && !!task?.dueDate && (task.status === TaskStatus.Overdue || new Date(task.dueDate) < new Date());
+  const maxDueKey   = localDateKey(maxDateFromNow(TASK_DUE_DATE_MAX_DAYS));
   // Valor real se entregue no prazo (mesma conta da conclusão, no shared)
   const pts         = calculateTaskPoints(difficulty, priority, { kind: 'on_time' });
 
@@ -80,6 +84,14 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     if (titleError) { setError(titleError); return; }
     // Prazo obrigatório: dá senso de urgência (e vale o bônus de entrega no prazo)
     if (!dueDate) { setError('Defina um prazo para a tarefa.'); return; }
+    if (!isPastDue && dueDate > maxDueKey) {
+      setError(`O prazo pode ser de no máximo ${TASK_DUE_DATE_MAX_DAYS} dias a partir de hoje.`);
+      return;
+    }
+    if (estimatedMinutes && Number(estimatedMinutes) > TASK_ESTIMATE_MAX_MINUTES) {
+      setError(`O tempo estimado pode ser de no máximo ${TASK_ESTIMATE_MAX_MINUTES.toLocaleString('pt-BR')} minutos (uma semana).`);
+      return;
+    }
     if (description && richTextToPlainText(description).length > MAX_TASK_DESCRIPTION_LENGTH) {
       setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
       return;
@@ -122,7 +134,9 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        {/* noValidate: as mensagens de erro são as nossas, em português (a validação
+            nativa mostrava balões em inglês e bloqueava o envio) */}
+        <form noValidate onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
           <div>
             <label htmlFor="task-title" className="mb-1 block text-xs font-medium text-gray-600">Título</label>
             <input
@@ -190,20 +204,30 @@ function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                 aria-required="true"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                disabled={isCompleted}
+                disabled={isCompleted || isPastDue}
                 min={localDateKey()}
+                max={maxDueKey}
+                aria-describedby={isPastDue ? 'task-due-hint' : undefined}
                 className="input disabled:opacity-50"
               />
+              {isPastDue && (
+                <p id="task-due-hint" className="mt-1 text-xs text-gray-500">Já passou do prazo: não dá para adiar.</p>
+              )}
             </div>
             <div>
               <label htmlFor="task-estimate" className="mb-1 block text-xs font-medium text-gray-600">Tempo estimado (min)</label>
+              {/* Texto com teclado numérico (e não type="number"): aceita só dígitos e
+                  no máximo o tamanho do teto. Com type="number", dezenas de dígitos
+                  viravam um balão do navegador em inglês e o formulário parecia travado */}
               <input
                 id="task-estimate"
-                type="number"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={String(TASK_ESTIMATE_MAX_MINUTES).length}
                 value={estimatedMinutes}
-                onChange={(e) => setEstimatedMinutes(e.target.value)}
+                onChange={(e) => setEstimatedMinutes(e.target.value.replace(/D/g, '').slice(0, String(TASK_ESTIMATE_MAX_MINUTES).length))}
                 disabled={isCompleted}
-                min={1}
                 placeholder="Ex: 60"
                 className="input disabled:opacity-50"
               />

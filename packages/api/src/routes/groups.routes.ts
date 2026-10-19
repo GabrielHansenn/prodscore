@@ -1,7 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { MemberRole, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, MAX_GROUP_DESCRIPTION_LENGTH, type RichTextDoc } from '@prodscore/shared';
+import { MemberRole, MAX_IMAGE_SIZE_BYTES, MAX_IMAGE_SIZE_MB, MAX_GROUP_DESCRIPTION_LENGTH,
+  MISSION_EXPIRES_MAX_DAYS, maxMissionReward, maxDateFromNow, type RichTextDoc,
+} from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
 import { resolveRichDescription } from '../lib/richDescription.js';
@@ -94,13 +96,16 @@ const createGroupMissionSchema = z.object({
     .min(1,     { message: 'Meta mínima é 1.' })
     .max(10000, { message: 'Meta máxima é 10.000.' }),
 
+  // Teto proporcional à meta (ver o refine abaixo). Antes aceitava até
+  // 100.000 pontos — e a recompensa vai para TODOS os membros: uma missão de
+  // meta 1 rendia dezenas de níveis para o grupo inteiro.
   rewardPoints: z
     .number({ invalid_type_error: 'Recompensa deve ser um número.' })
     .int({ message: 'Recompensa deve ser um número inteiro.' })
     .min(0, { message: 'Recompensa não pode ser negativa.' })
-    .max(100000)
     .default(0),
 
+  // Hora do SERVIDOR nas duas checagens (a do aparelho pode ser alterada)
   expiresAt: z
     .string()
     .datetime({ message: 'Data de expiração inválida. Use o formato ISO 8601.' })
@@ -108,7 +113,20 @@ const createGroupMissionSchema = z.object({
       (d) => new Date(d) > new Date(),
       { message: 'A data de expiração deve ser no futuro.' },
     )
+    .refine(
+      (d) => new Date(d) <= maxDateFromNow(MISSION_EXPIRES_MAX_DAYS),
+      { message: `A missão pode durar no máximo ${MISSION_EXPIRES_MAX_DAYS} dias.` },
+    )
     .optional(),
+}).superRefine((m, ctx) => {
+  const max = maxMissionReward(m.targetValue);
+  if (m.rewardPoints > max) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['rewardPoints'],
+      message: `Para uma meta de ${m.targetValue} ${m.targetValue === 1 ? 'tarefa' : 'tarefas'}, a recompensa pode ser de no máximo ${max.toLocaleString('pt-BR')} pontos.`,
+    });
+  }
 });
 
 const joinGroupSchema = z.object({

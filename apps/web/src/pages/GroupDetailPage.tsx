@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect, useState, type FormEvent, type KeyboardEvent
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   MemberRole, TaskDifficulty, TaskPriority, TaskStatus, getDescriptionDoc, richTextToPlainText,
-  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, type Task, type RichTextDoc,
+  MAX_TASK_DESCRIPTION_LENGTH, localDateKey, endOfLocalDayISO, maxMissionReward, maxDateFromNow,
+  TASK_DUE_DATE_MAX_DAYS, MISSION_EXPIRES_MAX_DAYS, type Task, type RichTextDoc,
 } from '@prodscore/shared';
 import {
   getGroupDetail,
@@ -176,6 +177,8 @@ function CreateMissionForm({
   const [expires,  setExpires]  = useState('');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
+  // A recompensa vai para TODOS os membros: o teto acompanha a meta (regra do shared, conferida na API)
+  const rewardMax = maxMissionReward(Number(target));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -185,7 +188,9 @@ function CreateMissionForm({
     const rewardNum   = Number(reward);
     const rewardError = !reward.trim() || !Number.isFinite(rewardNum) || rewardNum < 0
       ? 'Recompensa precisa ser um número maior ou igual a zero.'
-      : null;
+      : rewardNum > rewardMax
+        ? `Para essa meta, a recompensa pode ser de no máximo ${rewardMax.toLocaleString('pt-BR')} pontos.`
+        : null;
     const firstError = titleError ?? targetError ?? rewardError;
     if (firstError) { setError(firstError); return; }
 
@@ -208,6 +213,7 @@ function CreateMissionForm({
 
   return (
     <form
+      noValidate
       onSubmit={(e) => void handleSubmit(e)}
       className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800/50 dark:bg-brand-900/20"
     >
@@ -247,10 +253,14 @@ function CreateMissionForm({
           <div>
             <label htmlFor="mission-reward" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Recompensa (pts)</label>
             <input id="mission-reward"
-              type="number" min={0}
+              type="number" min={0} max={rewardMax}
               value={reward} onChange={(e) => setReward(e.target.value)}
+              aria-describedby="mission-reward-hint"
               className="input w-full text-sm"
             />
+            <p id="mission-reward-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Máximo: {rewardMax.toLocaleString('pt-BR')} pts
+            </p>
           </div>
         </div>
 
@@ -258,6 +268,7 @@ function CreateMissionForm({
           <label htmlFor="mission-expires" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Expira em (opcional)</label>
           <input id="mission-expires"
             type="datetime-local"
+            max={`${localDateKey(maxDateFromNow(MISSION_EXPIRES_MAX_DAYS))}T23:59`}
             value={expires} onChange={(e) => setExpires(e.target.value)}
             className="input w-full text-sm"
           />
@@ -429,6 +440,10 @@ function GroupTasksTab({
     // Prazo obrigatório, como nas tarefas pessoais
     const due = dueDate ? endOfLocalDayISO(dueDate) : null;
     if (!due) { setError('Defina um prazo para a tarefa.'); return; }
+    if (new Date(due) > maxDateFromNow(TASK_DUE_DATE_MAX_DAYS)) {
+      setError(`O prazo pode ser de no máximo ${TASK_DUE_DATE_MAX_DAYS} dias a partir de hoje.`);
+      return;
+    }
     if (desc && richTextToPlainText(desc).length > MAX_TASK_DESCRIPTION_LENGTH) {
       setError(`A descrição deve ter no máximo ${MAX_TASK_DESCRIPTION_LENGTH} caracteres.`);
       return;
@@ -466,6 +481,7 @@ function GroupTasksTab({
       {/* Botão / formulário de criação */}
       {showForm ? (
         <form
+          noValidate
           onSubmit={(e) => void handleCreate(e)}
           className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800/50 dark:bg-brand-900/20"
         >
@@ -524,6 +540,7 @@ function GroupTasksTab({
                 aria-required="true"
                 value={dueDate}
                 min={localDateKey()}
+                max={localDateKey(maxDateFromNow(TASK_DUE_DATE_MAX_DAYS))}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="input w-full text-sm"
               />

@@ -8,6 +8,9 @@ import {
   MAX_PROOF_FILE_SIZE_BYTES,
   MAX_PROOF_FILE_SIZE_MB,
   MAX_TASK_DESCRIPTION_LENGTH,
+  TASK_ESTIMATE_MAX_MINUTES,
+  TASK_DUE_DATE_MAX_DAYS,
+  maxDateFromNow,
 } from '@prodscore/shared';
 import { authGuard, type AuthenticatedRequest } from '../middleware/auth.js';
 import { sendError, AppError } from '../lib/errors.js';
@@ -27,6 +30,33 @@ import {
 } from '../services/proof.service.js';
 
 const router = Router();
+
+/**
+ * Tempo estimado: inteiro de 1 minuto até TASK_ESTIMATE_MAX_MINUTES. Sem o
+ * teto, um número com dezenas de dígitos estourava a coluna INTEGER do banco.
+ */
+const estimatedMinutesSchema = z
+  .number({ invalid_type_error: 'Tempo estimado deve ser um número.' })
+  .int({ message: 'Tempo estimado deve ser um número inteiro.' })
+  .min(1, { message: 'Tempo estimado deve ser de pelo menos 1 minuto.' })
+  .max(TASK_ESTIMATE_MAX_MINUTES, { message: `O tempo estimado pode ser de no máximo ${TASK_ESTIMATE_MAX_MINUTES.toLocaleString('pt-BR')} minutos (uma semana).` });
+
+/**
+ * Prazo: no futuro e a no máximo TASK_DUE_DATE_MAX_DAYS dias. As duas
+ * checagens usam o relógio do SERVIDOR — o do aparelho pode ser alterado
+ * (a trava "min" do campo de data no navegador é só conveniência).
+ */
+const dueDateFormatSchema = (requiredMessage: string) => z
+  .string({ required_error: requiredMessage, invalid_type_error: requiredMessage })
+  .datetime({ message: 'Data de entrega inválida. Use o formato ISO 8601 (ex: 2026-12-31T23:59:00Z).' })
+  .refine(
+    (date) => new Date(date) <= maxDateFromNow(TASK_DUE_DATE_MAX_DAYS),
+    { message: `O prazo pode ser de no máximo ${TASK_DUE_DATE_MAX_DAYS} dias a partir de hoje.` },
+  );
+
+/** Criação: o prazo também precisa ser no futuro */
+const dueDateSchema = (requiredMessage: string) => dueDateFormatSchema(requiredMessage)
+  .refine((date) => new Date(date) > new Date(), { message: 'A data de entrega deve ser no futuro.' });
 
 /** Upload em memória (o arquivo é validado e enviado ao Storage sem tocar o disco) */
 const proofUpload = multer({
@@ -91,21 +121,11 @@ const createTaskSchema = z.object({
     }),
   }).optional(),
 
-  estimatedMinutes: z
-    .number({ invalid_type_error: 'Tempo estimado deve ser um número.' })
-    .int({ message: 'Tempo estimado deve ser um número inteiro.' })
-    .min(1, { message: 'Tempo estimado deve ser de pelo menos 1 minuto.' })
-    .optional(),
+  estimatedMinutes: estimatedMinutesSchema.optional(),
 
   // Obrigatório: o prazo é o que dá senso de urgência à tarefa (e o bônus de
   // entrega no prazo depende dele)
-  dueDate: z
-    .string({ required_error: 'Defina um prazo para a tarefa.' })
-    .datetime({ message: 'Data de entrega inválida. Use o formato ISO 8601 (ex: 2026-12-31T23:59:00Z).' })
-    .refine(
-      (date) => new Date(date) > new Date(),
-      { message: 'A data de entrega deve ser no futuro.' },
-    ),
+  dueDate: dueDateSchema('Defina um prazo para a tarefa.'),
 
   groupId: z
     .string()
@@ -145,10 +165,7 @@ const updateTaskSchema = z
       })
       .optional(),
 
-    estimatedMinutes: z
-      .number({ invalid_type_error: 'Tempo estimado deve ser um número.' })
-      .int({ message: 'Tempo estimado deve ser um número inteiro.' })
-      .min(1, { message: 'Tempo estimado deve ser de pelo menos 1 minuto.' })
+    estimatedMinutes: estimatedMinutesSchema
       .nullable()
       .optional(),
 
@@ -163,11 +180,11 @@ const updateTaskSchema = z
       )
       .optional(),
 
-    // Pode mudar o prazo, mas não removê-lo (null era "sem prazo")
-    dueDate: z
-      .string({ invalid_type_error: 'A tarefa precisa ter um prazo.' })
-      .datetime({ message: 'Data de entrega inválida. Use o formato ISO 8601.' })
-      .optional(),
+    // Pode mudar o prazo, mas não removê-lo (null era "sem prazo"). "Tem que
+    // ser no futuro" e "tarefa atrasada não pode ser adiada" ficam no serviço:
+    // o formulário reenvia o prazo atual (já vencido, numa tarefa atrasada)
+    // mesmo quando só o título mudou.
+    dueDate: dueDateFormatSchema('A tarefa precisa ter um prazo.').optional(),
 
     requiresProof: z
       .boolean({ invalid_type_error: 'requiresProof deve ser verdadeiro ou falso.' })
