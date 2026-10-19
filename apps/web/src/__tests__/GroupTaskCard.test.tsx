@@ -28,7 +28,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 const renderCard = (task: Task) => render(<MemoryRouter><GroupTaskCard task={task} onComplete={vi.fn()} /></MemoryRouter>);
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); });
 
 describe('GroupTaskCard', () => {
   it('tarefa minha: mostra "por você" e o botão de concluir', () => {
