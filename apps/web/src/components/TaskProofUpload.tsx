@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useRef, useState } from 'react';
 import { useScrollLock } from '../lib/useScrollLock.js';
 import {
@@ -102,7 +103,9 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
     }
   };
 
-  return (
+  // Portal no <body>: fora de cards com opacidade/animação, que deixavam o
+  // popup transparente, preso atrás dos outros cards e permitiam abrir vários
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
         role="dialog"
@@ -188,5 +191,5 @@ export default function TaskProofUpload({ taskId, onUploaded, onCancel }: TaskPr
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }

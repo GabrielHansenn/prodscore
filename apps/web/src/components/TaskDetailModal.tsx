@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useScrollLock } from '../lib/useScrollLock.js';
 import { TaskStatus, getDescriptionDoc, type Task } from '@prodscore/shared';
@@ -48,7 +49,9 @@ export default function TaskDetailModal({ task, onClose, onEdit }: TaskDetailMod
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // Portal no <body>: fora de cards com opacidade/animação, que deixavam o
+  // popup transparente, preso atrás dos outros cards e permitiam abrir vários
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       onClick={onClose}
@@ -149,5 +152,5 @@ export default function TaskDetailModal({ task, onClose, onEdit }: TaskDetailMod
         )}
       </div>
     </div>
-  );
+  , document.body);
 }

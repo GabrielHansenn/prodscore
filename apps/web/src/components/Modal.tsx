@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useScrollLock } from '../lib/useScrollLock.js';
 
@@ -42,7 +43,9 @@ export default function Modal({
     };
   }, []);
 
-  return (
+  // Portal no <body>: fora de cards com opacidade/animação, que deixavam o
+  // popup transparente, preso atrás dos outros cards e permitiam abrir vários
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
       // Fecha só no clique no fundo — não quando o clique começa dentro do painel
@@ -59,5 +62,5 @@ export default function Modal({
         {children}
       </div>
     </div>
-  );
+  , document.body);
 }

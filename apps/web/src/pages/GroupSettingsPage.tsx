@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useScrollLock } from '../lib/useScrollLock.js';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -67,7 +68,9 @@ function ConfirmModal({
     finally { setLoading(false); }
   };
 
-  return (
+  // Portal no <body>: fora de cards com opacidade/animação, que deixavam o
+  // popup transparente, preso atrás dos outros cards e permitiam abrir vários
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
         <h3 className="mb-2 text-base font-semibold text-gray-900 dark:text-white">{title}</h3>
@@ -90,7 +93,7 @@ function ConfirmModal({
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }
 
 // ---------------------------------------------------------------------------
@@ -600,7 +603,8 @@ function DangerZoneSection({
       )}
 
       {/* Modal: Confirmar exclusão — requer digitar o nome */}
-      {confirmDelete && (
+      {/* Portal no <body>, como os outros popups (fica por cima de tudo) */}
+      {confirmDelete && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-700 dark:bg-gray-900">
             <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30">
@@ -634,7 +638,7 @@ function DangerZoneSection({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </section>
   );
 }

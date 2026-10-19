@@ -88,15 +88,18 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
     onComplete(task.id);
   };
 
+  const muted = task.status === TaskStatus.Completed ? 'opacity-70' : '';
+
   return (
+    // Concluída fica "apagada" só no conteúdo (selos, descrição, rodapé). Antes o
+    // opacity-70 ia no card inteiro: o popup de detalhes e o menu, desenhados
+    // dentro dele, ficavam transparentes e presos atrás dos outros cards
     <div
-      className={`card group relative transition-shadow hover:shadow-card-hover ${
-        task.status === TaskStatus.Completed ? 'opacity-70' : ''
-      } ${compact ? 'p-3' : 'p-4'}`}
+      className={`card group relative transition-shadow hover:shadow-card-hover ${compact ? 'p-3' : 'p-4'}`}
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className={`flex flex-wrap items-center gap-1.5 ${muted}`}>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${DIFFICULTY_COLORS[task.difficulty]}`}>
               {DIFFICULTY_LABELS[task.difficulty]}
             </span>
@@ -131,7 +134,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
             <RichTextPreview
               doc={description}
               onShowMore={() => setShowDetail(true)}
-              className="mt-1"
+              className={`mt-1 ${muted}`}
             />
           )}
         </div>
@@ -170,7 +173,7 @@ export default function TaskCard({ task, onComplete, onDelete, onEdit, compact =
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className={`mt-3 flex items-center justify-between ${muted}`}>
         <div className="flex items-center gap-3">
           {dueInfo && (
             <span className={`flex items-center gap-1 text-xs ${
