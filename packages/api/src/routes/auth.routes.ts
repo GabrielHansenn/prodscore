@@ -94,15 +94,60 @@ const registerSchema = z.object({
     ),
 });
 
-const loginSchema = z.object({
-  email: z
-    .string({ required_error: 'E-mail é obrigatório.' })
-    .email({ message: 'E-mail inválido.' }),
+/**
+ * Login: `login` aceita e-mail OU nome de usuário. `email` continua aceito
+ * (versões antigas do app mandam esse campo).
+ */
+const loginSchema = z
+  .object({
+    login:    z.string().trim().optional(),
+    email:    z.string().trim().optional(),
+    password: z
+      .string({ required_error: 'Senha é obrigatória.' })
+      .min(1, { message: 'Senha é obrigatória.' }),
+  })
+  .refine((b) => !!(b.login || b.email), { message: 'Digite seu e-mail ou nome de usuário.' });
 
-  password: z
-    .string({ required_error: 'Senha é obrigatória.' })
-    .min(1, { message: 'Senha é obrigatória.' }),
-});
+const INVALID_LOGIN_MESSAGE = 'E-mail, usuário ou senha incorretos.';
+
+/**
+ * Logins errados — só as FALHAS contam, em dois limites:
+ * - por IP + conta: 10 a cada 15 min. Barra quem tenta adivinhar a senha de
+ *   alguém (com o nome de usuário, que aparece no ranking, ficou mais fácil);
+ * - por IP: 50 a cada 15 min, para quem tenta muitas contas.
+ * Não é só por IP porque numa sala de aula ou numa casa todo mundo sai pelo
+ * mesmo IP: 10 erros somados bloqueariam até quem acerta a senha. O limite do
+ * Supabase não ajuda — para ele todo login vem do nosso servidor.
+ * Exportados para os testes zerarem entre um caso e outro.
+ */
+export const loginFailureLimiter   = new AttemptLimiter(10, 15 * 60_000);
+export const loginIpFailureLimiter = new AttemptLimiter(50, 15 * 60_000);
+
+/**
+ * E-mail da conta a partir do que a pessoa digitou. Com "@" é o próprio
+ * e-mail; sem, é o nome de usuário — o e-mail é buscado AQUI, no servidor,
+ * e nunca volta para o cliente (uma rota "e-mail do usuário X" entregaria o
+ * e-mail de qualquer um). Devolve null se a conta não existe.
+ */
+async function resolveLoginEmail(identifier: string): Promise<string | null> {
+  if (identifier.includes('@')) return identifier.toLowerCase();
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(identifier)) return null;
+
+  // Exato primeiro; sem diferenciar maiúsculas só se não houver ambiguidade
+  // ("_" é curinga no ILIKE, por isso o escape)
+  const exact = await supabase.from('profiles').select('id').eq('username', identifier).maybeSingle();
+  let userId = (exact.data as { id: string } | null)?.id ?? null;
+  if (!userId) {
+    const { data } = await supabase.from('profiles').select('id').ilike('username', identifier.replace(/_/g, '\\_')).limit(2);
+    const rows = (data ?? []) as Array<{ id: string }>;
+    if (rows.length === 1) userId = rows[0]!.id;
+  }
+  if (!userId) return null;
+
+  const { data: authUser, error } = await supabase.auth.admin.getUserById(userId);
+  if (error || !authUser.user?.email) return null;
+  return authUser.user.email;
+}
 
 /** Corpo comum das rotas de MFA que precisam completar a sessão do usuário */
 const refreshTokenSchema = z.object({
@@ -345,7 +390,7 @@ router.post('/forgot-password', async (req, res) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Autentica o usuário com e-mail e senha.
+ * Autentica o usuário com e-mail OU nome de usuário, e senha.
  *
  * Retorna o access token JWT, refresh token e os dados do perfil completo.
  * O access token deve ser enviado em todas as rotas protegidas via:
@@ -354,10 +399,32 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const body = loginSchema.parse(req.body);
+    const identifier = (body.login ?? body.email)!;
+    const ip = clientIp(req);
+    const accountKey = `${ip}|${identifier.toLowerCase()}`;
+    const recordFailure = () => {
+      loginFailureLimiter.tryAttempt(accountKey);
+      loginIpFailureLimiter.tryAttempt(ip);
+    };
+
+    if (loginFailureLimiter.isBlocked(accountKey) || loginIpFailureLimiter.isBlocked(ip)) {
+      throw new AppError(
+        'Muitas tentativas de login erradas. Aguarde alguns minutos e tente novamente.',
+        429,
+        'MUITAS_TENTATIVAS',
+      );
+    }
+
+    // Conta inexistente cai na MESMA mensagem de senha errada (não revela quem tem conta)
+    const email = await resolveLoginEmail(identifier);
+    if (!email) {
+      recordFailure();
+      throw new AppError(INVALID_LOGIN_MESSAGE, 401, 'CREDENCIAIS_INVALIDAS');
+    }
 
     // Cliente descartável — a sessão do login não pode contaminar o singleton service role
     const { data, error } = await createEphemeralAuthClient().auth.signInWithPassword({
-      email:    body.email,
+      email,
       password: body.password,
     });
 
@@ -373,12 +440,9 @@ router.post('/login', async (req, res) => {
           'EMAIL_NAO_CONFIRMADO',
         );
       }
-      // Mensagem genérica por segurança — não revela se o e-mail existe
-      throw new AppError(
-        'E-mail ou senha incorretos.',
-        401,
-        'CREDENCIAIS_INVALIDAS',
-      );
+      // Mensagem genérica por segurança — não revela se o e-mail/usuário existe
+      recordFailure();
+      throw new AppError(INVALID_LOGIN_MESSAGE, 401, 'CREDENCIAIS_INVALIDAS');
     }
 
     if (!data.session || !data.user) {

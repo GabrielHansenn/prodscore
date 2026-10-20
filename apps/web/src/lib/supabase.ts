@@ -80,30 +80,6 @@ export async function setAuthSession(
 }
 
 /**
- * Autentica o usuário com e-mail e senha.
- *
- * Ao fazer login com sucesso, o Supabase armazena a sessão no localStorage
- * e dispara o evento `SIGNED_IN` para todos os listeners registrados em
- * `onAuthStateChange`.
- *
- * @param email    - E-mail cadastrado
- * @param password - Senha do usuário
- * @returns Sessão com access_token e refresh_token, ou erro
- */
-export async function signIn(
-  email: string,
-  password: string,
-): Promise<AuthResult<Session | null>> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) return { data: null, error: error.message };
-  return { data: data.session, error: null };
-}
-
-/**
  * Encerra a sessão atual do usuário.
  *
  * Invalida o refresh_token no Supabase e limpa a sessão do localStorage.

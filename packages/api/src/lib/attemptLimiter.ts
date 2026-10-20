@@ -40,6 +40,16 @@ export class AttemptLimiter {
     return true;
   }
 
+  /**
+   * Já estourou o limite? Só consulta, não conta tentativa — para limites que
+   * contam apenas as falhas (ex: senha errada no login), registradas depois
+   * com tryAttempt.
+   */
+  isBlocked(key: string, now: number = Date.now()): boolean {
+    const recent = (this.attempts.get(key) ?? []).filter((t) => now - t < this.windowMs);
+    return recent.length >= this.maxAttempts;
+  }
+
   /** Zera todas as contagens (usado pelos testes) */
   reset(): void {
     this.attempts.clear();

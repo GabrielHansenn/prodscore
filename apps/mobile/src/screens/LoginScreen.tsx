@@ -32,7 +32,7 @@ export default function LoginScreen({ navigation }: Props) {
   const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
-    if (!email.trim())    { setError('Informe seu e-mail.');  return; }
+    if (!email.trim())    { setError('Informe seu e-mail ou nome de usuário.');  return; }
     if (!password.trim()) { setError('Informe sua senha.');   return; }
     setError('');
     setNeedsConfirm(false);
@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }: Props) {
         setNeedsConfirm(true);
         setResendStatus('idle');
       } else {
-        setError(getFriendlyErrorMessage(err, 'E-mail ou senha incorretos.'));
+        setError(getFriendlyErrorMessage(err, 'E-mail, usuário ou senha incorretos.'));
       }
     } finally {
       setLoading(false);
@@ -81,21 +81,22 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.subtitle}>Entre com sua conta para continuar</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>E-mail</Text>
+            {/* Aceita e-mail OU nome de usuário: a API acha a conta */}
+            <Text style={styles.label}>E-mail ou nome de usuário</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="seu@email.com"
+              placeholder="seu@email.com ou seu_usuario"
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete="email"
+              autoComplete="username"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
               blurOnSubmit={false}
-              accessibilityLabel="E-mail"
+              accessibilityLabel="E-mail ou nome de usuário"
             />
           </View>
 
@@ -112,7 +113,8 @@ export default function LoginScreen({ navigation }: Props) {
               accessibilityLabel="Senha"
             />
             <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}
+              // Só leva o texto digitado se for um e-mail (a recuperação é por e-mail)
+              onPress={() => navigation.navigate('ForgotPassword', email.includes('@') ? { email: email.trim() } : {})}
               style={styles.forgot}
               accessibilityRole="link"
             >
@@ -124,8 +126,14 @@ export default function LoginScreen({ navigation }: Props) {
           {needsConfirm && (
             <View style={styles.confirmBox}>
               <Text style={styles.confirmTitle}>Confirme seu e-mail antes de entrar.</Text>
-              <Text style={styles.confirmText}>Enviamos um link para {email.trim()}. Procure também no spam.</Text>
-              {resendStatus === 'sent' ? (
+              {/* Com o nome de usuário, o e-mail não é mostrado (nunca sai do servidor):
+                  o reenvio só aparece para quem entrou digitando o e-mail */}
+              <Text style={styles.confirmText}>
+                {email.includes('@')
+                  ? `Enviamos um link para ${email.trim()}. Procure também no spam.`
+                  : 'Procure o link que enviamos para o seu e-mail no cadastro (veja também o spam). Para receber de novo, entre com o seu e-mail.'}
+              </Text>
+              {!email.includes('@') ? null : resendStatus === 'sent' ? (
                 <Text style={styles.confirmSent}>E-mail reenviado!</Text>
               ) : (
                 <TouchableOpacity onPress={() => void handleResend()} disabled={resendStatus === 'sending'} accessibilityRole="button">

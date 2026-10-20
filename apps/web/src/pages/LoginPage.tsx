@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogoWordmark } from '../components/Logo.js';
 import { useAuthStore } from '../store/authStore.js';
 import { supabase } from '../lib/supabase.js';
-import { getFriendlyErrorMessage } from '../lib/errors.js';
+import { getFriendlyErrorMessage, getApiErrorCode } from '../lib/errors.js';
 import FormFeedback, { FieldError } from '../components/FormFeedback.js';
 import { TrophyIcon, FlameIcon, FlagIcon } from '../components/icons.js';
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
     setNeedsConfirm(false);
 
     const errs = {
-      email:    email.trim() ? undefined : 'Digite seu e-mail.',
+      email:    email.trim() ? undefined : 'Digite seu e-mail ou nome de usuário.',
       password: password ? undefined : 'Digite sua senha.',
     };
     setFieldErrors(errs);
@@ -65,7 +65,7 @@ export default function LoginPage() {
       const rawMsg = err instanceof Error ? err.message : '';
       if (rawMsg === 'MFA_REQUIRED') {
         navigate('/verificar-2fa');
-      } else if (rawMsg.toLowerCase().includes('not confirmed')) {
+      } else if (getApiErrorCode(err) === 'EMAIL_NAO_CONFIRMADO') {
         setNeedsConfirm(true);
       } else {
         setError(getFriendlyErrorMessage(err, 'Erro ao fazer login. Tente novamente.'));
@@ -141,16 +141,20 @@ export default function LoginPage() {
 
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
             <div>
+              {/* Aceita e-mail OU nome de usuário: a API acha a conta (id "email" mantido) */}
               <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-gray-600">
-                E-mail
+                E-mail ou nome de usuário
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setFieldErrors((p) => ({ ...p, email: undefined })); }}
-                placeholder="seu@email.com"
-                autoComplete="email"
+                placeholder="seu@email.com ou seu_usuario"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 aria-invalid={!!fieldErrors.email}
                 className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:ring-2 ${
                   fieldErrors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500/20'
@@ -200,10 +204,14 @@ export default function LoginPage() {
             {needsConfirm && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300">
                 <p className="font-semibold">Confirme seu e-mail antes de entrar.</p>
+                {/* Entrou com o nome de usuário: o e-mail não é mostrado (nunca sai do
+                    servidor), então o reenvio só aparece para quem digitou o e-mail */}
                 <p className="mt-1 text-xs text-amber-600">
-                  Enviamos um link para <strong>{email}</strong>. Verifique sua caixa de entrada.
+                  {email.includes('@')
+                    ? <>Enviamos um link para <strong>{email}</strong>. Verifique sua caixa de entrada.</>
+                    : <>Procure o link que enviamos para o seu e-mail no cadastro. Para receber de novo, entre com o seu e-mail.</>}
                 </p>
-                {resendStatus !== 'sent' ? (
+                {!email.includes('@') ? null : resendStatus !== 'sent' ? (
                   <button
                     type="button"
                     onClick={() => void handleResend()}

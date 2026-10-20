@@ -57,10 +57,10 @@ describe('Login (W10)', () => {
     render(<MemoryRouter><LoginPage /></MemoryRouter>);
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(screen.getByText('Digite seu e-mail.')).toBeInTheDocument();
+    expect(screen.getByText('Digite seu e-mail ou nome de usuário.')).toBeInTheDocument();
     expect(screen.getByText('Digite sua senha.')).toBeInTheDocument();
-    expect(screen.getByLabelText('E-mail')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('E-mail')).toHaveFocus();
+    expect(screen.getByLabelText('E-mail ou nome de usuário')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('E-mail ou nome de usuário')).toHaveFocus();
     expect(mockLogin).not.toHaveBeenCalled();
   });
 

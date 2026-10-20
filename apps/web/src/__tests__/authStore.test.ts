@@ -158,6 +158,23 @@ describe('authStore', () => {
     // Padrão: GET /users/me retorna o perfil de teste; POST resolve vazio
     mockApiGet.mockResolvedValue({ data: { usuario: mockUser } });
     mockApiPost.mockResolvedValue({ data: {} });
+
+    // O login passa pela API (POST /auth/login). O mock da API se comporta
+    // como ela: usa o mesmo mockSignIn por baixo e devolve os tokens, ou um
+    // erro 401 — assim os testes de login continuam descrevendo o mesmo fluxo.
+    mockApiPost.mockImplementation(async (url: string, body: { login: string; password: string }) => {
+      if (url !== '/auth/login') return { data: {} };
+      const { data, error } = await mockSignIn({ email: body.login, password: body.password });
+      if (error) {
+        throw Object.assign(new Error('Request failed with status code 401'), {
+          isAxiosError: true,
+          response: { status: 401, data: { erro: 'E-mail, usuário ou senha incorretos.', codigo: 'CREDENCIAIS_INVALIDAS' } },
+        });
+      }
+      return { data: { mfaRequired: false, sessao: { accessToken: data.session.access_token, refreshToken: data.session.refresh_token } } };
+    });
+    // A sessão devolvida pela API é instalada no cliente Supabase
+    mockSetAuthSession.mockResolvedValue({ data: mockSession, error: null });
   });
 
   describe('login', () => {
@@ -195,6 +212,16 @@ describe('authStore', () => {
       const state = useAuthStore.getState();
       expect(state.isAuthenticated).toBe(false);
       expect(state.user).toBeNull();
+    });
+
+    it('manda e-mail OU nome de usuário para a API (que acha a conta no servidor)', async () => {
+      mockSignIn.mockResolvedValue({ data: { session: mockSession, user: mockSession.user }, error: null });
+
+      await useAuthStore.getState().login('GabrielHansenn', 'senha123');
+
+      expect(mockApiPost).toHaveBeenCalledWith('/auth/login', { login: 'GabrielHansenn', password: 'senha123' });
+      expect(mockSetAuthSession).toHaveBeenCalledWith(mockSession.access_token, mockSession.refresh_token);
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
     });
 
     it('deve definir isLoading=false após login (com sucesso ou erro)', async () => {

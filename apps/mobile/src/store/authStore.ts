@@ -31,11 +31,12 @@ interface AuthState {
   mfaFactorId:     string | null;
 
   /**
-   * Autentica com e-mail e senha via POST /auth/login.
+   * Autentica com e-mail OU nome de usuário, e senha, via POST /auth/login
+   * (a API acha o e-mail da conta no servidor).
    * Se a conta tiver 2FA ativo, marca `mfaPending` em vez de autenticar —
    * chame `verifyMfaChallenge` na sequência com o código do autenticador.
    */
-  login:              (email: string, password: string) => Promise<void>;
+  login:              (login: string, password: string) => Promise<void>;
   /** Confirma o código TOTP do step-up de login e eleva a sessão para aal2 */
   verifyMfaChallenge: (code: string) => Promise<void>;
   /**
@@ -57,10 +58,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   mfaPending:      false,
   mfaFactorId:     null,
 
-  login: async (email, password) => {
+  login: async (login, password) => {
     set({ isLoading: true });
     try {
-      const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
+      const { data } = await api.post<LoginResponse>('/auth/login', { login, password });
 
       // Guarda os tokens mesmo em aal1 pendente — necessários pra chamar
       // /auth/mfa/verify no step-up (ver mfa.service.ts). São substituídos

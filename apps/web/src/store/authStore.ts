@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { AssuranceLevel, type User } from '@prodscore/shared';
 import {
-  signIn,
   setAuthSession,
   signOut,
   getSession,
@@ -18,6 +17,12 @@ import { api } from '../services/api.js';
 interface Session {
   accessToken: string;
   refreshToken: string;
+}
+
+/** Resposta de POST /auth/login (o perfil é buscado depois, em /users/me) */
+interface LoginResponse {
+  mfaRequired: boolean;
+  sessao:      { accessToken: string; refreshToken: string };
 }
 
 /** Resposta de POST /auth/register — `sessao` só vem quando a auto-confirmação está ativa */
@@ -52,11 +57,11 @@ interface AuthState {
   mfaFactorId: string | null;
 
   /**
-   * Autentica com e-mail e senha.
+   * Autentica com e-mail OU nome de usuário, e senha.
    * Lança 'MFA_REQUIRED' se o usuário tiver 2FA ativo — a UI deve redirecionar
    * para a tela de verificação e chamar `verifyMfaChallenge` na sequência.
    */
-  login: (email: string, password: string) => Promise<void>;
+  login: (login: string, password: string) => Promise<void>;
   /**
    * Registra novo usuário via API. Resolve só quando a conta foi realmente
    * criada (ver RegisterResult); qualquer falha é lançada.
@@ -86,13 +91,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   mfaPending:      false,
   mfaFactorId:     null,
 
-  login: async (email, password) => {
+  login: async (login, password) => {
     set({ isLoading: true });
     try {
-      const { data: supabaseSession, error } = await signIn(email, password);
+      // Pela API (e não supabase.auth.signInWithPassword direto): é ela que
+      // aceita o NOME DE USUÁRIO e acha o e-mail da conta no servidor, sem
+      // nunca mandar o e-mail de ninguém para o navegador. Erros da API
+      // (senha errada, e-mail não confirmado) sobem com o código para a tela.
+      const { data: res } = await api.post<LoginResponse>('/auth/login', { login, password });
+
+      // Instala no cliente Supabase a sessão criada pela API — dali em diante
+      // ele renova o token e o 2FA abaixo funciona como antes
+      const { data: supabaseSession, error } = await setAuthSession(res.sessao.accessToken, res.sessao.refreshToken);
 
       if (error || !supabaseSession) {
-        throw new Error(error ?? 'E-mail ou senha incorretos.');
+        throw new Error(error ?? 'Erro ao iniciar sessão.');
       }
 
       // Verifica se o usuário tem 2FA ativo — se sim, a sessão fica em aal1

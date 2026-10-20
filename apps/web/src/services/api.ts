@@ -27,11 +27,15 @@ api.interceptors.request.use(async (config) => {
 /**
  * Interceptor de response: em caso de 401, limpa o estado local e redireciona para /login.
  * Usa window.location.replace para forçar reload e limpar qualquer estado em memória.
+ *
+ * Exceção: rotas de /auth/ (login, cadastro...). Lá o 401 é "senha errada",
+ * não sessão vencida — recarregar a página apagaria a mensagem de erro.
  */
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
+    const isAuthRoute = axios.isAxiosError(error) && (error.config?.url ?? '').startsWith('/auth/');
+    if (axios.isAxiosError(error) && error.response?.status === 401 && !isAuthRoute) {
       // Importação dinâmica evita dependência circular entre api.ts ↔ authStore.ts
       void import('../store/authStore.js').then(({ useAuthStore }) => {
         useAuthStore.getState().clearSession();
